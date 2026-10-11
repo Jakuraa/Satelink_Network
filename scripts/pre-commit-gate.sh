@@ -8,7 +8,9 @@
 
 echo "🔒 Running secret leak check..."
 
-staged=$(git diff --cached --name-only)
+# --diff-filter=ACM (added/copied/modified) — a deleted file can't leak a
+# secret or add .env bloat; only files that still exist need scanning.
+staged=$(git diff --cached --name-only --diff-filter=ACM)
 
 # This script contains the secret patterns as literals; exclude it from the
 # content scan or it can never be committed.
