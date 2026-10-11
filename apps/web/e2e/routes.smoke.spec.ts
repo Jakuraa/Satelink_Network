@@ -7,7 +7,6 @@ const OK_ROUTES = [
   "/",
   "/product/overview",
   "/products/machine-commerce",
-  "/products/trading-intelligence",
   "/products/trading-intelligence/funding-rate-heatmap",
   "/products/trading-intelligence/liquidation-clusters",
   "/products/rpc",
@@ -128,9 +127,15 @@ test("liquidation-clusters page shows the mandatory model limitations", async ({
   await expect(page.getByText(/model, not a measurement/i)).toBeVisible();
 });
 
-test("redirect: /intelligence → /products/trading-intelligence", async ({ page }) => {
+test("redirect: /intelligence → /trading-agent/product (Q27)", async ({ page }) => {
   await page.goto("/intelligence");
-  await expect(page).toHaveURL(/\/products\/trading-intelligence$/);
+  await expect(page).toHaveURL(/\/trading-agent\/product$/);
+});
+
+test("redirect: /products/trading-intelligence 308 → /trading-agent/product (Q27: TI sale page removed)", async ({ request }) => {
+  const res = await request.get("/products/trading-intelligence", { maxRedirects: 0 });
+  expect(res.status()).toBe(308);
+  expect(res.headers()["location"]).toMatch(/\/trading-agent\/product$/);
 });
 
 test("redirect: /rpc → /products/rpc", async ({ page }) => {
