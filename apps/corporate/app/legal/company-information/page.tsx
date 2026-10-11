@@ -30,7 +30,7 @@ export default function CompanyInformation() {
             ["Udyam registration", `${company.udyam} (${company.udyamCategory})`],
             ["Email", <a key="e" href={`mailto:${company.email}`} className="link-u">{company.email}</a>],
             ...(company.phone ? ([["Telephone", company.phone]] as [string, string][]) : []),
-            ["Grievance officer", `${g.name ? `${g.name}, ` : ""}${g.designation} — ${g.email}`],
+            ["Grievance officer", `${g.name ? `${g.name}, ` : ""}${g.designation} - ${g.email}`],
           ]}
         />
       </div>

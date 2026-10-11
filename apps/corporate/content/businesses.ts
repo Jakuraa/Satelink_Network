@@ -1,4 +1,4 @@
-// Business verticals — derived only from the Memorandum of Association objects
+// Business verticals - derived only from the Memorandum of Association objects
 // and the company's registrations. The founder sets `status`; nothing here may
 // claim clients, volumes, facilities, partners, headcount or revenue.
 
@@ -23,14 +23,14 @@ export type Business = {
 export const businesses: Business[] = [
   {
     slug: "technology",
-    name: "Technology — Satelink",
+    name: "Technology - Satelink",
     short: "Satelink",
     status: "Operating",
     basis: "MOA object 3(b)(6): to develop, publish and license software and websites.",
     summary:
       "Machine-commerce infrastructure: software agents and machines pay per call for blockchain data and settle on-chain.",
     body: [
-      "Satelink is the company's technology business. It is a pay-per-call gateway: an autonomous agent or machine sends a request, pays for exactly that request, and receives the result — without a sales contract or a monthly commitment.",
+      "Satelink is the company's technology business. It is a pay-per-call gateway: an autonomous agent or machine sends a request, pays for exactly that request, and receives the result without a sales contract or a monthly commitment.",
       "Payments run on two rails: x402, where a machine pays in USDC on Base inside the HTTP request itself, and prepaid USDT credits deposited to a vault contract on Polygon.",
     ],
     scope: ["Blockchain RPC access", "Machine payments over HTTP 402 (x402)", "Usage metering and on-chain settlement"],

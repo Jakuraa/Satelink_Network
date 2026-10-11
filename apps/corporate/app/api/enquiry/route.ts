@@ -4,7 +4,7 @@ import { company } from "@/content/company";
 // Business enquiry form → email to the company inbox + auto-reply to the sender,
 // both sent via Resend from the verified jakuraa.com domain. If RESEND_API_KEY
 // is not configured the route answers 503 and the form shows the direct email
-// address instead — it never pretends a message was delivered.
+// address instead - it never pretends a message was delivered.
 
 const TOPICS = ["General", "Partnerships", "Trade & distribution", "Satelink", "Press", "Grievance"] as const;
 const hits = new Map<string, number[]>();
@@ -59,14 +59,14 @@ export async function POST(req: Request) {
       from,
       to,
       reply_to: email,
-      subject: `[Enquiry · ${topic}] ${name}${organisation ? ` — ${organisation}` : ""}`,
-      html: `<p><b>Name:</b> ${esc(name)}<br><b>Email:</b> ${esc(email)}<br><b>Organisation:</b> ${esc(organisation || "—")}<br><b>Topic:</b> ${esc(topic)}</p><p>${esc(message).replace(/\n/g, "<br>")}</p>`,
+      subject: `[Enquiry · ${topic}] ${name}${organisation ? ` - ${organisation}` : ""}`,
+      html: `<p><b>Name:</b> ${esc(name)}<br><b>Email:</b> ${esc(email)}<br><b>Organisation:</b> ${esc(organisation || "-")}<br><b>Topic:</b> ${esc(topic)}</p><p>${esc(message).replace(/\n/g, "<br>")}</p>`,
     });
     await send(key, {
       from,
       to: email,
-      subject: "We received your message — Jakuraa",
-      html: `<p>Hello ${esc(name)},</p><p>Thank you for writing to ${esc(company.legalName)}. We have received your ${esc(topic.toLowerCase())} enquiry and will reply from ${esc(company.email)}.</p><p>— Jakuraa</p>`,
+      subject: "We received your message - Jakuraa",
+      html: `<p>Hello ${esc(name)},</p><p>Thank you for writing to ${esc(company.legalName)}. We have received your ${esc(topic.toLowerCase())} enquiry and will reply from ${esc(company.email)}.</p><p>- Jakuraa</p>`,
     });
   } catch {
     return NextResponse.json({ ok: false, error: "send_failed" }, { status: 502 });

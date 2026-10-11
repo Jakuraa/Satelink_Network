@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 const steps: [string, string][] = [
   ["Request", "An agent or machine calls a Satelink endpoint, for example a blockchain RPC method."],
   ["Price", "If the call is not yet paid for, Satelink answers with HTTP 402 and machine-readable payment terms."],
-  ["Pay", "The caller pays for that request — USDC on Base via x402, or from prepaid USDT credits on Polygon."],
+  ["Pay", "The caller pays for that request - USDC on Base via x402, or from prepaid USDT credits on Polygon."],
   ["Receive", "The request is served and metered. The payment and the usage record reconcile on-chain."],
 ];
 
@@ -25,7 +25,7 @@ export default function TechnologyPage() {
       <PageHero
         eyebrow="Technology"
         title="Satelink: infrastructure for commerce between machines."
-        lede={<p>Software agents increasingly act on their own. Satelink lets them buy what they need — one request at a time — without a sales contract, a monthly plan or a human in the loop.</p>}
+        lede={<p>Software agents increasingly act on their own. Satelink lets them buy what they need - one request at a time - without a sales contract, a monthly plan or a human in the loop.</p>}
       />
       <Container>
         <Illustration kind="network" className="mx-auto w-full max-w-lg text-green" />
