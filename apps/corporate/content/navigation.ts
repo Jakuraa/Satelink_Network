@@ -10,6 +10,7 @@ export type NavItem = {
 };
 
 export const primaryNav: readonly NavItem[] = [
+  { label: 'Products', href: '/products' },
   { label: 'Systems', href: '/businesses' },
   { label: 'History', href: '/history' },
   { label: 'Research', href: '/news' },

@@ -580,7 +580,7 @@ export const mediaRegistry: MediaItem[] = [
     sourceUrl: 'https://photos.app.goo.gl/DjABw5pst3bLAT587',
     localPath: '/media/history/jakuraa-history-rack-compute-kondaas-03.webp',
     title: 'Rack Enclosure & Power Stabilization',
-    caption: 'Custom 4U rack-mount high-airflow fan enclosure backed by industrial Kondaas power stabilization unit.',
+    caption: 'Custom 4U rack-mount high-airflow fan enclosure paired with an industrial Kondaas power stabilization unit.',
     year: '2021',
     alt: 'Server rack compute system with heavy-duty cooling fans and Kondaas power unit',
     context: 'Power stabilization',

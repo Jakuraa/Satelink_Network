@@ -2,6 +2,7 @@ import React from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Container, PageHero } from "@/components/Page";
+import { company } from "@/content/company";
 
 export const metadata: Metadata = {
   title: "Media Kit & Institutional Resources | Jakuraa",
@@ -97,7 +98,7 @@ export default function MediaKitPage() {
                 negotiate, meter, and settle transactions on-chain with cryptographic certainty.
               </p>
               <div className="mt-6 border-t border-stone-1 pt-4 text-xs font-mono text-stone-3">
-                <span>CIN: U72900TZ2019PTC032906</span>
+                <span>CIN: {company.cin}</span>
                 <span className="mx-2">·</span>
                 <span>Incorporated: 2019</span>
               </div>
@@ -311,15 +312,15 @@ export default function MediaKitPage() {
           <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4 font-mono text-xs">
             <div>
               <span className="text-stone-4 block">CORPORATE IDENTITY NUMBER (CIN)</span>
-              <span className="font-semibold text-ink mt-0.5 block">U72900TZ2019PTC032906</span>
+              <span className="font-semibold text-ink mt-0.5 block">{company.cin}</span>
             </div>
             <div>
               <span className="text-stone-4 block">GOODS & SERVICES TAX (GSTIN)</span>
-              <span className="font-semibold text-ink mt-0.5 block">33AADCF9341B1Z9</span>
+              <span className="font-semibold text-ink mt-0.5 block">{company.gstin}</span>
             </div>
             <div>
               <span className="text-stone-4 block">DGFT IMPORT-EXPORT CODE (IEC)</span>
-              <span className="font-semibold text-ink mt-0.5 block">AADCF9341B</span>
+              <span className="font-semibold text-ink mt-0.5 block">{company.iec}</span>
             </div>
             <div>
               <span className="text-stone-4 block">REGISTERED JURISDICTION</span>

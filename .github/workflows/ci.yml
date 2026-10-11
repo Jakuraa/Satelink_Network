@@ -42,6 +42,10 @@ jobs:
         working-directory: apps/web
         run: npm run lint:claims
 
+      - name: Claims lint (jakuraa.com)
+        working-directory: apps/corporate
+        run: npm run lint:claims
+
   test:
     name: Tests
     runs-on: ubuntu-latest

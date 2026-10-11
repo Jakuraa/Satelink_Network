@@ -170,7 +170,7 @@ export const historicalChapters: HistoricalChapter[] = [
         id: 'early-rack-compute-kondaas-03',
         localPath: '/media/history/jakuraa-history-rack-compute-kondaas-03.webp',
         title: 'Rack Enclosure & Power Stabilization',
-        caption: 'Custom 4U rack-mount high-airflow fan enclosure backed by industrial Kondaas power stabilization unit.',
+        caption: 'Custom 4U rack-mount high-airflow fan enclosure paired with an industrial Kondaas power stabilization unit.',
         type: 'image',
         alt: 'Server rack compute system with heavy-duty cooling fans and Kondaas power unit',
         year: '2021',

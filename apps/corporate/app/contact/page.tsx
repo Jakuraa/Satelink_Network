@@ -195,7 +195,7 @@ export default function ContactPage() {
               <div className="pt-3 border-t border-stone-2 font-mono text-xs text-stone-3 space-y-1">
                 <div>CIN: {company.cin}</div>
                 <div>GSTIN: {company.gstin}</div>
-                <div>DGFT IEC: AADCF9341B</div>
+                <div>DGFT IEC: {company.iec}</div>
               </div>
             </div>
 
