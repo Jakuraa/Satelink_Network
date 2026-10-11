@@ -23,6 +23,7 @@ export const ROUTES = Object.freeze([
   ['GET', '/orders'], ['POST', '/orders'], ['GET', '/orders/:orderId'], ['POST', '/orders/:orderId/cancel'], ['GET', '/orders/:orderId/receipt'],
   ['GET', '/positions'], ['GET', '/portfolio/snapshots'],
   ['GET', '/proposals'], ['POST', '/proposals/:proposalId/approve', 'step-up'], ['POST', '/proposals/:proposalId/reject'],
+  ['POST', '/assistant/evaluate'],
   ['POST', '/mcp'],
   ['POST', '/agent/opportunities/evaluate'], ['POST', '/agent/proposals'], ['GET', '/agent/receipts/:receiptId'],
 ].map(([method, path, stepUp]) => Object.freeze({ method, path, stepUp: stepUp === 'step-up' })));
@@ -114,8 +115,10 @@ export function createTradingApiRouter({ env = {}, resolvePrincipal, services, s
   r.get('/portfolio/snapshots', wrap(async (req, res) => ok(res, await S.portfolio.snapshots(P(req), req.query))));
 
   r.get('/proposals', wrap(async (req, res) => ok(res, await S.proposals.list(P(req), req.query))));
-  r.post('/proposals/:proposalId/approve', ...stepUpRoute, wrap(async (req, res) => ok(res, await S.proposals.approve(P(req), req.params.proposalId, req.body, req.idempotencyKey), 201)));
+  r.post('/proposals/:proposalId/approve', ...stepUpRoute, wrap(async (req, res) => ok(res, await S.proposals.approve(P(req), req.params.proposalId, req.body, req.idempotencyKey, req.stepUp?.method), 201)));
   r.post('/proposals/:proposalId/reject', wrap(async (req, res) => ok(res, await S.proposals.reject(P(req), req.params.proposalId, req.body))));
+
+  r.post('/assistant/evaluate', wrap(async (req, res) => ok(res, await S.assistant.evaluate(P(req), req.body, req.idempotencyKey))));
 
   r.use((_req, res) => res.status(404).json({ ok: false, error: { code: 'NOT_FOUND', message: 'not found' } }));
   // Malformed / oversized JSON from express.json(): a 4xx envelope, never an HTML stack page.

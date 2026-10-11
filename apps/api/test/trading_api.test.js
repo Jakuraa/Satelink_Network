@@ -182,7 +182,7 @@ describe('trading api: OpenAPI contract', function () {
     await record('POST', '/proposals/:proposalId/reject', await call(r.app, 'POST', '/proposals/prp_000001/reject'));
     await record('POST', '/mcp', await call(r.app, 'POST', '/mcp', { key: null, body: { jsonrpc: '2.0', id: 1, method: 'ping' } }));
     await record('GET', '/status', await call(r.app, 'GET', '/status'));
-    expect(seen).to.include.members(['GET /strategy-versions/:versionId 404', 'POST /orders 201', 'POST /orders/:orderId/cancel 409', 'GET /orders 501', 'POST /proposals/:proposalId/approve 501']);
+    expect(seen).to.include.members(['GET /strategy-versions/:versionId 404', 'POST /orders 201', 'POST /orders/:orderId/cancel 409', 'GET /orders 200', 'POST /proposals/:proposalId/approve 501']); // GET /orders: 501 → 200 in Phase 6 item 13
   });
 });
 

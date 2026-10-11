@@ -23,6 +23,7 @@ const strOrNull = (v) => (typeof v === 'string' && v.length ? v : null);
  * @param d.receipts                                     Stage 19 TradeReceiptAssembler
  * @param d.proposals                                    optional review queue (B-02) { list, approve, reject }
  * @param d.machine                                      optional machine / agent interface (access/interface.mjs)
+ * @param d.assistant                                    optional human assistant (proposals/assistant.mjs)
  */
 export function createServicePorts(d) {
   const ownStrategy = async (p, strategyId) => { const s = await d.strategyStore.getStrategy(strategyId); must(s && s.principalId === p.principalId); return s; };
@@ -57,7 +58,11 @@ export function createServicePorts(d) {
       revoke: async (p, id, b) => { const m = await d.mandateStore.getMandate(id); must(m && m.principalId === p.principalId); return d.mandateService.revoke({ actor: actorOf(p), mandateId: id, reason: b?.reason }); },
     },
     orders: {
-      list: async () => { throw notImplemented('listing orders'); },
+      list: async (p, q = {}) => {
+        if (typeof d.omsStore?.listOrders !== 'function') throw notImplemented('listing orders');
+        const status = typeof q.status === 'string' && /^[A-Z_]{3,20}$/.test(q.status) ? q.status : null;
+        return d.omsStore.listOrders({ principalId: p.principalId, status, limit: Math.min(Number(q.limit) || 50, 200) });
+      },
       // Manual order intent → the Stage 17 acceptance path (mandate + risk checks). The OMS
       // idempotency key is derived from the HTTP Idempotency-Key, scoped to the principal.
       accept: async (p, b, idempotencyKey) => d.acceptance.accept({
@@ -86,6 +91,11 @@ export function createServicePorts(d) {
       list: async () => { throw notImplemented('the proposal review queue (B-02)'); },
       approve: async () => { throw notImplemented('the proposal review queue (B-02)'); },
       reject: async () => { throw notImplemented('the proposal review queue (B-02)'); },
+    },
+    // Human assistant (Phase 6 item 13): intent → orchestrator → GO / WAIT / REJECT card (+ a pending
+    // proposal when an order was described). It never places an order; approval does, via the queue.
+    assistant: d.assistant ?? {
+      evaluate: async () => { throw notImplemented('the trading assistant'); },
     },
     agent: d.machine ?? {
       evaluate: async () => { throw notImplemented('the machine / agent interface'); },

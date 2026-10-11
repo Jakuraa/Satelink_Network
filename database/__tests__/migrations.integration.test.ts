@@ -153,6 +153,7 @@ describe('M2 — ledger schema migrations', { timeout: 120_000 }, () => {
       '033_trading_decisions.sql',
       '034_trading_memory.sql',
       '035_trading_agent_access.sql',
+      '036_trading_proposals.sql',
     ]);
     expect(result.skipped).toHaveLength(0);
   });
