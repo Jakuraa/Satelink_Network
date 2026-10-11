@@ -23,24 +23,22 @@ const ibmPlexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL("https://satelink.network"),
   title: {
-    default: "Satelink - Derived Trading Intelligence for the Machine Economy",
+    default: "Satelink Trading AI — AI trading operating system for people, AI agents and machines",
     template: "%s | Satelink",
   },
   description:
-    "Derived trading intelligence - funding-rate divergence, open interest shifts, market microstructure - computed from public market data, never raw feeds redistributed. One-time USD credit packs from $0.01/call. Runs on our own pay-per-call Polygon RPC gateway ($0.00003/call).",
+    "Reason, validate, score, authorize, execute, learn. AI proposes; deterministic risk and your signed mandate decide. You keep custody; withdrawals are never enabled. Paper trading in controlled beta. Live execution is not yet available.",
   keywords: [
-    "trading intelligence",
-    "funding rate",
-    "open interest",
-    "market microstructure",
-    "derived analytics API",
-    "DePIN",
-    "RPC gateway",
-    "Polygon RPC",
+    "Satelink Trading AI",
+    "AI trading agents",
+    "AI trading operating system",
+    "algorithmic trading",
+    "risk management",
+    "trading mandates",
+    "MCP",
+    "machine commerce",
+    "x402",
     "pay per call API",
-    "USDT settlement",
-    "machine economy",
-    "HTTP 402",
   ],
   authors: [{ name: "Satelink Network" }],
   robots: "index, follow",
@@ -61,16 +59,16 @@ export const metadata: Metadata = {
     type: "website",
     url: "https://satelink.network",
     siteName: "Satelink Network",
-    title: "Satelink - Derived Trading Intelligence for the Machine Economy",
+    title: "Satelink Trading AI — AI trading operating system for people, AI agents and machines",
     description:
-      "Funding-rate divergence, open interest shifts, and market microstructure - derived from public market data. One-time USD credit packs, no subscription. Built on our own pay-per-call Polygon RPC gateway.",
+      "Reason, validate, score, authorize, execute, learn. AI proposes; deterministic risk and your signed mandate decide. You keep custody; withdrawals are never enabled. Paper trading in controlled beta. Live execution is not yet available.",
     images: ["https://satelink.network/og-image.png"],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Satelink - Derived Trading Intelligence for the Machine Economy",
+    title: "Satelink Trading AI — AI trading operating system for people, AI agents and machines",
     description:
-      "Derived market analytics for machine-commerce agents. One-time USD credit packs from $0.01/call, or pay per call via x402 - no subscription.",
+      "Reason, validate, score, authorize, execute, learn. AI proposes; deterministic risk and your signed mandate decide. You keep custody; withdrawals are never enabled. Paper trading in controlled beta. Live execution is not yet available.",
   },
 };
 
@@ -79,7 +77,7 @@ const ORG_JSON_LD = {
   "@type": "Organization",
   name: "Satelink Network",
   description:
-    "Derived trading intelligence and pay-per-call Polygon RPC, metered per call with on-chain and Dodo Payments settlement.",
+    "Satelink Trading AI: an AI trading operating system for people, AI agents and machines, plus machine-commerce rails (x402 payments, metered Polygon RPC). Operated by Jakuraa Commercial Pvt Ltd.",
   url: "https://satelink.network",
   email: "satelinknetwork@gmail.com",
   foundingDate: "2025",

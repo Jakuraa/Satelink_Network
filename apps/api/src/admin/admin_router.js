@@ -939,6 +939,24 @@ export function createAdminRouter(pool, redis) {
     });
   });
 
+  // OBSERVER — Beta requests (Phase 7 amendment, #511: beta waitlist capture)
+  router.get('/beta-requests', async (req, res) => {
+    try {
+      const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 200, 1), 500);
+      const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
+      const exists = await one(`SELECT to_regclass('public.beta_requests') AS t`);
+      if (!exists.t) {
+        return res.json({ ok: true, data: { requests: [], count: 0, total: 0, limit, offset }, ts: Date.now() });
+      }
+      const rows = await q(
+        `SELECT id, email, name, role, use_case, capital_band, broker, source, created_at
+           FROM beta_requests ORDER BY created_at DESC LIMIT $1 OFFSET $2`,
+        [limit, offset]);
+      const total = num((await one(`SELECT COUNT(*)::int AS c FROM beta_requests`)).c);
+      ok(res, { requests: rows, count: rows.length, total, limit, offset });
+    } catch (e) { fail(res, e); }
+  });
+
   return router;
 }
 

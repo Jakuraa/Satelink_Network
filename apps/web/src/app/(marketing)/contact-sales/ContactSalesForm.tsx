@@ -8,7 +8,10 @@ import { Button } from "@/components/ui/Button";
 
 type State = "idle" | "submitting" | "ok" | "error";
 
-export function ContactSalesForm() {
+/** Phase 7: the "Request beta access" CTA reuses this form (?interest=beta preselects the use case). */
+export const BETA_USE_CASE = "Satelink Trading AI beta";
+
+export function ContactSalesForm({ defaultUseCase = "" }: { defaultUseCase?: string } = {}) {
   const [state, setState] = React.useState<State>("idle");
   const [errorMsg, setErrorMsg] = React.useState("");
 
@@ -62,8 +65,9 @@ export function ContactSalesForm() {
       <Field label="Company" htmlFor="company"><Input id="company" name="company" required maxLength={160} /></Field>
       <Field label="Role" htmlFor="role"><Input id="role" name="role" maxLength={120} /></Field>
       <Field label="Primary use case" htmlFor="useCase">
-        <Select id="useCase" name="useCase" required defaultValue="">
+        <Select id="useCase" name="useCase" required defaultValue={defaultUseCase}>
           <option value="" disabled>Select…</option>
+          <option>{BETA_USE_CASE}</option>
           <option>Machine commerce</option>
           <option>Trading Intelligence</option>
           <option>RPC</option>
@@ -74,6 +78,7 @@ export function ContactSalesForm() {
       <Field label="Expected volume" htmlFor="volume">
         <Select id="volume" name="volume" required defaultValue="">
           <option value="" disabled>Select…</option>
+          <option>Individual / paper trading</option>
           <option>&lt; 100k calls / mo</option>
           <option>100k–1M calls / mo</option>
           <option>1M–10M calls / mo</option>

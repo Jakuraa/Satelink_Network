@@ -50,7 +50,8 @@ export function attachBaseMiddleware(app) {
         '/api/settlement',
         '/api/admin/mal',
         '/os',
-        '/provider.json'
+        '/provider.json',
+        '/beta'
     ];
 
     const corsOptions = {

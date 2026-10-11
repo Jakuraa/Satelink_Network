@@ -8,6 +8,7 @@
         "build": "next build",
         "start": "next start",
         "lint": "echo Skipped",
+        "lint:claims": "node scripts/claims-lint.mjs",
         "test": "vitest",
         "test:run": "vitest run",
         "e2e": "playwright test"

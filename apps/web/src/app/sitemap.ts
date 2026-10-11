@@ -1,7 +1,8 @@
 // Sitemap (§12) — the full IA-v2 public route set, generated from the same
 // data modules the pages use (no drift). Excludes redirected paths
 // (/intelligence, /rpc), noindex pages (customer-stories, /support/search,
-// /styleguide), and the internal consoles (disallowed in robots.ts).
+// /styleguide), the internal consoles (disallowed in robots.ts), and — Phase 7 — the paused
+// node-operator program (/network*) and the builder/distributor/design surfaces (404 in production).
 import type { MetadataRoute } from "next";
 import { DOCS } from "@/lib/docs";
 import { getFallbackCatalog } from "@/lib/intelligence";
@@ -12,6 +13,7 @@ import { POSTS } from "@/lib/resources";
 import { TUTORIALS, USE_CASES } from "@/lib/academy";
 import { nonEmptyCollections, ARTICLES } from "@/lib/support";
 import { LEGAL_ORDER } from "@/lib/legal";
+import { TA_PAGES } from "@/lib/trading-agent/copy";
 
 const BASE = "https://satelink.network";
 
@@ -22,6 +24,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const core = [
     e("/", 1, "weekly"),
+    e("/trading-agent", 0.95, "weekly"),
     e("/product/overview", 0.9, "weekly"),
     e("/pricing", 0.9, "weekly"),
     e("/platform", 0.85, "weekly"),
@@ -42,8 +45,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     e("/contact-sales", 0.7),
     e("/contact", 0.4),
     e("/signup", 0.5),
-    e("/network", 0.6),
-    e("/network/run-a-node", 0.6),
     e("/status", 0.6, "daily"),
     e("/docs", 0.9, "weekly"),
     // Machine-readable endpoints.
@@ -67,12 +68,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const supportCollections = nonEmptyCollections().map((c) => e(`/support/${c.slug}`, 0.6));
   const supportArticles = ARTICLES.map((a) => e(`/support/${a.collection}/${a.slug}`, 0.5));
   // LEGAL_ORDER now includes terms/privacy/refund (P4), so no manual concat.
-  // operator-terms is network-scoped (not in LEGAL_ORDER) but listed for SEO.
-  const legal = LEGAL_ORDER.map((s) => e(`/${s}`, 0.5)).concat([e("/network/operator-terms", 0.4)]);
+  const legal = LEGAL_ORDER.map((s) => e(`/${s}`, 0.5));
+  const tradingAi = TA_PAGES.filter((p) => p.href !== "/trading-agent" && !p.href.endsWith("/login")).map((p) => e(p.href, 0.85, "weekly"));
   const docs = DOCS.map((d) => e(`/docs/${d.slug}`, 0.7, "weekly"));
 
   return [
     ...core,
+    ...tradingAi,
     ...products,
     ...metrics,
     ...platform,

@@ -521,11 +521,10 @@ export const LEGAL: Record<string, LegalDoc> = {
   "operator-terms": {
     slug: "operator-terms",
     title: "Node Operator Terms",
-    version: "1.0",
+    version: "1.1",
     summary: [
       "Additional terms for anyone running a node on the Satelink network.",
-      "Rewards follow the published split (50% node operators / 30% platform / 20% distribution pool).",
-      "Earnings depend on real settled traffic — they are not guaranteed.",
+      "The node operator program is paused. Operator payouts are not active.",
       "You are responsible for your infrastructure, uptime, and legal compliance.",
     ],
     intro:
@@ -539,15 +538,18 @@ export const LEGAL: Record<string, LegalDoc> = {
         "Serve requests honestly and do not tamper with responses or metering.",
         "Keep operator keys secure and report suspected compromise.",
       ] },
-      { heading: "Rewards and settlement", body: [
-        "Where you are eligible for rewards, revenue is aggregated per epoch and settled on-chain per the published economic split (50% node operators / 30% platform / 20% distribution pool). Earnings depend on real settled traffic and are not guaranteed; there is no promise of any particular income.",
+      { heading: "Program status", body: [
+        "The node operator program is paused. Operator payouts are not active. No operator is owed or promised any payment, and none will accrue while the program is paused. If it resumes, these terms will be updated first and the change recorded below.",
       ] },
       { heading: "Suspension and termination", body: [
         "We may suspend or remove a node that violates these terms, degrades the network, or acts unlawfully.",
       ] },
       { heading: "Contact", body: [`Questions: ${LEGAL_CONTACT}.`] },
     ],
-    versionHistory: V1("Node-operator obligations moved out of the main Terms into a dedicated page."),
+    versionHistory: [
+      { version: "1.0", date: LEGAL_UPDATED, note: "Node-operator obligations moved out of the main Terms into a dedicated page." },
+      { version: "1.1", date: "2026-10-11", note: "Operator program paused; payouts are not active. Reward and split language removed." },
+    ],
   },
 
   "responsible-disclosure": {

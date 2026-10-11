@@ -42,7 +42,7 @@ export const DOCS: DocEntry[] = [
   { slug: "revenue-model", title: "Revenue Model", description: "The 50/30/20 revenue split, epoch aggregation, and on-chain settlement lifecycle.", category: "Billing & Economics" },
 
   // Network Participants
-  { slug: "node-operators", title: "Node Operators", description: "Register a node, serve traffic, and earn 50% of routed revenue in USDT. No staking, no slashing.", category: "Network Participants" },
+  { slug: "node-operators", title: "Node Operators", description: "The node operator program is paused. Operator payouts are not active.", category: "Network Participants" },
   { slug: "developer-guide", title: "Developer Guide", description: "Integrating Satelink into applications: keys, headers, chains, failover, and usage monitoring.", category: "Network Participants" },
   { slug: "admin-guide", title: "Admin Guide", description: "The operator command center: observer endpoints, settlement controls, and demand radar.", category: "Network Participants" },
 
