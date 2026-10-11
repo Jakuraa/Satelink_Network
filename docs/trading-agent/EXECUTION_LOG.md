@@ -115,3 +115,42 @@ Vercel build quota exhausted (≈26 integration merges × 3 projects of preview 
 - `docs/trading-agent/ARCHITECTURE.md` at integration 443ad62f. EXISTS 9 / PARTIAL 10 / MISSING 15 / WRONG 1 / DUPLICATE 2.
 - Architecture test (27 questions, reconstructed from the locked definition — original list not in repo): YES 8 / PARTIAL 7 / NO 11 / Q18 NO (desired).
 - Spot checks: `grep -c trading_agent apps/api/app_factory.mjs apps/api/server.js` → 0/0; 501 ports `api/ports.mjs:59,85-87`; `/v1/intelligence` mounted `app_factory.mjs:419` (WRONG vs definition).
+
+## Phase 6 — Build the 14 missing core items (2026-10-07 08:42 UTC → 2026-10-11 09:00 UTC)
+Each item: one PR into `trading-agent/integration`, flag-gated OFF, unit + local-Postgres integration tests, mutation checks, stage doc with "## Blocker impact", no new failures against the previous item's API baseline (`comm -13` empty). Nothing mounted; migrations 031–037 applied only to local / ephemeral DBs; main untouched (founder hold).
+
+| # | Item | PR → merge | Stage doc |
+|---|---|---|---|
+| 1 | Stage 20 shadow revenue engine (option 2: sim book, real book needs verified evidence) | #495 → a946b36a | 20-shadow-revenue.md |
+| 2 | Stage 28 security (option 1, no cloud KMS): migration 031 credential roles, CI secret + licence scans | #496 → d4be2e60 | 28-security.md |
+| 3 | Anthropic provider + tiered router (deterministic/fast/standard/deep) + per-call cost metering (032) | #497 → 4e9b48ea | 36-ai-provider-router.md |
+| 4 | Deterministic engines: features (+VWAP), regime, liquidity, data confidence | #498 → 14591956 | 37-deterministic-engines.md |
+| 5 | Validation: walk-forward + stress / Monte Carlo | #499 → 140a8922 | 38-validation-engines.md |
+| 6 | Scorecard + hard gates → GO/WAIT/REJECT (033) | #500 → 440a0dea | 39-scorecard.md |
+| 7 | Portfolio-fit + correlation, concentration gate | #501 → 93fae557 | 40-portfolio-fit.md |
+| 8 | AI orchestrator + specialized agents | #502 → 00d77f63 | 41-orchestrator.md |
+| 9 | Trading memory + feedback / calibration (034) | #503 → 2082d7a1 | 42-memory-feedback.md |
+| 10 | Automation bot runner (separate worker) | #504 → 04b88c81 | 43-bot-runner.md |
+| 11 | Machine + AI-agent interface: keys, scopes, budgets, metering (035) | #505 → 149bc99e | 44-machine-interface.md |
+| 12 | Mode B for agent/machine proposals (risk-checks/1.1, `MANDATE_MODE_B`) | #506 → cab65000 | 45-mode-b.md |
+| 13 | Proposal review queue, order list, "Talk to Satelink Trading AI" (036) | #507 → 5badb8a1 | 46-review-queue-assistant.md |
+| 14 | Full-loop paper E2E, `mode_b_executor` bot, trace coverage (037) | #508 → bea3a380 | 47-full-loop-e2e.md |
+
+**Final evidence (item 14, local Postgres 16):**
+- full-loop E2E: 4/4 passing. Three legs (human / machine / Mode B), each with one trace id across 13 tables.
+- trading integration suites: 79 passing. The Docker-only migrations suite runs in CI.
+- `apps/api`: 1122 passing / 22 failing / 98 pending; the failing set is unchanged since item 13.
+- Architecture test re-run (ARCHITECTURE.md §5b): YES 8 → **23**, PARTIAL 2 (Q6 live shares OMS not simulator; Q25 order receipt lacks the scorecard decision), NO 1 (Q27 Trading Intelligence still a billed product — founder decision).
+- Real defects found by the full loop and fixed:
+  - the Mode B risk rule read `termsMode` instead of `modeCode`;
+  - proposal-built intents carried `timeInForce`, which the risk schema rejects, so every approval was refused;
+  - machine Mode B proposals could not carry the bound strategy version.
+
+**Founder items raised in Phase 6:**
+- draft machine pricing (`access/pricing.mjs`) and Groq pricing;
+- Mode B context loader for production (proposer + scorecard lookups; the E2E shows the shape);
+- KMS / egress provider (Stage 28 option 1 has no cloud KMS);
+- the bots worker is not deployed;
+- `/v1/intelligence` unmount (Q27).
+
+PHASE 6 COMPLETE.
