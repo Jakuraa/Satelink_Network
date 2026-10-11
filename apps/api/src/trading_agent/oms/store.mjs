@@ -54,6 +54,11 @@ export class InMemoryOmsStore {
   async listForReconcile({ statuses, limit = 100 }) {
     return structuredClone([...this.state.orders.values()].filter((o) => statuses.includes(o.status)).sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1)).slice(0, limit));
   }
+  /** A principal's orders, newest first (Phase 6 item 13 — replaces the Stage 24 501). */
+  async listOrders({ principalId, status = null, limit = 50 }) {
+    return structuredClone([...this.state.orders.values()].filter((o) => o.principalId === principalId && (!status || o.status === status))
+      .sort((a, b) => (b.createdAt - a.createdAt) || (a.id < b.id ? 1 : -1)).slice(0, limit));
+  }
 }
 
 const ORDER_COLS = {
@@ -143,6 +148,13 @@ export class PgOmsStore {
   async failOutbox(id, error) { await this.#q.query(`UPDATE trading_outbox SET status = 'failed', last_error = $2 WHERE id = $1 AND status = 'pending'`, [id, String(error).slice(0, 500)]); }
   async listForReconcile({ statuses, limit = 100 }) {
     const { rows } = await this.#q.query(`SELECT * FROM orders WHERE status = ANY($1) ORDER BY created_at, id LIMIT $2`, [statuses, limit]);
+    return rows.map(fromRow);
+  }
+  /** A principal's orders, newest first (Phase 6 item 13 — replaces the Stage 24 501). */
+  async listOrders({ principalId, status = null, limit = 50 }) {
+    const { rows } = await this.#q.query(
+      `SELECT * FROM orders WHERE principal_id = $1 AND ($2::text IS NULL OR status = $2) ORDER BY created_at DESC, id DESC LIMIT $3`,
+      [principalId, status, Math.min(Math.max(1, Number(limit) || 50), 200)]);
     return rows.map(fromRow);
   }
 }
