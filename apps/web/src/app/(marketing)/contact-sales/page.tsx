@@ -5,7 +5,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { buildMetadata } from "@satelink/seo";
 import { SectionHeader } from "@/components/ui/SectionHeader";
-import { ContactSalesForm, BETA_USE_CASE } from "./ContactSalesForm";
+import { ContactSalesForm } from "./ContactSalesForm";
+import { BetaRequestForm } from "./BetaRequestForm";
 
 export const metadata: Metadata = buildMetadata({
   title: "Contact sales",
@@ -31,7 +32,7 @@ export default async function ContactSalesPage({ searchParams }: { searchParams?
       </section>
       <section className="mx-auto max-w-[900px] px-4 py-12 sm:px-6">
         <div className="rounded-[var(--sl-radius-lg)] border border-sl-border bg-sl-surface p-6 sm:p-8">
-          <ContactSalesForm defaultUseCase={beta ? BETA_USE_CASE : ""} />
+          {beta ? <BetaRequestForm /> : <ContactSalesForm />}
         </div>
       </section>
     </>
