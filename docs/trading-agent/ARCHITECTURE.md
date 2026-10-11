@@ -182,9 +182,9 @@ Same 27 questions, against `trading-agent/integration` + `trading-agent/full-loo
 | 24 | LLM can never change risk/mandates/billing/ledger/revenue? | YES | **YES** | unchanged; Mode B executor is a deterministic bot, not an LLM tool |
 | 25 | Every decision explainable with an audit "why" receipt? | PARTIAL | **PARTIAL** | decisions, proposals, memory and usage now carry the trace id (migration 037) and the decision is a persisted receipt (`GET /agent/receipts/:id`); `TradeReceiptAssembler` does **not yet** include the scorecard decision in the order receipt |
 | 26 | Live money locked behind flags + REAL MONEY GATE 1? | YES | **YES** | unchanged; every full-loop order is `mode: paper` |
-| 27 | Trading Intelligence internal-only? | NO | **NO** | `/v1/intelligence` still mounted and billed (`app_factory.mjs:419`); needs a founder decision (Phase 7 repositions the copy only) |
+| 27 | Trading Intelligence internal-only? | NO | **PARTIAL (2026-10-11 founder decision, STEP 2)** | Delisted from the four surfaces the founder named: public pricing copy + nav (PR #511, site/phase7-web), `/.well-known/x402` catalog and `GET /v1/pricing`'s `intelligence` block, and the console nav (PR chore/delist-trading-intelligence → main). `/v1/intelligence/*` routes still mounted and billed from `api_credits` — intentional, "keep engine + existing keys working." **Not YES**: `apps/web/src/app/(marketing)/products/trading-intelligence/page.tsx` is still live and is "the ONLY Dodo checkout surface" — a `Start with $…` button posts to `/checkout?plan=starter`, a standalone sale path independent of the delisted nav/catalog entries. Taking that page/checkout down was outside STEP 2's stated scope (pricing/nav/`.well-known`/console-nav only) — founder decision needed before this can read YES. |
 
-Score now: **YES 23 · PARTIAL 2 (Q6, Q25) · NO 1 (Q27)** · plus Q18 = NO, the desired answer. Before: YES 8 · PARTIAL 7 · NO 11.
+Score now: **YES 23 · PARTIAL 3 (Q6, Q25, Q27) · NO 0** · plus Q18 = NO, the desired answer. Before: YES 8 · PARTIAL 7 · NO 11.
 
 Still true for every YES: **unmounted** (B-03/B-06/B-10 unresolved, enforced by `trading_blocker_register.test.js`), migrations applied only to local/ephemeral databases, flags OFF, paper only.
 
