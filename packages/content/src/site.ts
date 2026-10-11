@@ -22,7 +22,7 @@ export type SiteKey = keyof typeof SITES;
 // One canonical explanation per concept (§3). Everywhere else links here.
 export const CANONICAL_URL = {
   machineCommerce: "/products/machine-commerce",
-  tradingIntelligence: "/products/trading-intelligence",
+  tradingIntelligence: "/trading-agent/product", // standalone TI sale page removed (Q27); /v1/intelligence still serves
   x402: "/products/x402",
   rpc: "/products/rpc",
   metering: "/products/metering",
