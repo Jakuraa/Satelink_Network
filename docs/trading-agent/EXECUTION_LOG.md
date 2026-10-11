@@ -154,3 +154,42 @@ Each item: one PR into `trading-agent/integration`, flag-gated OFF, unit + local
 - `/v1/intelligence` unmount (Q27).
 
 PHASE 6 COMPLETE.
+
+## Phase 7 — Websites (2026-10-11; all PRs HELD — merges to `main` deploy)
+- **Found:** jakuraa.com production (`dpl_C2kiHaHp2vEivZt598U4qxSeNxCL`, 04:45 IST) was a Vercel **CLI** deploy of two local, unpushed Antigravity commits (`197e4f97`, `83782288`) on a stale local `main` (fork `0547420c`, 39 behind origin). GitHub `main` does not contain the live site.
+- **#510** reconciles that source into git on top of `origin/main`. Corporate is byte-identical to the deployed source. Internal planning docs are excluded (personal emails, DNS zone ids). Lockfile fix: `gsap` was missing, so `npm ci` failed. All 13 CI checks + 3 Vercel previews pass.
+- **#511** satelink.network. Changes:
+  - positioning, verbatim status line, beta CTA via `/contact-sales?interest=beta` (leads are logged only);
+  - Stage 26 pages public;
+  - C1–C6 replaced with the paused notice;
+  - nav: Network/Run-a-node out; RPC/x402/MCP under Developers; footer 404 links fixed;
+  - builder/distributor/design/styleguide 404 in production;
+  - claims lint strict + public tier as a failing CI step;
+  - metadata without DePIN.
+
+  Evidence:
+  - lint: strict 16/0, public 212/0;
+  - vitest 251/251;
+  - tsc 66 → 66 (0 new);
+  - build ✅;
+  - preview verified by curl.
+- **#512** jakuraa.com. Changes:
+  - Satelink Trading AI flagship; contradicting claims removed;
+  - statutory IDs from `content/company.ts`. **CIN/GSTIN mismatch between the live hero and company.ts — founder to confirm**;
+  - "early 2019" → 4 Dec 2019;
+  - `/products`;
+  - claims lint as a CI step, mutation-checked.
+
+  Evidence: lint 54/0; build ✅; 39/39 link targets 200.
+- Screenshots (desktop + 390px) in `docs/trading-agent/evidence/site/` on #512. The web shots are from the Vercel preview; corporate shots are from a local production build, because the preview is behind deployment protection.
+- Production untouched: health 200 / 200 / 307 / 200 before and after; jakuraa.com still on the Antigravity CLI deploy.
+
+## Phase 8 — GitHub repositioning (2026-10-11)
+- `gh repo edit`: description = the order's text; homepage = https://satelink.network.
+- Topics: removed `depin`, `rpc`, `node-network`, `decentralized-infrastructure`; added `trading`, `ai-agents`, `algorithmic-trading`, `mcp`, `risk-management`, `trading-bot`.
+- README rewrite: **#513** (HELD). Legacy RPC is under "Legacy / internal"; the licence section is unchanged (B-11).
+- Org profile repo `Satelink-Protocol/.github` did not exist. **Creating it was denied by the session's permission classifier** and is left as a founder action (checklist #14).
+
+## Phase 9 — Go-live handoff (2026-10-11)
+- `docs/trading-agent/GO_LIVE_FOUNDER_CHECKLIST.md`: 14 ordered founder actions, Claude Code follow-ups, per-broker / per-interface status.
+- `BLOCKERS.md` B-05 OPEN → PARTIAL (copy fixed in held #511; not deployed). Register test: 7 passing.
