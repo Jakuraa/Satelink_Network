@@ -1,6 +1,8 @@
 # Satelink Trading AI — canonical architecture map
 
 Verified 2026-10-07 against `trading-agent/integration` @ `443ad62f` (read-only: `git grep`, file reads, test counts).
+> **Re-run 2026-10-11 after Phase 6 (items 1–14): see §5b.** Sections 2–5 below are the 2026-10-07 baseline, kept unchanged as the "before" picture.
+
 Status vocabulary: **EXISTS** (code + tests present) · **PARTIAL** (some of it exists, or it exists but nothing runs it) · **MISSING** · **WRONG** (contradicts the locked definition) · **DUPLICATE**.
 
 > Everything that EXISTS is **unwired**: `mountTradingRoutes` is never called from `apps/api/app_factory.mjs` or `apps/api/server.js` (0 matches for `trading_agent`), and this is enforced by `apps/api/test/trading_blocker_register.test.js` while B-03, B-06 or B-10 is unresolved. Nothing in production code schedules a trading job.
@@ -147,6 +149,44 @@ flowchart TD
 | 27 | Is Trading Intelligence internal-only (never a standalone product)? | **NO** | `/v1/intelligence` mounted and billed (`app_factory.mjs:419`) — **WRONG** |
 
 Score: YES 8 · PARTIAL 7 · NO 11 · plus Q18 = NO, the desired answer.
+
+## 5b. Architecture test — re-run after Phase 6 (2026-10-11)
+
+Same 27 questions, against `trading-agent/integration` + `trading-agent/full-loop-e2e` (item 14). The proof for the chain is `database/__tests__/trading-full-loop.integration.test.ts`: on real Postgres (migrations 001–037), three legs (human assistant, machine API key, Mode B executor) each run intent → orchestrator + agents → engines → scorecard → proposal → (human step-up approval | Mode B rule) → risk (20 checks) → mandate → OMS → paper venue → fills → portfolio → memory → post-trade review. Each leg runs under **one trace id**, asserted across 13 tables. Everything is still **unmounted** and flag-gated OFF; nothing here is live.
+
+| # | Question | Before | Now | Evidence |
+|---|---|---|---|---|
+| 1 | One AI orchestration backbone routing tasks to agents? | NO | **YES** | `orchestrator/` `Orchestrator.run` (stage 41); `trading_orchestrator.test.js`; full-loop legs A–C |
+| 2 | Specialized agents exist? | NO | **YES** | `orchestrator/agents.mjs`: Market, Regime-interpreter, Risk-explainer, Portfolio, Review (stage 41); a failing agent never changes the deterministic decision |
+| 3 | Agents use only read/propose tools? | YES | **YES** | unchanged; `FORBIDDEN_TOOL_PATTERNS`; machine/MCP tools add only `evaluate_opportunity`, `propose_strategy`, `get_receipt` (stage 44) |
+| 4 | Deterministic engines are separate pure functions? | PARTIAL | **YES** | `engines/` features (incl. VWAP), regime, liquidity, data-confidence (stage 37); `trading_engines.test.js` |
+| 5 | Strategy DSL + validation + deterministic evaluator? | YES | **YES** | unchanged |
+| 6 | Backtest, paper and live share one engine? | PARTIAL | **PARTIAL** | backtest + paper share `SimulationEngine`; live goes signal → proposal → OMS, not the simulator. No live venue exists to compare against (LIVE_TRADING locked) |
+| 7 | Walk-forward and stress/Monte Carlo? | NO | **YES** | `validation/` (stage 38); `trading_validation.test.js` |
+| 8 | Scorecard → GO/WAIT/REJECT with a separate confidence? | NO | **YES** | `decision/` + migration 033 (stage 39); `trading_scorecard.test.js` |
+| 9 | A failed hard gate always overrides a high score? | NO | **YES** | `decision/gates.mjs`; DB CHECK `decision <> 'REJECT' OR cardinality(failed_gates) > 0` and the converse (033); mutation-tested (stage 39) |
+| 10 | Deterministic risk engine with hard caps + kill switches? | YES | **YES** | 20 checks, now `risk-checks/1.1` (Mode B rule inside check 7) |
+| 11 | Portfolio context (exposure, concentration, correlation) checked before execution? | PARTIAL | **YES** | `portfolio/fit.mjs` + concentration hard gate (stage 40) |
+| 12 | Mandates human-signed (TOTP) before any order? | YES | **YES** | unchanged; full-loop signs both mandates with step-up (replay of a used code refused) |
+| 13 | Agent/machine proposals execute under a mandate without per-order clicks (Mode B)? | NO | **YES — paper, flag OFF** | stage 45 + item 14: `mode_b_executor` bot (flag `MANDATE_MODE_B`, default OFF, kill switch honoured) → `ProposalService.executeModeB` → risk Mode B rule (Mode B mandate, EXECUTE key bound to it, current GO for the same instrument/side, bound strategy version, LIVE_SMALL caps). Full-loop leg C: flag off → `skipped_flag`; on → filled paper order |
+| 14 | OMS with explicit state machine + reconciliation? | PARTIAL | **YES (library + bots)** | dispatcher / reconciler / fill consumer are scheduled by `workers/trading-bots` (stage 43); worker not deployed |
+| 15 | Every broker reached only through an adapter? | YES | **YES** | unchanged |
+| 16 | Automation bots run the operational loops? | NO | **YES — not deployed** | `bots/registry.mjs` 10 scheduled + 2 event bots; separate worker; acting bots flag- and kill-switch-gated |
+| 17 | Trading memory with feedback/calibration? | NO | **YES** | `memory/` + migration 034 (stage 42); calibration produces a NEW pending config version, never edits the live one |
+| 18 | Can a strategy change itself while live? | NO (correct) | **NO (correct), now tested** | `trading_memory.test.js`: a revision proposal is a new DRAFT version; the live version is unchanged |
+| 19 | Machine API (`evaluate_opportunity`, proposals, receipts)? | PARTIAL | **YES — unmounted** | `access/interface.mjs` + REST `/agent/*` + MCP tools (stage 44); full-loop leg B |
+| 20 | Agent/machine scopes, budgets, rate limits? | NO | **YES** | `access/` keys (READ / PROPOSE / EXECUTE_UNDER_MANDATE), call + USD budgets, per-minute limit, migration 035 |
+| 21 | Usage metered into a revenue engine? | NO | **YES — simulated book only** | guard meters each billable call → `ShadowRevenueEngine` `sim` book; `real` book stays empty (leg B asserts both). Machine pricing is a DRAFT (founder decision) |
+| 22 | All three clients use the same core? | PARTIAL | **YES** | human assistant, machine key and Mode B all call the same orchestrator, scorecard, proposal service, acceptance and risk (legs A–C) |
+| 23 | LLM never sees broker credentials? | YES | **YES** | unchanged; stage 28 security scans in CI |
+| 24 | LLM can never change risk/mandates/billing/ledger/revenue? | YES | **YES** | unchanged; Mode B executor is a deterministic bot, not an LLM tool |
+| 25 | Every decision explainable with an audit "why" receipt? | PARTIAL | **PARTIAL** | decisions, proposals, memory and usage now carry the trace id (migration 037) and the decision is a persisted receipt (`GET /agent/receipts/:id`); `TradeReceiptAssembler` does **not yet** include the scorecard decision in the order receipt |
+| 26 | Live money locked behind flags + REAL MONEY GATE 1? | YES | **YES** | unchanged; every full-loop order is `mode: paper` |
+| 27 | Trading Intelligence internal-only? | NO | **NO** | `/v1/intelligence` still mounted and billed (`app_factory.mjs:419`); needs a founder decision (Phase 7 repositions the copy only) |
+
+Score now: **YES 23 · PARTIAL 2 (Q6, Q25) · NO 1 (Q27)** · plus Q18 = NO, the desired answer. Before: YES 8 · PARTIAL 7 · NO 11.
+
+Still true for every YES: **unmounted** (B-03/B-06/B-10 unresolved, enforced by `trading_blocker_register.test.js`), migrations applied only to local/ephemeral databases, flags OFF, paper only.
 
 ## 6. What Phase 6 builds (in order)
 

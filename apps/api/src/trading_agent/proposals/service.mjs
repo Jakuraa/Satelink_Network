@@ -35,7 +35,7 @@ export class ProposalService {
     if (kind === 'order') {
       if (!src.mandateId && !raw.mandateId) throw new ApiError(400, 'INVALID', 'order proposals are bound to a mandate');
       if (!['buy', 'sell'].includes(src.side) || typeof src.quantity !== 'string' || typeof src.instrument !== 'string') throw new ApiError(400, 'INVALID', 'instrument, side and quantity required');
-      payload = { instrument: src.instrument, side: src.side, type: src.type ?? (src.limitPrice ? 'limit' : 'market'), quantity: src.quantity, limitPrice: src.limitPrice ?? null, timeInForce: src.timeInForce ?? 'gtc' };
+      payload = { instrument: src.instrument, side: src.side, type: src.type ?? (src.limitPrice ? 'limit' : 'market'), quantity: src.quantity, limitPrice: src.limitPrice ?? null, timeInForce: src.timeInForce ?? 'gtc', ...(src.strategyVersionId ? { strategyVersionId: src.strategyVersionId } : {}) };
     } else payload = { ...src };
     const now = this.#clock();
     const p = {
@@ -50,6 +50,9 @@ export class ProposalService {
     await this.#store.appendEvent({ proposalId: p.id, action: 'created', actorId: p.proposedBy, at: p.createdAt });
     return Object.freeze({ proposalId: p.id, status: 'pending_review' });
   }
+
+  /** Candidates for the mode_b_executor bot. */
+  async listModeBCandidates(q) { return this.#store.listModeBCandidates(q); }
 
   async list(principal, query = {}) {
     const status = ['pending_review', 'approved', 'rejected', 'expired'].includes(query.status) ? query.status : null;
@@ -89,7 +92,7 @@ export class ProposalService {
         ...(p.proposedByKind === 'agent' || p.proposedByKind === 'machine' ? { proposedBy: /^prn_/.test(p.proposedBy) ? p.proposedBy : undefined } : {}),
         ...(p.decisionId ? { decisionId: p.decisionId } : {}),
         brokerAccountId: ctx.brokerAccountId, mandateId: p.mandateId, mode: ctx.mode, venue: ctx.venue,
-        instrument: p.payload.instrument, side: p.payload.side, type: p.payload.type, timeInForce: p.payload.timeInForce, quantity: p.payload.quantity,
+        instrument: p.payload.instrument, side: p.payload.side, type: p.payload.type, quantity: p.payload.quantity, // no timeInForce: not part of the risk-checked intent schema
         ...(p.payload.limitPrice ? { limitPrice: p.payload.limitPrice } : {}),
       };
       for (const k of Object.keys(intent)) if (intent[k] === undefined) delete intent[k];
@@ -117,6 +120,38 @@ export class ProposalService {
     }
     await this.#close(p, 'approved', 'approved', principal.principalId, stepUpMethod, null, { acknowledged: p.kind });
     return Object.freeze({ proposalId: p.id, status: 'approved' });
+  }
+
+  /**
+   * Mode B (Phase 6 items 12 + 14): submit an agent / machine candidate WITHOUT a per-order human
+   * click. This only builds the intent; the risk engine's Mode B rule decides (human-signed Mode B
+   * mandate, EXECUTE key bound to it, current scorecard GO, LIVE_SMALL caps, paper unless LIVE_TRADING).
+   * Run only by the acting mode_b_executor bot (flag MANDATE_MODE_B + global kill switch apply there).
+   */
+  async executeModeB(id) {
+    const p = await this.#store.get(id);
+    if (!p || p.status !== 'pending_review' || p.executionPath !== 'mode_b_candidate' || p.kind !== 'order' || !['agent', 'machine'].includes(p.proposedByKind)) {
+      return Object.freeze({ executed: false, reason: 'NOT_A_CANDIDATE' });
+    }
+    if (p.expiresAt <= this.#clock().toISOString()) {
+      await this.#close(p, 'expired', 'expired', 'mode_b_executor', null, null, { reason: 'expired' });
+      return Object.freeze({ executed: false, reason: 'EXPIRED' });
+    }
+    const ctx = await this.#deps.orderContext(p.mandateId, p.principalId);
+    const intent = {
+      idempotencyKey: `prp_${p.id}`.slice(0, 128), principalId: p.principalId, origin: 'agent_proposal', proposedBy: p.proposedBy,
+      ...(p.decisionId ? { decisionId: p.decisionId } : {}), ...(p.payload.strategyVersionId ? { strategyVersionId: p.payload.strategyVersionId } : {}),
+      brokerAccountId: ctx.brokerAccountId, mandateId: p.mandateId, mode: ctx.mode, venue: ctx.venue,
+      instrument: p.payload.instrument, side: p.payload.side, type: p.payload.type, quantity: p.payload.quantity, // no timeInForce: not part of the risk-checked intent schema
+      ...(p.payload.limitPrice ? { limitPrice: p.payload.limitPrice } : {}),
+    };
+    const out = await this.#deps.acceptance.accept(intent);
+    if (out?.accepted === false) {
+      await this.#close(p, 'rejected', 'execution_refused', 'mode_b_executor', null, null, { reason: out.reason, detail: String(out.detail ?? '').slice(0, 300), path: 'mode_b' });
+      return Object.freeze({ executed: false, reason: out.reason });
+    }
+    await this.#close(p, 'approved', 'mode_b_executed', 'mode_b_executor', null, out.orderId, { orderId: out.orderId, authorization: `mandate:${p.mandateId}`, decisionId: p.decisionId });
+    return Object.freeze({ executed: true, orderId: out.orderId });
   }
 
   async reject(principal, id, body = {}) {

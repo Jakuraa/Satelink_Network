@@ -18,6 +18,8 @@ export const BOTS = Object.freeze([
     run: (d) => d.brokerHealth.runOnce() },
   { id: 'oms_dispatcher', kind: 'scheduled', intervalMs: 2_000, flag: null, acts: true, requires: ['dispatcher'],
     run: (d) => d.dispatcher.runOnce() },
+  { id: 'mode_b_executor', kind: 'scheduled', intervalMs: 5_000, flag: 'MANDATE_MODE_B', acts: true, requires: ['proposals'],
+    run: async (d) => { const out = []; for (const p of await d.proposals.listModeBCandidates({ limit: 20 })) out.push(await d.proposals.executeModeB(p.id)); return out; } },
   { id: 'oms_reconciler', kind: 'scheduled', intervalMs: 15_000, flag: null, acts: false, requires: ['omsReconciler'],
     run: (d) => d.omsReconciler.runOnce() },
   { id: 'fill_consumer', kind: 'scheduled', intervalMs: 5_000, flag: null, acts: false, requires: ['fillConsumer'],

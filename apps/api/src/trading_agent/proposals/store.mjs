@@ -15,6 +15,11 @@ export class InMemoryProposalStore {
     return true;
   }
   async appendEvent(e) { this.events.push(structuredClone(e)); }
+  /** Pending Mode B candidates across principals, oldest first (for the mode_b_executor bot). */
+  async listModeBCandidates({ limit = 20 } = {}) {
+    return structuredClone([...this.rows.values()].filter((p) => p.status === 'pending_review' && p.executionPath === 'mode_b_candidate' && p.kind === 'order')
+      .sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1)).slice(0, limit));
+  }
 }
 
 const fromRow = (r) => ({
@@ -42,6 +47,12 @@ export class PgProposalStore {
   async decide(id, { status, decidedAt, resultRef = null }) {
     const r = await this.#pool.query(`UPDATE trading_proposals SET status = $2, decided_at = $3, result_ref = $4 WHERE id = $1 AND status = 'pending_review'`, [id, status, decidedAt, resultRef]);
     return r.rowCount === 1;
+  }
+  async listModeBCandidates({ limit = 20 } = {}) {
+    const { rows } = await this.#pool.query(
+      `SELECT * FROM trading_proposals WHERE status = 'pending_review' AND execution_path = 'mode_b_candidate' AND kind = 'order' ORDER BY created_at, id LIMIT $1`,
+      [Math.min(Math.max(1, Number(limit) || 20), 100)]);
+    return rows.map(fromRow);
   }
   async appendEvent(e) {
     await this.#pool.query(`INSERT INTO trading_proposal_events (proposal_id, action, actor_id, step_up_method, detail, at) VALUES ($1,$2,$3,$4,$5,$6)`,

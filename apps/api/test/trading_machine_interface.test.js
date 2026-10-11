@@ -151,6 +151,10 @@ describe('trading: machine + AI-agent interface (Phase 6 item 11)', function () 
       expect([wrong.status, wrong.body.error.code]).to.deep.equal([403, 'MANDATE_MISMATCH']);
       const ok = await post(r.app, '/agent/proposals', k.apiKey, { mandateId: 'mdt_alice_1', instrument: 'BTC-USDT', side: 'buy', quantity: '0.01' });
       expect(ok.body.data.executionPath).to.equal('mode_b_candidate');
+      const bound = await post(r.app, '/agent/proposals', k.apiKey, { mandateId: 'mdt_alice_1', instrument: 'BTC-USDT', side: 'buy', quantity: '0.01', strategyVersionId: 'stv_000123' });
+      expect(bound.status).to.equal(201);
+      expect(r.proposals.at(-1).strategyVersionId).to.equal('stv_000123'); // Mode B binds the mandate's strategy version
+      expect((await post(r.app, '/agent/proposals', k.apiKey, { mandateId: 'mdt_alice_1', instrument: 'BTC-USDT', side: 'buy', quantity: '0.01', strategyVersionId: 'bad id' })).status).to.equal(400);
       expect((await post(r.app, '/agent/proposals', k.apiKey, { instrument: 'BTC-USDT', side: 'buy', quantity: '0.01' })).status).to.equal(400); // mandate required
     });
   });
