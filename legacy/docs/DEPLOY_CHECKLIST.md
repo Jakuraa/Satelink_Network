@@ -39,15 +39,15 @@ Last updated: 2026-05-11
 
 ## Deploy Sequence
 
-### Step 1: Push to develop branch
+### Step 1: Merge to main
 ```bash
 git add -A
 git commit -m "fix: AuthProvider in root layout, Suspense in login page"
-git push origin develop
+git push origin main
 ```
 
 ### Step 2: Verify Railway deploy
-Railway auto-deploys from `develop`. Wait 2-3 minutes, then:
+Railway auto-deploys from `main` (the single source of truth — no `develop` branch exists). Wait 2-3 minutes, then:
 ```bash
 curl -s https://rpc.satelink.network/health
 # Expected: {"status":"ok"}
@@ -57,7 +57,7 @@ curl -I https://rpc.satelink.network/api/epochs 2>&1 | grep access-control
 ```
 
 ### Step 3: Verify Vercel deploy
-Vercel auto-deploys from `develop` or manual deploy:
+Vercel auto-deploys from `main` or manual deploy:
 ```bash
 cd apps/web
 vercel --prod

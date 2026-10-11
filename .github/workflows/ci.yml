@@ -127,7 +127,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: [check, test]
-    if: github.ref == 'refs/heads/develop' || github.base_ref == 'main'
+    # No `develop` branch exists — the old `github.ref == 'refs/heads/develop'`
+    # half of this condition never fires; this job runs on PRs targeting main.
+    if: github.base_ref == 'main'
 
     steps:
       - uses: actions/checkout@v7
