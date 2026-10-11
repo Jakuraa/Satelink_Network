@@ -78,7 +78,7 @@ export default function HistoryPage() {
 
               <div className="space-y-4 font-sans text-sm sm:text-base leading-relaxed text-stone-4">
                 <p>
-                  Pradeep Jakuraa established the firm in Coimbatore in early 2019. Over seven
+                  Pradeep Jakuraa incorporated the firm in Coimbatore on 4 December 2019. Over seven
                   years, rather than restricting the company to software consulting or speculative
                   technology, he chose to operate directly across physical industries: managing
                   heavy machinery distribution at Falcor Power Tools, running the kitchen and dining

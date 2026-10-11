@@ -2,6 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { systems } from "@/content/systems";
 import { researchItems } from "@/content/research";
+import { company } from "@/content/company";
 import {
   ArrowLink,
   Container,
@@ -83,15 +84,16 @@ export default function HomePage() {
 
               <MotionReveal delay={120}>
                 <h1 className="mt-5 font-sans font-medium text-[clamp(2.5rem,5.2vw,4.5rem)] leading-[1.08] tracking-[-0.03em] text-ink">
-                  We build the infrastructure machines trade on.
+                  We build the AI that trades within your rules.
                 </h1>
               </MotionReveal>
 
               <MotionReveal delay={200}>
                 <p className="mt-6 max-w-xl text-lg sm:text-xl font-sans leading-relaxed text-stone-4">
-                  Jakuraa is a corporate technology institution established in 2019. We engineer and operate Satelink,
-                  the flagship machine-commerce platform enabling autonomous software agents to negotiate, meter, and settle
-                  transactions on-chain with cryptographic certainty.
+                  Jakuraa Commercial Private Limited, incorporated in Coimbatore in 2019, builds Satelink Trading AI: an AI
+                  trading operating system for people, AI agents and machines. AI proposes; deterministic risk and your signed
+                  mandate decide; you keep custody. Satelink also runs machine-commerce rails for software that pays software.
+                  Paper trading in controlled beta. Live execution is not yet available.
                 </p>
               </MotionReveal>
 
@@ -119,9 +121,9 @@ export default function HomePage() {
 
               <MotionReveal delay={340}>
                 <div className="mt-10 flex flex-wrap items-center gap-6 text-xs font-mono text-stone-3 border-t border-stone-1 pt-4">
-                  <span>CIN: U72900TZ2019PTC032906</span>
-                  <span>GSTIN: 33AADCF9341B1Z9</span>
-                  <span className="hidden sm:inline">DGFT IEC: AADCF9341B</span>
+                  <span>CIN: {company.cin}</span>
+                  <span>GSTIN: {company.gstin}</span>
+                  <span className="hidden sm:inline">DGFT IEC: {company.iec}</span>
                 </div>
               </MotionReveal>
             </div>
@@ -257,13 +259,13 @@ export default function HomePage() {
                   id="satelink-heading"
                   className="mt-2 font-serif text-3xl sm:text-4xl lg:text-5xl font-normal tracking-tight text-ink"
                 >
-                  Satelink: Machine commerce infrastructure.
+                  Satelink: AI trading agents and machine commerce.
                 </h2>
                 <p className="mt-4 text-base sm:text-lg leading-relaxed text-stone-4 font-sans">
-                  Satelink is the flagship technology platform engineered by Jakuraa. As autonomous software
-                  agents increasingly transact without human intervention, Satelink provides the payment rails,
-                  permissionless vaults, and usage-metered gateways enabling agents to purchase live intelligence,
-                  compute, and APIs per call.
+                  Satelink is the flagship platform engineered by Jakuraa. Its first product, Satelink Trading AI,
+                  reasons about markets, validates strategies, scores each decision GO, WAIT or REJECT, and executes
+                  only inside a mandate you signed. Underneath, Satelink provides the payment rails, vaults and
+                  usage-metered gateways that let software agents pay for data, compute and APIs per call.
                 </p>
               </MotionReveal>
 
@@ -373,12 +375,12 @@ export default function HomePage() {
                 PRIMARY APPLICATION DIRECTION
               </span>
               <h2 id="trading-heading" className="mt-2 font-serif text-3xl sm:text-4xl text-ink">
-                AI Trading Agents: The first production application of machine commerce.
+                Satelink Trading AI: reason, validate, score, authorize, execute, learn.
               </h2>
               <p className="mt-4 text-base sm:text-lg text-stone-4 font-sans leading-relaxed">
-                Autonomous trading represents the highest-velocity environment for machine commerce. In non-custodial
-                financial markets, software agents must ingest live intelligence feeds, compute predictive signals,
-                execute programmatic trades, and pay for per-query telemetry in real time.
+                An AI trading operating system for people, AI agents and machines. AI agents read the market and propose;
+                deterministic engines validate and score; nothing executes unless the risk engine and a mandate you signed
+                allow it. Your money stays at your broker and withdrawals are never enabled.
               </p>
             </div>
           </MotionReveal>
@@ -405,7 +407,7 @@ export default function HomePage() {
                   <span className="font-mono text-xs text-stone-3 uppercase">02 / INFERENCE LOOP</span>
                   <h3 className="mt-3 font-serif text-xl text-ink">Agent Decision Systems</h3>
                   <p className="mt-2 text-sm leading-relaxed text-stone-4 font-sans">
-                    Deterministic decision loops evaluating quantitative models, risk budgets, and slippage bounds before capital allocation.
+                    A deterministic scorecard gives GO, WAIT or REJECT with its evidence. A failed hard gate always overrides a high score.
                   </p>
                 </div>
                 <div className="mt-6 border-t border-stone-1 pt-3 text-xs font-mono text-stone-3">
@@ -418,13 +420,13 @@ export default function HomePage() {
               <div className="flex h-full flex-col justify-between rounded-2xl border border-stone-1 bg-ivory p-6 shadow-sm">
                 <div>
                   <span className="font-mono text-xs text-stone-3 uppercase">03 / EXECUTION RAILS</span>
-                  <h3 className="mt-3 font-serif text-xl text-ink">Programmatic Trades</h3>
+                  <h3 className="mt-3 font-serif text-xl text-ink">Authorised Execution</h3>
                   <p className="mt-2 text-sm leading-relaxed text-stone-4 font-sans">
-                    Direct smart contract execution with verifiable execution trails, automated routing, and zero human latency.
+                    Orders pass a fixed risk engine and your signed mandate, then go to your broker exactly once, with a receipt for every step.
                   </p>
                 </div>
                 <div className="mt-6 border-t border-stone-1 pt-3 text-xs font-mono text-stone-3">
-                  Scope: Smart Contracts
+                  Scope: Risk + Mandates
                 </div>
               </div>
             </MotionReveal>
@@ -453,7 +455,7 @@ export default function HomePage() {
                   CAPABILITY DEPLOYMENT STATUS
                 </span>
                 <span className="font-mono text-xs text-stone-3">
-                  AUDITED RAILS
+                  STATUS AS OF OCTOBER 2026
                 </span>
               </div>
               <div className="mt-6 grid gap-6 sm:grid-cols-3">
@@ -463,16 +465,16 @@ export default function HomePage() {
                   </span>
                   <h4 className="mt-2 font-serif text-base text-ink">x402 & RevenueVaultV2 Rails</h4>
                   <p className="mt-1 text-xs text-stone-4 font-sans">
-                    USDC on Base (8453) and USDT on Polygon (137) deployed and actively settling machine transactions.
+                    USDC on Base and USDT on Polygon deployed on mainnet; settlement proven with mainnet transactions.
                   </p>
                 </div>
                 <div>
                   <span className="inline-block rounded bg-amber-ink/10 px-2.5 py-0.5 font-mono text-[10px] font-semibold uppercase text-amber-ink">
-                    PRIVATE BETA
+                    CONTROLLED BETA (PAPER)
                   </span>
-                  <h4 className="mt-2 font-serif text-base text-ink">AI Trading Agent Execution</h4>
+                  <h4 className="mt-2 font-serif text-base text-ink">Satelink Trading AI</h4>
                   <p className="mt-1 text-xs text-stone-4 font-sans">
-                    Microstructure telemetry pipelines and algorithmic order routing currently in private operator testing.
+                    Paper trading in controlled beta. Live execution is not yet available.
                   </p>
                 </div>
                 <div>
@@ -680,7 +682,7 @@ export default function HomePage() {
                 Expanding toward universal autonomous assistance.
               </h2>
               <p className="mt-4 text-base sm:text-lg text-stone-4 font-sans leading-relaxed">
-                While AI trading agents and machine-to-machine commerce represent Satelink's initial production deployment,
+                While AI trading agents and machine-to-machine commerce are Satelink's initial focus,
                 our long-term architectural roadmap expands toward an institutional autonomous assistant capable of executing
                 complex multi-step operations across enterprise workflows.
               </p>

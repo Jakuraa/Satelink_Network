@@ -25,6 +25,8 @@ export const jakuraaFooterConfig: FooterConfig = {
     {
       heading: 'SATELINK PLATFORM',
       links: [
+        { href: '/products', label: 'Products' },
+        { href: 'https://satelink.network/trading-agent', label: 'Satelink Trading AI', external: true },
         { href: 'https://satelink.network', label: 'Platform Overview', external: true },
         { href: 'https://satelink.network/products/machine-commerce', label: 'Machine Commerce', external: true },
         { href: '/technology', label: 'AI Trading Architecture' },
@@ -103,7 +105,7 @@ export const jakuraaFooterConfig: FooterConfig = {
     { href: 'mailto:contact@jakuraa.com', label: 'Email', icon: 'mail' },
   ],
   copyrightText: `${company?.legalName || 'Jakuraa Commercial Private Limited'}. All rights reserved.`,
-  entityNotice: `CIN: ${company?.cin} | GSTIN: ${company?.gstin} | DGFT IEC: AADCF9341B`,
+  entityNotice: `CIN: ${company?.cin} | GSTIN: ${company?.gstin} | DGFT IEC: ${company?.iec}`,
   addressLines: [registeredOfficeLine()],
   metaBadges: [
     { label: 'INSTITUTION', value: 'JAKURAA COMMERCIAL' },

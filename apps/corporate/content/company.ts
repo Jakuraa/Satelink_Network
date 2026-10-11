@@ -92,7 +92,7 @@ export const principles: { title: string; body: string }[] = [
     body: "Our statutory details are published, our registered office is listed, and there is a named route for grievances.",
   },
   {
-    title: "Earn trust in small steps",
+    title: "Build trust in small steps",
     body: "New businesses start as registered capabilities and become operating businesses only when they are genuinely running.",
   },
 ];

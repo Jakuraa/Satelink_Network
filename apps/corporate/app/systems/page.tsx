@@ -108,7 +108,7 @@ export default function SystemsPage() {
           <span className="font-mono text-xs uppercase tracking-wider text-stone-3">ORGANIZATIONAL VERTICALS</span>
           <h2 className="mt-1 font-serif text-3xl sm:text-4xl text-ink">Business Lines & Registered Verticals</h2>
           <p className="mt-2 text-base text-stone-4">
-            Each commercial vertical is backed by an official constitutional object or government statutory registration.
+            Each commercial vertical is tied to a constitutional object or government statutory registration.
           </p>
         </div>
 
