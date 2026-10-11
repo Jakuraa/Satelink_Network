@@ -61,7 +61,6 @@ export const navigationFallback: Navigation = {
         ] },
         { title: "Machine commerce", items: [
           { label: "Machine Commerce", href: "/products/machine-commerce", description: "Discover, pay and settle — end to end" },
-          { label: "Trading Intelligence", href: "/products/trading-intelligence", description: "Funding, open interest, liquidations, microstructure" },
           { label: "API Metering", href: "/products/metering", description: "Usage, caps and receipts per agent" },
         ] },
       ],
@@ -140,7 +139,6 @@ export const footerFallback: Footer = {
       { label: "Risk and safety", href: "/trading-agent/risk" },
       { label: "Request beta access", href: "/contact-sales?interest=beta" },
       { label: "Machine Commerce", href: "/products/machine-commerce" },
-      { label: "Trading Intelligence", href: "/products/trading-intelligence" },
       { label: "API Metering", href: "/products/metering" },
       { label: "Pricing", href: "/pricing" },
     ] },
