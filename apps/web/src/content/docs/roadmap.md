@@ -15,8 +15,8 @@ code or are explicitly planned. Nothing below is invented for marketing.
   HTTP 402 machine onboarding (`/v1/machine/register`)
 - **Admin command center** — operator NOC with data-truth-audited metrics,
   computed health score, demand radar and conversion pipeline
-- **Node & developer portals** — registration, earnings, usage metering,
-  deposits consoles
+- **Node & developer portals** — node registration (operator program now
+  paused; payouts not active), usage metering, deposits consoles
 - **Monitoring & status** — public status page, per-provider health API,
   measured (never fabricated) uptime/latency
 - **Paperclip agent OS foundations** — machine-access control plane (hashed

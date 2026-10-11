@@ -8,10 +8,7 @@ $0.00003 per metered call. Credits never expire.
 to the RevenueVault; credits the sending wallet's account after ~25
 confirmations.
 
-**DePIN** — Decentralized Physical Infrastructure Network: real hardware,
-operated permissionlessly, coordinated and paid on-chain.
-
-**Distribution pool** — the 20% revenue share distributed to top-performing
+**Distribution pool** — (operator program paused; not paid out) the 20% revenue share designed for top-performing
 nodes based on uptime and traffic.
 
 **Epoch** — an aggregation window (~10 minutes) that rolls individual

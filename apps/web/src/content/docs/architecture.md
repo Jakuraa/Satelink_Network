@@ -21,7 +21,7 @@ row in this pipeline or an on-chain read.
 - **RPC Gateway** — the public entry point (`rpc.satelink.network`). Multi-chain
   JSON-RPC with provider health monitoring, automatic failover, and an edge
   cache. Live provider status: `/rpc/health`, `/rpc/stats/polygon`.
-- **Free-tier gate** — IP-based metering for anonymous callers backed by
+- **Free-tier gate** — IP-based metering for anonymous callers using
   Redis counters that reset at UTC midnight. Over-limit traffic receives a
   self-describing HTTP 402.
 - **Credit system** — customer balances in USDT. Deposits are permissionless:

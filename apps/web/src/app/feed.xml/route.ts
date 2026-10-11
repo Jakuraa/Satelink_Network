@@ -59,7 +59,7 @@ export function GET() {
   <channel>
     <title>Satelink Network — Changelog</title>
     <link>${BASE}/docs/changelog</link>
-    <description>Notable changes to the Satelink DePIN RPC network.</description>
+    <description>Notable changes to Satelink: Satelink Trading AI and the machine-commerce rails.</description>
     <language>en</language>
 ${items}
   </channel>

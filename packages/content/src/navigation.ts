@@ -50,22 +50,22 @@ export const navigationFallback: Navigation = {
     {
       label: "Products",
       groups: [
-        { title: "Products", items: [
+        { title: "Satelink Trading AI", items: [
+          { label: "Overview", href: "/trading-agent", description: "AI trading OS for people, AI agents and machines", badge: "Beta" },
+          { label: "How it works", href: "/trading-agent/how-it-works", description: "Reason, validate, score, authorize, execute, learn" },
+          { label: "Risk and safety", href: "/trading-agent/risk", description: "AI proposes; deterministic risk and your signed mandate decide" },
+          { label: "AI", href: "/trading-agent/ai", description: "What the AI can and cannot do" },
+          { label: "Brokers", href: "/trading-agent/brokers", description: "Connector status, stage by stage" },
+          { label: "Security", href: "/trading-agent/security" },
+          { label: "Status", href: "/trading-agent/status" },
+        ] },
+        { title: "Machine commerce", items: [
           { label: "Machine Commerce", href: "/products/machine-commerce", description: "Discover, pay and settle — end to end" },
           { label: "Trading Intelligence", href: "/products/trading-intelligence", description: "Funding, open interest, liquidations, microstructure" },
-          { label: "RPC Infrastructure", href: "/products/rpc", description: "Polygon RPC at $0.00003 per call" },
-          { label: "x402 Machine Payments", href: "/products/x402", description: "Keyless pay-per-call in USDC" },
           { label: "API Metering", href: "/products/metering", description: "Usage, caps and receipts per agent" },
         ] },
-        { title: "Platform", items: [
-          { label: "Platform overview", href: "/product/overview" },
-          { label: "Payments", href: "/platform/payments" },
-          { label: "Settlement", href: "/platform/settlement" },
-          { label: "Machine Identity", href: "/platform/machine-identity" },
-          { label: "Status", href: "/status" },
-        ] },
       ],
-      featureCard: { eyebrow: "See it work", title: "How a machine pays", description: "A 402 price, a payment and a receipt — one request.", href: "/products/machine-commerce#lifecycle" },
+      featureCard: { eyebrow: "Paper trading in controlled beta", title: "Request beta access", description: "Live execution is not yet available.", href: "/contact-sales?interest=beta" },
     },
     {
       label: "Solutions",
@@ -96,8 +96,11 @@ export const navigationFallback: Navigation = {
           { label: "API reference", href: "/developers/api" },
           { label: "SDKs", href: "/developers/sdks" },
         ] },
-        { title: "Protocols", items: [
-          { label: "x402", href: "/platform/x402" },
+        { title: "Protocols and infrastructure", items: [
+          { label: "RPC Infrastructure", href: "/products/rpc", description: "Polygon RPC at $0.00003 per call" },
+          { label: "x402 Machine Payments", href: "/products/x402", description: "Keyless pay-per-call in USDC" },
+          { label: "MCP server", href: "/trading-agent/docs", description: "Trading AI tools for AI agents (not public yet)" },
+          { label: "x402 protocol", href: "/platform/x402" },
           { label: "Metering", href: "/platform/metering" },
           { label: "Status", href: "/status" },
           { label: "Changelog", href: "/changelog" },
@@ -124,7 +127,7 @@ export const navigationFallback: Navigation = {
   ],
   cta: [
     { label: "Log in", href: `${CONSOLE}/sign-in`, variant: "ghost" },
-    { label: "Try Satelink", href: `${CONSOLE}/sign-in?mode=signup`, variant: "primary" },
+    { label: "Request beta access", href: "/contact-sales?interest=beta", variant: "primary" },
   ],
 };
 
@@ -132,10 +135,12 @@ export const footerFallback: Footer = {
   site: "satelink",
   columns: [
     { title: "Products", links: [
+      { label: "Satelink Trading AI", href: "/trading-agent" },
+      { label: "How it works", href: "/trading-agent/how-it-works" },
+      { label: "Risk and safety", href: "/trading-agent/risk" },
+      { label: "Request beta access", href: "/contact-sales?interest=beta" },
       { label: "Machine Commerce", href: "/products/machine-commerce" },
       { label: "Trading Intelligence", href: "/products/trading-intelligence" },
-      { label: "RPC Infrastructure", href: "/products/rpc" },
-      { label: "x402 Machine Payments", href: "/products/x402" },
       { label: "API Metering", href: "/products/metering" },
       { label: "Pricing", href: "/pricing" },
     ] },
@@ -165,6 +170,9 @@ export const footerFallback: Footer = {
       { label: "API reference", href: "/developers/api" },
       { label: "SDKs", href: "/developers/sdks" },
       { label: "Console", href: "https://console.satelink.network" },
+      { label: "RPC Infrastructure", href: "/products/rpc" },
+      { label: "x402 Machine Payments", href: "/products/x402" },
+      { label: "MCP server", href: "/trading-agent/docs" },
       { label: "x402-kit (GitHub)", href: "https://github.com/Satelink-Protocol" },
     ] },
     { title: "Resources", links: [
@@ -184,14 +192,13 @@ export const footerFallback: Footer = {
       { label: "Security", href: "/security" },
       { label: "Report abuse", href: "/contact" },
       { label: "Responsible disclosure", href: "/responsible-disclosure" },
-      { label: "Network (run a node)", href: "/network/run-a-node" },
     ] },
     { title: "Company", links: [
       { label: "Jakuraa", href: "https://jakuraa.com" },
       { label: "Leadership", href: "https://jakuraa.com/company/leadership" },
-      { label: "Mission", href: "https://jakuraa.com/company/mission" },
-      { label: "Research", href: "https://jakuraa.com/company/research" },
-      { label: "News", href: "https://jakuraa.com/company/news" },
+      { label: "Company", href: "https://jakuraa.com/company" },
+      { label: "Research", href: "https://jakuraa.com/research" },
+      { label: "News", href: "https://jakuraa.com/news" },
       { label: "Careers", href: "https://jakuraa.com/careers" },
       { label: "Contact", href: "/contact" },
       { label: "Contact sales", href: "/contact-sales" },

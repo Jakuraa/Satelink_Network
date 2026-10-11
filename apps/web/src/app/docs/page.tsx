@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { OPERATOR_PROGRAM_PAUSED } from "@/lib/operator-program";
 import Link from "next/link";
 import { docsByCategory } from "@/lib/docs";
 
@@ -10,7 +11,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Satelink Documentation",
     description:
-      "Docs for the Satelink DePIN RPC network — pay-per-call USDT metering on Polygon PoS.",
+      "Docs for Satelink Trading AI and the legacy Satelink RPC gateway on Polygon PoS.",
     url: "https://docs.satelink.network",
     siteName: "Satelink Docs",
     type: "website",
@@ -25,7 +26,7 @@ export default function DocsIndexPage() {
     name: "Satelink Documentation",
     url: "https://docs.satelink.network",
     description:
-      "Documentation for the Satelink DePIN RPC network on Polygon PoS: pay-per-call USDT metering, permissionless deposits, node operation, and machine onboarding.",
+      "Documentation for Satelink Trading AI and the legacy Satelink RPC gateway on Polygon PoS: pay-per-call USDT metering, permissionless deposits and machine onboarding.",
     publisher: {
       "@type": "Organization",
       name: "Satelink Network",
@@ -41,11 +42,12 @@ export default function DocsIndexPage() {
       />
       <h1>Satelink Documentation</h1>
       <p className="docs-lede">
-        Satelink is a DePIN RPC gateway on Polygon PoS. Developers and
-        autonomous machines pay <strong>$0.00003 per call</strong> in USDT;
-        node operators earn 50% of routed revenue; everything settles through
-        an on-chain vault you can verify on Polygonscan. Start with the Quick
-        Start — your first call takes under two minutes and needs no account.
+        Satelink Trading AI is an AI trading operating system for people, AI
+        agents and machines. Its documentation is at{" "}
+        <a href="/trading-agent/docs">/trading-agent/docs</a>. The pages below
+        document the legacy Satelink RPC gateway on Polygon PoS, where developers
+        and machines pay <strong>$0.00003 per call</strong> in USDT.{" "}
+        {OPERATOR_PROGRAM_PAUSED}
       </p>
 
       {groups.map((g) => (

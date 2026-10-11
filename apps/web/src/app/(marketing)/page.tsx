@@ -1,203 +1,192 @@
-// Home (web-v3 P2) — the claude.com pattern: short, confident, plan-led.
-// hero (+ MachinePaysDemo) → product video (only once a real recording exists)
-// → three product tiles → how a machine pays → live proof strip → infographics
-// → Explore plans → FAQ (+ FAQPage JSON-LD) → footer (layout). The long
-// platform stack moved to /product/overview. No invented numbers (§2.1): the
-// proof strip is real /health data; prices are the live catalog + constants.
+// Home (Phase 7) — Satelink Trading AI first, machine commerce second.
+// hero (positioning + verbatim status line + beta CTA) → the loop (reason → validate → score →
+// authorize → execute → learn) → GO / WAIT / REJECT → safety boundary → three interfaces →
+// machine commerce → FAQ (+ FAQPage JSON-LD) → disclosures. The claims lint (strict tier) runs on
+// this file: no numbers, no performance, partnership or availability claims.
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, LineChart, CreditCard, Server, ShieldCheck, FileCode2 } from "lucide-react";
+import { ArrowRight, Brain, CheckCircle2, CircleSlash, Clock, CreditCard, FileCheck2, Globe, KeyRound, LineChart, PlugZap, Server, ShieldCheck, Terminal, Wallet } from "lucide-react";
 import { buildMetadata, faqLd, jsonLdScript } from "@satelink/seo";
-import { MachinePaysDemo, ScrollReveal, Stagger, StaggerItem } from "@satelink/web-ui";
-import { getCatalog } from "@/lib/intelligence";
-import { FLAT_RATE_USD } from "@/lib/products";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Disclosure } from "@/components/ui/Disclosure";
-import { LiveNetworkStrip } from "@/components/site/LiveNetworkStrip";
-import { PlanCards } from "@/components/PlanCards";
-import { ConsoleShowcase } from "@/components/landing/ConsoleShowcase";
-import { CONSOLE, planCatalog } from "@/lib/plan-catalog";
-import { ProductVideo } from "@/components/landing/ProductVideo";
-import { HowMachinePays } from "@/components/landing/HowMachinePays";
-import { UnderTheHood } from "@/components/landing/UnderTheHood";
-import { productVideo } from "@/lib/media";
+import DISCLAIMERS from "@/lib/trading-agent/disclaimers.json";
 
 export const metadata: Metadata = buildMetadata({
-  title: "Commerce for software that pays software",
+  title: "Satelink Trading AI — an AI trading operating system for people, AI agents and machines",
   description:
-    "Satelink is machine commerce infrastructure: a software agent discovers a priced API, pays for it without a human, calls it, and settles on-chain — on Polygon, with x402, USDT, or prepaid credits.",
+    "Reason, validate, score, authorize, execute, learn. AI proposes; deterministic risk and your signed mandate decide. You keep custody. Paper trading in controlled beta. Live execution is not yet available.",
   path: "/",
 });
 
-export const revalidate = 300;
+const BETA_HREF = "/contact-sales?interest=beta";
+const STATUS_LINE = "Paper trading in controlled beta. Live execution is not yet available.";
 
-const VAULT_URL = "https://polygonscan.com/address/0x577D3716d6Ad5b676d230f5409deF9838FABaCEF";
-const X402_KIT_URL = "https://github.com/Satelink-Protocol/x402-kit";
-
-const TILES = [
-  {
-    name: "Trading Intelligence",
-    href: "/products/trading-intelligence",
-    icon: LineChart,
-    color: "market" as const,
-    line: "Derived market analytics — funding, open interest, microstructure — bought per call.",
-  },
-  {
-    name: "Machine Payments (x402)",
-    href: "/products/x402",
-    icon: CreditCard,
-    color: "machine" as const,
-    line: "HTTP-native, keyless payments in USDC on Base. An agent pays a 402 on its own.",
-  },
-  {
-    name: "RPC",
-    href: "/products/rpc",
-    icon: Server,
-    color: "settle" as const,
-    line: "Metered Polygon JSON-RPC at a flat per-call rate. No seat licence, no commitment.",
-  },
+const LOOP = [
+  { step: "Reason", icon: Brain, body: "Specialised AI agents read market structure, regime, risk and your portfolio, and explain what they see." },
+  { step: "Validate", icon: FileCheck2, body: "A strategy is a versioned rule set, tested on history, walk-forward windows and stress scenarios — labelled hypothetical." },
+  { step: "Score", icon: LineChart, body: "A deterministic scorecard gives GO, WAIT or REJECT with its evidence. A failed hard gate always wins over a high score." },
+  { step: "Authorize", icon: KeyRound, body: "Nothing executes without a mandate you signed with a one-time code: which account, which instruments, how much." },
+  { step: "Execute", icon: PlugZap, body: "Approved orders pass the risk engine, then the order manager sends each one once, through your broker." },
+  { step: "Learn", icon: CheckCircle2, body: "Every decision, order and outcome is kept with one trace, so the next decision can be explained and reviewed." },
 ];
 
-const COLOR_CLASS: Record<"market" | "machine" | "settle", { text: string; soft: string }> = {
-  market: { text: "text-sl-market", soft: "bg-sl-market-soft" },
-  machine: { text: "text-sl-machine", soft: "bg-sl-machine-soft" },
-  settle: { text: "text-sl-settle", soft: "bg-sl-settle-soft" },
-};
+const DECISIONS = [
+  { label: "GO", icon: CheckCircle2, className: "text-sl-settle", body: "Every hard gate passed and the score clears the bar. It can become a proposal for you to authorise." },
+  { label: "WAIT", icon: Clock, className: "text-sl-warn", body: "Nothing is broken, but the evidence is not strong enough yet. No proposal is made." },
+  { label: "REJECT", icon: CircleSlash, className: "text-sl-down", body: "A hard gate failed — stale data, thin liquidity, an expired mandate, too much concentration. No proposal is made." },
+];
+
+const BOUNDARY = [
+  { title: "AI proposes", body: "The AI can read and suggest. It has no order-placing tool, never sees broker keys and cannot change risk limits or mandates." },
+  { title: "Deterministic risk decides", body: "Every order is checked by fixed rules — kill switches, limits, data freshness, price collars. If a check cannot run, the order is refused." },
+  { title: "Your signed mandate decides", body: "Orders must fit limits you signed with a one-time code. You can revoke a mandate or stop everything with one switch." },
+  { title: "You keep custody", body: "Your money stays at your broker. Satelink never holds customer funds, and withdrawals are never enabled." },
+];
+
+const INTERFACES = [
+  { name: "Web", icon: Globe, status: "Paper beta", body: "Talk to Satelink Trading AI: describe your capital, limits and markets, read the decision card, authorise a paper order." },
+  { name: "API", icon: Terminal, status: "Not public yet", body: "The same core for software: evaluate an opportunity, receive GO / WAIT / REJECT as JSON, submit a proposal for review." },
+  { name: "MCP", icon: Server, status: "Not public yet", body: "The same tools for AI agents, read and propose only, scoped by key, budgeted and metered." },
+];
+
+const MACHINE = [
+  { name: "Machine Commerce", href: "/products/machine-commerce", icon: Wallet, line: "Discover a priced API, pay for it without a human, settle on-chain." },
+  { name: "x402 Machine Payments", href: "/products/x402", icon: CreditCard, line: "HTTP-native, keyless pay-per-call in USDC on Base." },
+  { name: "RPC Infrastructure", href: "/products/rpc", icon: Server, line: "Metered Polygon JSON-RPC at a flat per-call rate." },
+];
 
 const FAQ = [
   {
-    question: "What is Satelink?",
+    question: "What is Satelink Trading AI?",
     answer:
-      "Machine-commerce infrastructure: the rails a software agent uses to discover a priced API, pay for it without a human, call it, and settle the payment on-chain on Polygon.",
+      "An AI trading operating system for people, AI agents and machines. AI agents reason about markets, deterministic engines validate and score, and nothing executes unless the risk engine and a mandate you signed allow it.",
+  },
+  { question: "Is it live?", answer: STATUS_LINE },
+  {
+    question: "Does Satelink hold my money?",
+    answer: "No. Your money stays at your broker. Satelink never takes custody of funds and withdrawals are never enabled.",
   },
   {
-    question: "What is machine commerce?",
+    question: "Can the AI place orders on its own?",
     answer:
-      "Humans buy products at a checkout; software increasingly buys services — an RPC call, a market-data query — thousands of times an hour. Machine commerce is the discovery, pricing, payment, and settlement that traffic needs.",
+      "No. The AI has no order-placing tool. It can propose; the deterministic risk engine and the limits in your signed mandate decide, and in the beta every paper order is authorised by a person.",
   },
-  {
-    question: "What can I buy?",
-    answer:
-      "Derived Trading Intelligence (funding-rate heatmaps, open-interest shifts, market microstructure, liquidation clusters) and metered Polygon RPC — priced per call, discoverable as public JSON.",
-  },
-  {
-    question: "How does a machine pay?",
-    answer:
-      "The service quotes a price in a signed HTTP 402 response. The agent pays with x402 (USDC on Base), a USDT deposit, or a prepaid credit balance — and receives a verifiable on-chain receipt.",
-  },
-  {
-    question: "How much does it cost?",
-    answer:
-      "Trading Intelligence is $0.01 per call and Polygon RPC is $0.00003 per call. Start free with a weekly allowance of market data, take a plan (Launch is $5 for the first month, then $19), or buy a credit pack from $10 — no subscription required.",
-  },
-  {
-    question: "Is this investment advice?",
-    answer: "No. Satelink sells derived analytics computed from public market data. It is not investment advice and Satelink never takes custody of funds.",
-  },
+  { question: "Is this investment advice?", answer: DISCLAIMERS.notAdvice },
 ];
 
-export default async function HomePage() {
-  const { catalog } = await getCatalog();
-  const tiPrice = catalog.metrics[0]?.priceUsd ?? 0.01;
-
+export default function HomePage() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(faqLd(FAQ)) }} />
 
-      {/* Hero — gradient band */}
+      {/* Hero */}
       <section className="relative overflow-hidden border-b border-sl-border">
         <div className="sl-grad-hero pointer-events-none absolute inset-0" aria-hidden />
-        <div className="relative mx-auto grid max-w-[1200px] items-center gap-12 px-4 py-20 sm:px-6 md:py-28 lg:grid-cols-[1.05fr_1fr]">
-          <div>
-            <p className="mb-4 text-xs font-semibold uppercase tracking-[0.12em] text-sl-accent">
-              Machine commerce infrastructure
-            </p>
-            <h1 className="font-sl-display text-balance font-normal leading-[1.05] tracking-[-0.02em] text-sl-text" style={{ fontSize: "var(--sl-display-1)" }}>
-              Commerce for software that pays software.
-            </h1>
-            <p className="mt-5 max-w-xl text-pretty text-lg leading-relaxed text-sl-text-muted">
-              Discover a priced API, pay for it without a human, and settle on-chain — on Polygon,
-              with x402, USDT, or prepaid credits.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Button asChild size="lg">
-                <a href={`${CONSOLE}/sign-in?mode=signup`}>Start free <ArrowRight className="size-4" /></a>
-              </Button>
-              <Button asChild variant="secondary" size="lg">
-                <Link href="/contact-sales">Talk to sales</Link>
-              </Button>
-            </div>
-          </div>
-          <MachinePaysDemo />
-        </div>
-      </section>
-
-      <ProductVideo media={productVideo} />
-
-      {/* Three product tiles */}
-      <section className="mx-auto max-w-[1200px] px-4 py-20 sm:px-6 md:py-24">
-        <SectionHeader eyebrow="Products" title="Three ways to build on the rail" />
-        <Stagger className="mt-10 grid gap-4 md:grid-cols-3">
-          {TILES.map((t) => {
-            const c = COLOR_CLASS[t.color];
-            return (
-              <StaggerItem key={t.name}>
-                <Card interactive className="flex h-full flex-col">
-                  <span className={`mb-4 inline-flex size-11 items-center justify-center rounded-[var(--sl-radius)] ${c.soft} ${c.text}`}>
-                    <t.icon className="size-5" />
-                  </span>
-                  <h3 className={`font-semibold ${c.text}`}>{t.name}</h3>
-                  <p className="mt-2 flex-1 text-sm leading-relaxed text-sl-text-muted">{t.line}</p>
-                  <Link href={t.href} className={`mt-4 inline-flex items-center gap-1.5 text-sm font-semibold ${c.text} hover:underline`}>
-                    Learn more <ArrowRight className="size-3.5" />
-                  </Link>
-                </Card>
-              </StaggerItem>
-            );
-          })}
-        </Stagger>
-      </section>
-
-      <HowMachinePays />
-
-      {/* Quick proof strip — live stats only */}
-      <section className="border-b border-sl-border bg-sl-bg-raised">
-        <div className="mx-auto max-w-[1200px] px-4 py-10 sm:px-6">
-          <LiveNetworkStrip />
-          <p className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-sm text-sl-text-muted">
-            <span>Signals from the public gateway health probe.</span>
-            <a href={VAULT_URL} className="inline-flex items-center gap-1.5 font-medium text-sl-text underline decoration-sl-border-strong underline-offset-4 hover:decoration-sl-text">
-              <ShieldCheck aria-hidden className="size-3.5 text-sl-settle" /> RevenueVault V2 on Polygon
-            </a>
-            <a href={X402_KIT_URL} className="inline-flex items-center gap-1.5 font-medium text-sl-text underline decoration-sl-border-strong underline-offset-4 hover:decoration-sl-text">
-              <FileCode2 aria-hidden className="size-3.5 text-sl-machine" /> x402-kit (open source)
-            </a>
+        <div className="relative mx-auto max-w-[1200px] px-4 py-20 sm:px-6 md:py-28">
+          <p className="mb-4 text-xs font-semibold uppercase tracking-[0.12em] text-sl-accent">Satelink Trading AI</p>
+          <h1 className="max-w-4xl font-sl-display text-balance font-normal leading-[1.05] tracking-[-0.02em] text-sl-text" style={{ fontSize: "var(--sl-display-1)" }}>
+            An AI trading operating system for people, AI agents and machines.
+          </h1>
+          <p className="mt-5 max-w-2xl text-pretty text-lg leading-relaxed text-sl-text-muted">
+            Reason, validate, score, authorize, execute, learn. AI proposes; deterministic risk and your signed mandate decide; you keep custody.
           </p>
+          <p className="mt-6"><Badge variant="planned">{STATUS_LINE}</Badge></p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Button asChild size="lg">
+              <Link href={BETA_HREF}>Request beta access <ArrowRight className="size-4" /></Link>
+            </Button>
+            <Button asChild variant="secondary" size="lg">
+              <Link href="/trading-agent/how-it-works">How it works</Link>
+            </Button>
+          </div>
         </div>
       </section>
 
-      <UnderTheHood />
+      {/* The loop */}
+      <section id="loop" className="mx-auto max-w-[1200px] px-4 py-20 sm:px-6 md:py-24">
+        <SectionHeader eyebrow="One core" title="Reason, validate, score, authorize, execute, learn" lede="Every client — a person, an AI agent or a machine — goes through the same chain. Nothing skips a step." />
+        <ol className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {LOOP.map((s) => (
+            <li key={s.step}>
+              <Card className="h-full">
+                <s.icon aria-hidden className="mb-3 size-5 text-sl-accent" />
+                <h3 className="font-semibold text-sl-text">{s.step}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-sl-text-muted">{s.body}</p>
+              </Card>
+            </li>
+          ))}
+        </ol>
+      </section>
 
-      <ConsoleShowcase />
-
-      {/* Plans — rendered from the PlanCatalog (same source as /pricing and the console) */}
-      <section className="border-y border-sl-border bg-sl-bg-raised">
+      {/* GO / WAIT / REJECT */}
+      <section id="decision" className="border-y border-sl-border bg-sl-bg-raised">
         <div className="mx-auto max-w-[1200px] px-4 py-20 sm:px-6 md:py-24">
-          <SectionHeader
-            eyebrow="Plans"
-            title="Start free. Pay as you grow."
-            lede="A weekly allowance of market data on a plan, a credit pack, or pay per call as software — RPC is $0.00003 a call."
-          />
-          <div className="mt-10"><PlanCards catalog={planCatalog()} /></div>
-          <p className="mt-6 text-center text-sm"><Link href="/pricing" className="text-sl-text underline underline-offset-4">See full pricing</Link></p>
+          <SectionHeader eyebrow="The scorecard" title="GO, WAIT or REJECT — with the evidence" lede="The score describes decision quality, not a forecast of any outcome. A failed hard gate always overrides a high score." />
+          <div className="mt-10 grid gap-4 md:grid-cols-3">
+            {DECISIONS.map((d) => (
+              <Card key={d.label} className="h-full">
+                <p className={`flex items-center gap-2 font-semibold ${d.className}`}><d.icon aria-hidden className="size-5" /> {d.label}</p>
+                <p className="mt-2 text-sm leading-relaxed text-sl-text-muted">{d.body}</p>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Safety boundary */}
+      <section id="safety" className="mx-auto max-w-[1200px] px-4 py-20 sm:px-6 md:py-24">
+        <SectionHeader eyebrow="Safety boundary" title="AI proposes. Deterministic risk and your signed mandate decide." />
+        <div className="mt-10 grid gap-4 sm:grid-cols-2">
+          {BOUNDARY.map((b) => (
+            <Card key={b.title} className="h-full">
+              <h3 className="flex items-center gap-2 font-semibold text-sl-text"><ShieldCheck aria-hidden className="size-4 text-sl-settle" /> {b.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-sl-text-muted">{b.body}</p>
+            </Card>
+          ))}
+        </div>
+        <p className="mt-6 text-sm"><Link href="/trading-agent/risk" className="text-sl-text underline underline-offset-4">Risk and how it is limited</Link></p>
+      </section>
+
+      {/* Three interfaces */}
+      <section id="interfaces" className="border-y border-sl-border bg-sl-bg-raised">
+        <div className="mx-auto max-w-[1200px] px-4 py-20 sm:px-6 md:py-24">
+          <SectionHeader eyebrow="Three interfaces" title="Web for people. API and MCP for AI agents and machines." lede="Same core, same checks, same receipts — whichever way you connect." />
+          <div className="mt-10 grid gap-4 md:grid-cols-3">
+            {INTERFACES.map((i) => (
+              <Card key={i.name} className="h-full">
+                <div className="flex items-center justify-between">
+                  <h3 className="flex items-center gap-2 font-semibold text-sl-text"><i.icon aria-hidden className="size-5 text-sl-accent" /> {i.name}</h3>
+                  <Badge variant="planned">{i.status}</Badge>
+                </div>
+                <p className="mt-2 text-sm leading-relaxed text-sl-text-muted">{i.body}</p>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Machine commerce */}
+      <section id="machine-commerce" className="mx-auto max-w-[1200px] px-4 py-20 sm:px-6 md:py-24">
+        <SectionHeader eyebrow="Machine commerce" title="Rails for software that pays software" lede="The payment and data infrastructure Satelink runs today, for developers and autonomous agents." />
+        <div className="mt-10 grid gap-4 md:grid-cols-3">
+          {MACHINE.map((m) => (
+            <Card key={m.name} interactive className="flex h-full flex-col">
+              <m.icon aria-hidden className="mb-3 size-5 text-sl-machine" />
+              <h3 className="font-semibold text-sl-text">{m.name}</h3>
+              <p className="mt-2 flex-1 text-sm leading-relaxed text-sl-text-muted">{m.line}</p>
+              <Link href={m.href} className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-sl-text hover:underline">
+                Learn more <ArrowRight className="size-3.5" />
+              </Link>
+            </Card>
+          ))}
         </div>
       </section>
 
       {/* FAQ */}
-      <section className="mx-auto max-w-[820px] px-4 py-20 sm:px-6">
+      <section className="mx-auto max-w-[820px] px-4 pb-16 sm:px-6">
         <SectionHeader title="Frequently asked" align="left" />
         <div className="mt-8 space-y-3">
           {FAQ.map((f) => (
@@ -208,20 +197,22 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Final CTA */}
-      <section className="mx-auto max-w-[1200px] px-4 pb-24 sm:px-6">
+      {/* Beta CTA + disclosures */}
+      <section id="beta" className="mx-auto max-w-[1200px] px-4 pb-24 sm:px-6">
         <div className="rounded-[var(--sl-radius-lg)] border border-sl-border bg-sl-surface px-6 py-14 text-center">
-          <Badge variant="live" dot className="mx-auto">Live on Polygon</Badge>
+          <Badge variant="planned" className="mx-auto">{STATUS_LINE}</Badge>
           <h2 className="mx-auto mt-4 max-w-xl text-balance font-sl-display text-3xl font-normal tracking-[-0.02em] text-sl-text sm:text-4xl">
-            Build for the machine economy.
+            Join the paper-trading beta.
           </h2>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <Button asChild size="lg"><Link href="/signup">Start free</Link></Button>
-            <Button asChild variant="secondary" size="lg"><Link href="/product/overview">Explore the platform</Link></Button>
+            <Button asChild size="lg"><Link href={BETA_HREF}>Request beta access</Link></Button>
+            <Button asChild variant="secondary" size="lg"><Link href="/trading-agent">Read more</Link></Button>
           </div>
-          <p className="mt-4 text-xs text-sl-text-subtle">
-            Trading Intelligence from ${tiPrice}/call · RPC ${FLAT_RATE_USD}/call · no subscription required.
-          </p>
+        </div>
+        <div className="mx-auto mt-8 grid max-w-[820px] gap-3">
+          <Disclosure title="Not investment advice">{DISCLAIMERS.notAdvice}</Disclosure>
+          <Disclosure title="Independence">{DISCLAIMERS.noAffiliation}</Disclosure>
+          <Disclosure title="AI disclosure">{DISCLAIMERS.aiCanBeWrong}</Disclosure>
         </div>
       </section>
     </>

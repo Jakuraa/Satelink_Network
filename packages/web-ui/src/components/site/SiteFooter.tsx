@@ -20,7 +20,6 @@ export const satelinkFooterConfig: FooterConfig = {
       heading: 'Infrastructure',
       links: [
         { href: '/machine', label: 'For Agents (x402)' },
-        { href: '/network', label: 'Network' },
         { href: '/rpc', label: 'RPC Gateway' },
         {
           href: 'https://polygonscan.com/address/0x577D3716d6Ad5b676d230f5409deF9838FABaCEF',
