@@ -45,10 +45,10 @@ describe('Catalog consistency (C8): one price, every surface', () => {
     const rpc = body.routes.find((x) => x.resource.endsWith('/rpc/polygon'));
     assert.equal(rpc.price, bundlePriceText(r));
     assert.deepEqual([rpc.rail, rpc.x402_challenge], ['x402', true]);
-    for (const ti of body.routes.filter((x) => x.resource.includes('/v1/intelligence/'))) {
-      assert.equal(ti.price, `$${r.intelligence_credits.price_usd_per_request}/call`);
-      assert.deepEqual([ti.rail, ti.x402_challenge], ['api_credits', false], 'TI is metered from credits, not an x402 challenge');
-    }
+    // Trading Intelligence delisting (founder decision, Phase 7 amendment):
+    // /v1/intelligence/* is no longer advertised as a catalog entry here —
+    // the routes themselves keep serving existing keys unchanged.
+    assert.deepEqual(body.routes.filter((x) => x.resource.includes('/v1/intelligence/')), [], 'TI must not appear in the x402 discovery catalog');
     assert.deepEqual(body.rails, r);
   });
 
@@ -64,7 +64,10 @@ describe('Catalog consistency (C8): one price, every surface', () => {
     const p = (await request(app).get('/v1/pricing')).body;
     assert.equal(p.price_per_call_usdt, r.rpc_credits.price_usd_per_call);
     for (const t of p.tiers) assert.equal(t.cost_per_call_usdt, r.rpc_credits.price_usd_per_call, t.tier);
-    assert.equal(p.intelligence.price_usdt_per_call, r.intelligence_credits.price_usd_per_request);
+    // Trading Intelligence delisting: /v1/pricing no longer advertises a
+    // standalone `intelligence` catalog entry. `rails.intelligence_credits`
+    // (checked above, C8) still carries the live price for the engine itself.
+    assert.equal(p.intelligence, undefined, 'TI must not appear as a standalone catalog entry in /v1/pricing');
     assert.deepEqual(p.rails, r);
   });
 
