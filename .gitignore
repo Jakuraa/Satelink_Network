@@ -37,8 +37,9 @@ satelink-env/
 # for rotational agent system to work
 agent/memory/CURRENT_TASK.md
 
-# ── CLAUDE CODE ──────────────────────
+# ── CLAUDE CODE & TOOLS ──────────────
 .claude/
+.playwright-mcp/
 
 # ── NODE ─────────────────────────────
 node_modules/

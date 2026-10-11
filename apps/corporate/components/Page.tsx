@@ -14,9 +14,9 @@ export function PageHero({ eyebrow, title, lede }: { eyebrow?: string; title: st
   );
 }
 
-export function SectionHeading({ title, lede, id }: { title: string; lede?: string; id?: string }) {
+export function SectionHeading({ title, lede, id, className = "" }: { title: string; lede?: string; id?: string; className?: string }) {
   return (
-    <div className="max-w-2xl">
+    <div className={`max-w-2xl ${className}`}>
       <h2 id={id} className="font-serif text-3xl leading-tight tracking-tight sm:text-4xl">{title}</h2>
       {lede && <p className="mt-4 text-lg leading-relaxed text-stone-4">{lede}</p>}
     </div>
@@ -27,10 +27,10 @@ export function Rule() {
   return <hr className="border-stone-1" />;
 }
 
-export function ArrowLink({ href, children }: { href: string; children: React.ReactNode }) {
+export function ArrowLink({ href, children, className = "" }: { href: string; children: React.ReactNode; className?: string }) {
   const external = href.startsWith("http");
   return (
-    <Link href={href} className="group inline-flex items-center gap-1.5 font-medium text-green" {...(external ? { rel: "noopener" } : {})}>
+    <Link href={href} className={`group inline-flex items-center gap-1.5 font-medium text-green ${className}`} {...(external ? { rel: "noopener" } : {})}>
       {children}
       <span aria-hidden="true" className="transition-transform group-hover:translate-x-0.5">→</span>
     </Link>

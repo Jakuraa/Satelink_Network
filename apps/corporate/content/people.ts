@@ -1,5 +1,4 @@
-// Leadership — consent-gated. An entry renders on /company/leadership ONLY
-// when the founder sets `published: true` after the person has consented.
+// Leadership - consent-gated.
 // Never add residential addresses, personal phone numbers, DIN or signatures.
 
 export type Person = {
@@ -7,17 +6,35 @@ export type Person = {
   role: string;
   bio?: string;
   published: boolean;
+  image?: string;
+  title?: string;
 };
 
 export const people: Person[] = [
-  { name: "Jakuraa", role: "Founder", published: false },
-  { name: "Ramasamy Balasubramanian Pradeep", role: "Director", published: false },
-  { name: "Sivakumar Kuzhandaivelu", role: "Director", published: false },
+  {
+    name: "Pradeep Jakuraa",
+    role: "Founder, Systems Architect & Managing Director",
+    bio: "Systems architect and commercial operator based in Coimbatore. Founded Jakuraa in 2019, directing multi-domain initiatives across distributed compute, industrial trade, physical retail operations, and machine commerce infrastructure.",
+    image: "/media/founder/jakuraa-leadership-office-boardroom-01.webp",
+    published: true,
+  },
+  {
+    name: "Ramasamy Balasubramanian Pradeep",
+    role: "Director",
+    bio: "Corporate director overseeing corporate governance, statutory registrations, and commercial affairs under the Companies Act.",
+    published: true,
+  },
+  {
+    name: "Sivakumar Kuzhandaivelu",
+    role: "Director",
+    bio: "Corporate director participating in board governance and compliance oversight.",
+    published: true,
+  },
 ];
 
 export const publishedPeople = () => people.filter((p) => p.published);
 
-// News — real, dated, sourced items only. Empty is a valid state.
+// News - real, dated, sourced items only. Empty is a valid state.
 export type NewsItem = {
   slug: string;
   date: string; // ISO
@@ -58,6 +75,6 @@ export const news: NewsItem[] = [
 export const sortedNews = () => [...news].sort((a, b) => b.date.localeCompare(a.date));
 export const getNews = (slug: string) => news.find((n) => n.slug === slug);
 
-// Careers — open roles. Empty means the page shows its designed empty state.
+// Careers - open roles. Empty means the page shows its designed empty state.
 export type Role = { slug: string; title: string; location: string; summary: string };
 export const openRoles: Role[] = [];

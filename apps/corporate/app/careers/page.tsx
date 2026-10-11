@@ -1,105 +1,282 @@
+import React from "react";
 import type { Metadata } from "next";
-import { openRoles } from "@/content/people";
-import { company } from "@/content/company";
-import { Container, EmptyState, PageHero, SectionHeading } from "@/components/Page";
+import Link from "next/link";
+import { Container, PageHero, SectionHeading } from "@/components/Page";
 
 export const metadata: Metadata = {
-  title: "Careers",
-  description: "How Jakuraa hires, and current open roles.",
+  title: "Careers & Engineering Disciplines | Jakuraa & Satelink",
+  description:
+    "Engineering, research, and operating roles across Jakuraa Commercial and the Satelink machine-commerce platform.",
 };
 
+const jakuraaDisciplines = [
+  {
+    area: "Corporate Operations & Strategy",
+    desc: "Overseeing statutory compliance, inter-entity commercial structuring, capital management, and physical-to-digital domain bridging.",
+    contact: "careers@jakuraa.com",
+  },
+  {
+    area: "Quantitative Systems & Applied Research",
+    desc: "Developing algorithmic market models, orderbook microstructure simulations, and programmatic trade execution telemetry.",
+    contact: "careers@jakuraa.com",
+  },
+  {
+    area: "Statutory Governance & Compliance",
+    desc: "Managing regulatory filings, DGFT international trade compliance, GSTIN statutory accounting, and corporate legal administration.",
+    contact: "careers@jakuraa.com",
+  },
+];
+
+const satelinkDisciplines = [
+  {
+    area: "AI-Agent & Protocol Engineering",
+    desc: "Architecting machine-to-machine payment protocols, HTTP 402 header negotiation rails, and non-custodial cryptographic verification.",
+    contact: "careers@satelink.network",
+  },
+  {
+    area: "AI Trading Systems & Microstructure",
+    desc: "Building low-latency inference loops, deterministic nonce sequencers, and automated decentralized liquidity routing engines.",
+    contact: "careers@satelink.network",
+  },
+  {
+    area: "Smart Contract & Vault Infrastructure",
+    desc: "Designing and auditing EVM smart contracts (Base USDC x402, Polygon PoS RevenueVaultV2), gas optimization, and permissionless accounting.",
+    contact: "careers@satelink.network",
+  },
+  {
+    area: "MCP & Developer Connectivity",
+    desc: "Engineering Model Context Protocol (MCP) tool-calling context servers, zero-dependency SDKs, and streaming REST/WebSocket gateways.",
+    contact: "careers@satelink.network",
+  },
+  {
+    area: "Distributed Cloud & Network Reliability",
+    desc: "Operating resilient RPC clusters, real-time telemetry pipelines, sub-second metering engines, and high-availability gateway nodes.",
+    contact: "careers@satelink.network",
+  },
+];
+
 const principles: [string, string][] = [
-  ["Work that is real", "You will work on things that exist and are used, and you will be told plainly what is and isn't working."],
-  ["Small and accountable", "We are a small company. Everyone owns outcomes end to end."],
-  ["Written first", "Decisions, designs and trade-offs are written down so anyone can follow the reasoning."],
+  ["Work that is real", "You will work on systems that exist, process live transactions, and are battle-tested against real economic friction."],
+  ["Small and accountable", "We operate small, high-density teams. Engineers and operators own outcomes end to end from design to deployment."],
+  ["Written first", "Architecture decisions, protocol trade-offs, and failure postmortems are documented clearly so anyone can audit the reasoning."],
+  ["Zero credentialism", "We value verifiable code, deployed smart contracts, running servers, and operational grit over pedigree or credentials."],
 ];
 
 const process: [string, string][] = [
-  ["Application", "Send a short note about something you have built or run, and why this role."],
-  ["Conversation", "A call about your work and ours — no trick questions."],
-  ["Practical exercise", "Where relevant, a short exercise that resembles the actual work."],
-  ["Decision", "We let you know the outcome."],
+  ["Written Note", "Send a concise summary of a system you have engineered, operated, or debugged, and why you want to build with us."],
+  ["Systems Conversation", "A technical deep-dive into real architectural trade-offs, concurrency, or economic mechanics with our systems builder."],
+  ["Practical Work Exercise", "A focused, compensated practical problem that closely mirrors actual daily engineering challenges."],
+  ["Decision & Offer", "A straightforward outcome with transparent terms, clear ownership boundaries, and direct institutional alignment."],
 ];
 
 const faq: [string, string][] = [
-  ["Where is the company based?", "Our registered office is in Coimbatore, Tamil Nadu. Where each role is based is stated on the role itself."],
-  ["Can I apply if no role fits?", `Yes — write to ${company.email} with the subject "Careers". We read every note, though we cannot promise a role.`],
-  ["Will you ever ask me for money?", "No. Jakuraa never asks candidates for payment at any stage of hiring. Treat any such request as fraudulent."],
+  ["Where are the teams located?", "Jakuraa Commercial is registered and headquartered in Coimbatore, Tamil Nadu, India. Satelink operates a hybrid and distributed engineering model depending on role requirements."],
+  ["What is the difference between Jakuraa and Satelink roles?", "Jakuraa encompasses corporate governance, multi-domain operations, quantitative research, and institutional administration. Satelink focuses specifically on AI-agent protocol rails, trading engines, smart contracts, and cloud infrastructure."],
+  ["Can I submit a speculative application?", "Yes. If your capabilities align with our technical disciplines, write to careers@jakuraa.com or careers@satelink.network with your work and code repositories."],
+  ["Will you ever ask candidates for money?", "No. Jakuraa and Satelink never ask candidates for fees, security deposits, or payments at any stage of hiring. Treat any such request as fraudulent."],
 ];
 
 export default function CareersPage() {
   return (
-    <>
-      <PageHero eyebrow="Careers" title="Build things that are true." lede={<p>We hire rarely and deliberately. Here is how we work and how we hire.</p>} />
+    <main className="min-h-screen bg-ivory text-ink">
+      <PageHero
+        eyebrow="CAREERS & TALENT"
+        title="Build things that are true."
+        lede={
+          <p>
+            We hire rarely, deliberately, and with high accountability. Explore our engineering disciplines
+            across Jakuraa and Satelink.
+          </p>
+        }
+      />
 
-      <section className="border-t border-stone-1 py-20">
+      {/* Institutional Hiring Status Banner (Honest, Unfabricated) */}
+      <section className="border-t border-stone-1 py-12 bg-ivory-2/60">
+        <Container>
+          <div className="rounded-2xl border border-stone-2 bg-ivory p-6 sm:p-8">
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-stone-1 pb-4">
+              <div className="flex items-center gap-2.5">
+                <span className="size-2 rounded-full bg-stone-3" />
+                <span className="font-mono text-xs font-semibold uppercase text-stone-4 tracking-wider">
+                  ACTIVE HIRING POSTURE
+                </span>
+              </div>
+              <span className="rounded-full bg-stone-1 px-3 py-1 font-mono text-[11px] text-stone-4">
+                No active open requisitions
+              </span>
+            </div>
+
+            <div className="mt-4 grid gap-6 sm:grid-cols-12 sm:items-center">
+              <div className="sm:col-span-8">
+                <h3 className="font-serif text-xl sm:text-2xl text-ink">
+                  We are not actively advertising open roles today.
+                </h3>
+                <p className="mt-2 text-sm text-stone-4 font-sans leading-relaxed">
+                  We periodically open deliberate requisitions for exceptional protocol engineers, quantitative systems builders,
+                  and infrastructure operators. When specific roles open, they are published directly here. In the interim,
+                  we welcome speculative notes from individuals with a demonstrated track record of building resilient systems.
+                </p>
+              </div>
+
+              <div className="sm:col-span-4 flex flex-col gap-2.5 sm:border-l sm:border-stone-1 sm:pl-6">
+                <span className="font-mono text-xs text-stone-3 uppercase">SPECULATIVE APPLICATIONS</span>
+                <a
+                  href="mailto:careers@satelink.network"
+                  className="font-mono text-xs text-green hover:underline font-medium"
+                >
+                  careers@satelink.network (Satelink) →
+                </a>
+                <a
+                  href="mailto:careers@jakuraa.com"
+                  className="font-mono text-xs text-stone-4 hover:text-ink hover:underline font-medium"
+                >
+                  careers@jakuraa.com (Jakuraa) →
+                </a>
+              </div>
+            </div>
+          </div>
+        </Container>
+      </section>
+
+      {/* Employer Tracks: Jakuraa vs Satelink */}
+      <section className="py-20 border-t border-stone-1">
+        <Container>
+          <div className="max-w-2xl">
+            <span className="font-mono text-xs uppercase tracking-wider text-green font-semibold">
+              EMPLOYER IDENTITY & TRACKS
+            </span>
+            <h2 className="mt-2 font-serif text-3xl sm:text-4xl text-ink">
+              Two organizations, shared engineering rigor.
+            </h2>
+            <p className="mt-3 text-base text-stone-4 font-sans leading-relaxed">
+              Understand the distinction between working on Jakuraa corporate and operational systems
+              versus engineering the Satelink machine-commerce platform.
+            </p>
+          </div>
+
+          <div className="mt-14 grid gap-12 lg:grid-cols-2">
+            {/* Track 1: CAREERS AT SATELINK */}
+            <div className="rounded-2xl border border-stone-2 bg-ivory p-8 shadow-sm space-y-6">
+              <div className="border-b border-stone-1 pb-4">
+                <span className="rounded bg-green/10 px-2.5 py-1 font-mono text-[10px] uppercase font-semibold text-green">
+                  FLAGSHIP TECHNOLOGY PLATFORM
+                </span>
+                <h3 className="mt-3 font-serif text-2xl text-ink">
+                  Engineering at Satelink
+                </h3>
+                <p className="mt-2 text-sm text-stone-4 font-sans leading-relaxed">
+                  Focuses on autonomous software rails, AI-agent machine commerce, HTTP 402 micro-payments,
+                  and low-latency EVM smart contract settlements.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <span className="font-mono text-xs text-stone-3 uppercase block">CORE DISCIPLINES</span>
+                {satelinkDisciplines.map((d) => (
+                  <div key={d.area} className="rounded-xl border border-stone-1 bg-ivory-2/40 p-4">
+                    <h4 className="font-serif text-base text-ink">{d.area}</h4>
+                    <p className="mt-1 text-xs text-stone-4 font-sans leading-relaxed">{d.desc}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="pt-4 border-t border-stone-1 flex items-center justify-between text-xs font-mono">
+                <span className="text-stone-3">DIRECT CONTACT</span>
+                <a href="mailto:careers@satelink.network" className="text-green hover:underline font-medium">
+                  careers@satelink.network →
+                </a>
+              </div>
+            </div>
+
+            {/* Track 2: CAREERS AT JAKURAA */}
+            <div className="rounded-2xl border border-stone-2 bg-ivory p-8 shadow-sm space-y-6">
+              <div className="border-b border-stone-1 pb-4">
+                <span className="rounded bg-ivory-2 px-2.5 py-1 font-mono text-[10px] uppercase text-stone-4">
+                  CORPORATE TECHNOLOGY INSTITUTION
+                </span>
+                <h3 className="mt-3 font-serif text-2xl text-ink">
+                  Careers at Jakuraa
+                </h3>
+                <p className="mt-2 text-sm text-stone-4 font-sans leading-relaxed">
+                  Focuses on corporate governance, quantitative research, statutory administration,
+                  international trade operations, and long-term capital allocation.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <span className="font-mono text-xs text-stone-3 uppercase block">CORE DISCIPLINES</span>
+                {jakuraaDisciplines.map((d) => (
+                  <div key={d.area} className="rounded-xl border border-stone-1 bg-ivory-2/40 p-4">
+                    <h4 className="font-serif text-base text-ink">{d.area}</h4>
+                    <p className="mt-1 text-xs text-stone-4 font-sans leading-relaxed">{d.desc}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="pt-4 border-t border-stone-1 flex items-center justify-between text-xs font-mono">
+                <span className="text-stone-3">DIRECT CONTACT</span>
+                <a href="mailto:careers@jakuraa.com" className="text-green hover:underline font-medium">
+                  careers@jakuraa.com →
+                </a>
+              </div>
+            </div>
+          </div>
+        </Container>
+      </section>
+
+      {/* Operating Principles */}
+      <section className="border-t border-stone-1 py-20 bg-ivory-2/30">
         <Container>
           <SectionHeading title="How we work" />
-          <div className="mt-10 grid gap-10 sm:grid-cols-3">
+          <div className="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
             {principles.map(([t, b]) => (
-              <div key={t}>
-                <h3 className="font-serif text-2xl">{t}</h3>
-                <p className="mt-3 leading-relaxed text-stone-4">{b}</p>
+              <div key={t} className="rounded-xl border border-stone-1 bg-ivory p-6 shadow-sm">
+                <h3 className="font-serif text-xl text-ink">{t}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-stone-4 font-sans">{b}</p>
               </div>
             ))}
           </div>
         </Container>
       </section>
 
-      <section className="bg-ivory-2 py-20">
+      {/* Hiring Process */}
+      <section className="border-t border-stone-1 py-20">
         <Container>
-          <SectionHeading title="How we hire" />
+          <SectionHeading title="Evaluation process" />
           <ol className="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
             {process.map(([t, b], i) => (
               <li key={t} className="border-t-2 border-green pt-5">
-                <p className="text-sm text-amber-ink">0{i + 1}</p>
-                <h3 className="mt-1 font-serif text-xl">{t}</h3>
-                <p className="mt-2 leading-relaxed text-stone-4">{b}</p>
+                <p className="font-mono text-xs text-green font-semibold">STAGE 0{i + 1}</p>
+                <h3 className="mt-1 font-serif text-xl text-ink">{t}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-stone-4 font-sans">{b}</p>
               </li>
             ))}
           </ol>
         </Container>
       </section>
 
-      <section aria-labelledby="roles" className="py-20">
+      {/* Questions & Anti-Fraud Notice */}
+      <section className="border-t border-stone-1 py-20 bg-ivory">
         <Container>
-          <SectionHeading id="roles" title="Open roles" />
-          <div className="mt-10">
-            {openRoles.length === 0 ? (
-              <EmptyState title="No open roles right now" body={`We are not hiring for specific roles at the moment. You are welcome to write to ${company.email}.`} />
-            ) : (
-              <ul className="divide-y divide-stone-1 border-y border-stone-1">
-                {openRoles.map((r) => (
-                  <li key={r.slug} className="grid gap-2 py-6 sm:grid-cols-[1fr_200px]">
-                    <div>
-                      <p className="font-serif text-2xl">{r.title}</p>
-                      <p className="mt-1 text-stone-4">{r.summary}</p>
-                    </div>
-                    <p className="text-sm text-stone-3 sm:text-right">{r.location}</p>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </Container>
-      </section>
-
-      <section className="border-t border-stone-1 py-20">
-        <Container>
-          <SectionHeading title="Questions" />
+          <SectionHeading title="Frequently asked questions" />
           <div className="mt-8 max-w-3xl divide-y divide-stone-1 border-y border-stone-1">
             {faq.map(([q, a]) => (
               <details key={q} className="group py-5">
-                <summary className="flex cursor-pointer items-center justify-between gap-4 font-serif text-xl">
+                <summary className="flex cursor-pointer items-center justify-between gap-4 font-serif text-xl text-ink">
                   {q}
                   <span aria-hidden="true" className="text-stone-3 transition-transform group-open:rotate-45">+</span>
                 </summary>
-                <p className="mt-3 leading-relaxed text-stone-4">{a}</p>
+                <p className="mt-3 text-sm leading-relaxed text-stone-4 font-sans">{a}</p>
               </details>
             ))}
           </div>
+
+          <div className="mt-12 rounded-xl border border-amber-ink/20 bg-amber-ink/5 p-4 font-mono text-xs text-stone-4 max-w-3xl">
+            <span className="text-amber-ink font-semibold uppercase">SECURITY & INTEGRITY NOTICE: </span>
+            Jakuraa Commercial and Satelink will never solicit recruitment fees, processing deposits, or monetary transactions from job applicants. Official communications originate strictly from verified @jakuraa.com and @satelink.network domains.
+          </div>
         </Container>
       </section>
-    </>
+    </main>
   );
 }

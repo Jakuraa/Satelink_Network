@@ -30,8 +30,8 @@ export default function Privacy() {
       </p>
       <h2>Who processes it for us</h2>
       <ul>
-        <li>Vercel Inc. — website hosting.</li>
-        <li>Resend — delivery of the enquiry email and your confirmation email.</li>
+        <li>Vercel Inc. - website hosting.</li>
+        <li>Resend - delivery of the enquiry email and your confirmation email.</li>
       </ul>
       <h2>How long we keep it</h2>
       <p>We keep enquiry correspondence for as long as needed to deal with it and to meet legal obligations, then delete it.</p>

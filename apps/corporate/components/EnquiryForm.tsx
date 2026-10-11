@@ -23,7 +23,7 @@ export function EnquiryForm({ fallbackEmail }: { fallbackEmail: string }) {
   if (state === "sent") {
     return (
       <div role="status" className="rounded-2xl border border-stone-1 bg-green-soft p-8">
-        <p className="font-serif text-2xl text-green">Thank you — your message is on its way.</p>
+        <p className="font-serif text-2xl text-green">Thank you - your message is on its way.</p>
         <p className="mt-2 text-stone-4">A confirmation has been sent to your email address.</p>
       </div>
     );

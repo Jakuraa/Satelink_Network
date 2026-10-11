@@ -1,4 +1,4 @@
-# Unified design system — "the jakuraa.com standard"
+# Unified design system - "the jakuraa.com standard"
 
 One modern-minimalist system for **satelink.network**, **console.satelink.network**,
 **docs** and **jakuraa.com** (2026-09-25). Structure, spacing, interaction and
@@ -26,13 +26,13 @@ Tailwind entry, *after* `@import "tailwindcss"`:
 ```
 
 Imported anywhere else (e.g. from `layout.tsx`) Tailwind never sees the `@theme`
-block and **no `sl-*` utility is generated** — which is exactly what made the
+block and **no `sl-*` utility is generated** - which is exactly what made the
 production mega-menu transparent, every border black and every primary button
-unfilled (AUDIT_2026-09-25 D1–D3). Guarded by `apps/web/test/tailwind-token-entry.test.ts`.
+unfilled (AUDIT_2026-09-25 D1-D3). Guarded by `apps/web/test/tailwind-token-entry.test.ts`.
 
 ## Brand layers
 
-**Satelink** — calm, high-contrast, warm-neutral.
+**Satelink** - calm, high-contrast, warm-neutral.
 
 | Token | Light (default) | Dark (true dark) |
 |---|---|---|
@@ -42,37 +42,42 @@ unfilled (AUDIT_2026-09-25 D1–D3). Guarded by `apps/web/test/tailwind-token-en
 | `--sl-text` / `-muted` / `-subtle` | `#1A1915` / `#55524A` / `#6B675C` | `#EEECE6` / `#AAA69C` / `#8E8A80` |
 | `--sl-accent` (the one primary) | `#0B7A6B` | `#5CD6C3` |
 
-Product colours carry meaning and are used sparingly — **icons, dots, chart
+Product colours carry meaning and are used sparingly - **icons, dots, chart
 series and tints only, never body or link text** (they fail AA as small text):
 teal `--sl-accent` platform · indigo `--sl-machine` machine/x402 · amber
 `--sl-market` market data · sky `--sl-settle` settlement. Every text pair is
 AA-checked by `apps/web/test/token-contrast.test.ts`.
 
-**Jakuraa** — ivory `#faf8f3`, ink `#15130f`, deep green `#1f4d3a`; dark mode
+**Jakuraa** - ivory `#faf8f3`, ink `#15130f`, deep green `#1f4d3a`; dark mode
 inverts roles (`#12110e` / `#efece4`, green lifted to `#86c4a3`). The Satelink
 band (`bg-band`) stays deep green in both themes.
 
 ## Type
-- **Display:** Source Serif 4 (same family as jakuraa.com), weight 400, tracking −0.015em, line-height ~1.08. H1, section H2s, feature-card titles, the wordmark.
-- **Body:** Inter. **Numbers & code:** JetBrains Mono, tabular numerals.
-- Both Inter and Source Serif 4 load as **variable fonts** (one file each; no `weight` list) — part of the Lighthouse ≥ 90 budget.
+- **Satelink UI / Body / Headings:** Manrope (weights 400, 500, 600, 700). Primary font for all navigation, headings, body, and interface elements on satelink.network (`apps/web`).
+- **Satelink Technical / Telemetry:** IBM Plex Mono (weights 400, 500, 600). Technical labels, machine addresses, identifiers, metrics, and telemetry data.
+- **Jakuraa Corporate Typography:** DM Sans (sans UI/body), Source Serif 4 (editorial display), JetBrains Mono (technical figures/code) preserved on jakuraa.com (`apps/corporate`).
 - Eyebrows are sentence-case muted text, not uppercase accent labels.
+
+## Favicon
+- **Approved Brand Mark:** Pure white icon on transparent background optimized for dark/light browser tabs and OS chrome.
+- **Formats Delivered:** Vector SVG (`favicon.svg`, `icon.svg`), multi-size ICO (`favicon.ico`), raster PNGs (16x16, 32x32, 48x48), and Apple touch icon (180x180 `apple-touch-icon.png`).
+- Applied across both `satelink.network` (`apps/web`) and `jakuraa.com` (`apps/corporate`).
 
 ## Foundation scales
 Spacing `--sl-space-1…10` (4 → 128 px) · section rhythm `--sl-section-y`
-(64–128 px) · radius 6 / 10 / 16 / pill · elevation `--sl-shadow-1/2/3`
-(3 = overlays) · motion `--sl-dur-1/2/3` 120/220/360 ms — **motion only for
+(64-128 px) · radius 6 / 10 / 16 / pill · elevation `--sl-shadow-1/2/3`
+(3 = overlays) · motion `--sl-dur-1/2/3` 120/220/360 ms - **motion only for
 reveal and the machine-pays demo** · stacking `--sl-z-backdrop` 40 <
 `--sl-z-header` 50 (the mega-menu sheet lives inside the header) <
 `--sl-z-dialog` 80 < `--sl-z-toast` 90.
 
 ## Header (claude.com pattern)
-`Wordmark · Products · Solutions · Pricing · Developers · Resources` —
+`Wordmark · Products · Solutions · Pricing · Developers · Resources` -
 right: `[search][theme]` icon cluster · **Log in** · **Try Satelink** (the single
 primary). Contact sales lives in Solutions and the footer. Nav data:
 `packages/content/src/navigation.ts` (CMS-overridable).
 
-Mega-menu: a **solid** full-width sheet (`bg-sl-surface`, `shadow-3`), 2–3 link
+Mega-menu: a **solid** full-width sheet (`bg-sl-surface`, `shadow-3`), 2-3 link
 columns + one feature card, over a dimmed + blurred backdrop so the page is never
 legible through or beside it. Keyboard: Enter/Space/↓ open (↓ focuses the first
 link), Esc closes and returns focus, focus leaving closes. Mobile: full-screen
@@ -87,7 +92,7 @@ serif headline, Continue with Google, OR, email → magic link, legal line.
 ## Gates
 | Gate | Where |
 |---|---|
-| No overlap / clipping at 360–1440 × light/dark; menu opaque + covering hero (hit-test); drawer full-screen + focus trap; no horizontal scroll; axe | `apps/web/e2e/header-overlap.spec.ts` |
+| No overlap / clipping at 360-1440 × light/dark; menu opaque + covering hero (hit-test); drawer full-screen + focus trap; no horizontal scroll; axe | `apps/web/e2e/header-overlap.spec.ts` |
 | Sign-in pattern, theme-follow, axe at 5 breakpoints × 2 themes | `apps/console/e2e/sign-in.spec.ts` |
 | Tokens compiled by Tailwind | `apps/web/test/tailwind-token-entry.test.ts` |
 | AA contrast of every text pair, both themes | `apps/web/test/token-contrast.test.ts` |
