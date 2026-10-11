@@ -8,7 +8,7 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard, LineChart, CreditCard, Server, KeyRound, BarChart3,
+  LayoutDashboard, CreditCard, Server, KeyRound, BarChart3,
   Receipt, BookOpen, Settings, Menu, X,
 } from "lucide-react";
 
@@ -20,7 +20,6 @@ const NAV: NavGroup[] = [
   {
     title: "Products",
     items: [
-      { label: "Trading Intelligence", href: "/console/products/trading-intelligence", icon: LineChart, color: "var(--sl-market)" },
       { label: "Machine Payments (x402)", href: "/console/products/x402", icon: CreditCard, color: "var(--sl-machine)" },
       { label: "RPC", href: "/console/products/rpc", icon: Server, color: "var(--sl-settle)" },
     ],
