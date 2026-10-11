@@ -31,7 +31,7 @@ const modeBOrder = (idem: string) => { const o = { ...ORDER(), idempotencyKey: i
 const modeBCtx = () => {
   const c = RISK_CTX();
   c.flagsEnv[F('MANDATE_MODE_B')] = 'true';
-  c.mandate = { ...c.mandate, mode: 'automated', termsMode: 'B', stepUpMethod: 'totp', strategyVersionId: 'stv_1', instruments: ['BTC-USDT'] };
+  c.mandate = { ...c.mandate, mode: 'automated', modeCode: 'B', stepUpMethod: 'totp', strategyVersionId: 'stv_1', instruments: ['BTC-USDT'] };
   c.activity = { ...c.activity, todayNotionalMinor: '0' };
   c.proposer = { principalId: 'prn_bot', ownerPrincipalId: 'prn_alice', scope: 'EXECUTE_UNDER_MANDATE', mandateId: 'mdt_1' };
   c.scorecardDecision = { id: 'dec_000001', decision: 'GO', expires_at: new Date(NOW + 600_000).toISOString(), subject: { principalId: 'prn_alice', instrument: 'BTC-USDT', side: 'buy' } };

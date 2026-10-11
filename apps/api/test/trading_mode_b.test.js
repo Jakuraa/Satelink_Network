@@ -12,7 +12,7 @@ const MODE_B_ORDER = () => {
 const MODE_B_CTX = () => {
   const c = RISK_CTX();
   c.flagsEnv[F('MANDATE_MODE_B')] = 'true';
-  c.mandate = { ...c.mandate, mode: 'automated', termsMode: 'B', stepUpMethod: 'totp', strategyVersionId: 'stv_1', instruments: ['BTC-USDT'] };
+  c.mandate = { ...c.mandate, mode: 'automated', modeCode: 'B', stepUpMethod: 'totp', strategyVersionId: 'stv_1', instruments: ['BTC-USDT'] };
   c.activity = { ...c.activity, todayNotionalMinor: '0' };
   c.proposer = { principalId: 'prn_bot', ownerPrincipalId: 'prn_alice', scope: 'EXECUTE_UNDER_MANDATE', mandateId: 'mdt_1' };
   c.scorecardDecision = { id: 'dec_000001', decision: 'GO', expires_at: new Date(NOW + 10 * 60_000).toISOString(), subject: { principalId: 'prn_alice', instrument: 'BTC-USDT', side: 'buy' } };
@@ -40,8 +40,8 @@ describe('trading: Mode B for agents / machines (Phase 6 item 12)', () => {
     ['live mode (LIVE_TRADING is LOCKED even if set)', (o, c) => { o.mode = 'live'; c.brokerAccount.environment = 'live'; c.flagsEnv[F('LIVE_TRADING')] = 'true'; }, ['REJECT', 'trading_flags', 'FLAG_DISABLED']],
     ['any other origin without approval needs AUTONOMOUS_MODE (LOCKED)', (o) => { o.origin = 'llm_proposal'; }, ['REJECT', 'trading_flags', 'FLAG_DISABLED']],
     ['copilot mandate', (o, c) => { c.mandate.mode = 'copilot'; }, ['REJECT', 'mandate', 'APPROVAL_REQUIRED']],
-    ['Mode A terms', (o, c) => { c.mandate.termsMode = 'A'; }, ['REJECT', 'mandate', 'MODE_B_MANDATE_REQUIRED']],
-    ['Mode C terms', (o, c) => { c.mandate.termsMode = 'C'; }, ['REJECT', 'mandate', 'MODE_B_MANDATE_REQUIRED']],
+    ['Mode A terms', (o, c) => { c.mandate.modeCode = 'A'; }, ['REJECT', 'mandate', 'MODE_B_MANDATE_REQUIRED']],
+    ['Mode C terms', (o, c) => { c.mandate.modeCode = 'C'; }, ['REJECT', 'mandate', 'MODE_B_MANDATE_REQUIRED']],
     ['mandate not step-up signed', (o, c) => { c.mandate.stepUpMethod = 'none'; }, ['REJECT', 'mandate', 'MANDATE_NOT_APPROVED']],
     ['mandate expired', (o, c) => { c.mandate.validUntil = NOW - 1; }, ['REJECT', 'mandate', 'MANDATE_EXPIRED']],
     ['mandate revoked', (o, c) => { c.mandate.status = 'revoked'; }, ['REJECT', 'mandate', 'MANDATE_INACTIVE']],

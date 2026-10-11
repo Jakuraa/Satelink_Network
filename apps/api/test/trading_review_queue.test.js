@@ -9,6 +9,8 @@ import { StrategyService, InMemoryStrategyStore } from '../src/trading_agent/str
 import { ToolRegistry, createDefaultTools } from '../src/trading_agent/agent/index.mjs';
 import { DecisionService, InMemoryDecisionStore } from '../src/trading_agent/decision/index.mjs';
 import { goodInput, NOW } from './helpers/decision_fixture.mjs';
+import { ORDER_INTENT_SCHEMA } from '../src/trading_agent/risk/index.mjs';
+import { validateAgainst } from '../src/trading_agent/strategies/validator.mjs';
 
 // Phase 6 item 13 — proposal review queue + order list (replacing the Stage 24 501s) + assistant.
 const ENV = { TRADING_FLAG_TRADING_AGENT: 'true' };
@@ -31,7 +33,11 @@ function rig({ riskRefuses = false, decisionInput = goodInput } = {}) {
     store: omsStore, idFactory: ids, clock,
     venues: { capabilities: () => ({ executionSafety: 'IDEMPOTENT', supportsClientOrderId: true, supportsQueryByClientOrderId: true, clientOrderIdMaxLength: 36 }) },
     mandates: { async verifyForOrder(id) { if (id !== 'mdt_alice_1') throw Object.assign(new Error('not found'), { code: 'NOT_FOUND' }); return mandate; } },
-    risk: { async decide(intent) { intents.push(intent); return riskRefuses ? { decision: 'REJECT', recorded: true, decisionId: ids('rdc'), failedCheck: { code: 'MAX_ORDER_NOTIONAL', detail: 'too big' } } : { decision: 'APPROVE', recorded: true, decisionId: ids('rdc') }; } },
+    risk: { async decide(intent) {
+      intents.push(intent);
+      const v = validateAgainst(ORDER_INTENT_SCHEMA, intent); // the real engine's check 2: proposal-built intents must be schema-valid
+      if (!v.ok) throw new Error(`intent fails ORDER_INTENT_SCHEMA: ${v.errors.map((e) => `${e.path}: ${e.message}`).join('; ')}`);
+      return riskRefuses ? { decision: 'REJECT', recorded: true, decisionId: ids('rdc'), failedCheck: { code: 'MAX_ORDER_NOTIONAL', detail: 'too big' } } : { decision: 'APPROVE', recorded: true, decisionId: ids('rdc') }; } },
   });
   const strategyStore = new InMemoryStrategyStore();
   const strategies = new StrategyService({ store: strategyStore, idFactory: ids, env: ENV, clock });
@@ -135,6 +141,32 @@ describe('trading: proposal review queue + order list + assistant (Phase 6 item 
     const assistant = createAssistant({ orchestrator: { run: async () => { throw new Error('must not run'); } }, proposals: r.proposals });
     expect(await codeOf(() => assistant.evaluate({ principalId: 'prn_bot', kind: 'agent' }, { intent: { capital: '1000', maxLoss: '50', broker: 'binance', markets: ['BTC-USDT'] } }, 'req-1'))).to.equal('HUMAN_REQUIRED');
     expect(r.intents).to.have.length(0);
+  });
+
+  describe('Mode B execution (no per-order click; the risk engine decides)', () => {
+    const candidate = (r, over = {}) => r.proposals.create({ principalId: 'prn_bot', proposedBy: 'prn_bot', proposedByKind: 'agent', kind: 'order', executionPath: 'mode_b_candidate', mandateId: 'mdt_alice_1', decisionId: 'dec_000123', payload: { mandateId: 'mdt_alice_1', instrument: 'BTC-USDT', side: 'buy', quantity: '0.001', limitPrice: '30000', strategyVersionId: 'stv_1' }, ...over });
+    it('a candidate becomes an UNAPPROVED agent_proposal intent with proposer + decision id; event mode_b_executed', async () => {
+      const r = rig();
+      const { proposalId } = await candidate(r);
+      expect((await r.proposals.listModeBCandidates()).map((p) => p.id)).to.deep.equal([proposalId]);
+      const out = await r.proposals.executeModeB(proposalId);
+      expect(out.executed).to.equal(true);
+      expect(r.intents[0]).to.include({ origin: 'agent_proposal', proposedBy: 'prn_bot', decisionId: 'dec_000123', strategyVersionId: 'stv_1', mode: 'paper' });
+      expect(r.intents[0]).to.not.have.property('approvedBy');
+      expect(r.proposalStore.events.at(-1)).to.deep.include({ action: 'mode_b_executed', actorId: 'mode_b_executor' });
+      expect(await r.proposals.listModeBCandidates()).to.deep.equal([]);
+      expect((await r.proposals.executeModeB(proposalId)).reason).to.equal('NOT_A_CANDIDATE'); // once
+    });
+    it('a risk refusal closes the candidate; human-review proposals are never executed this way', async () => {
+      const r = rig({ riskRefuses: true });
+      const { proposalId } = await candidate(r);
+      expect(await r.proposals.executeModeB(proposalId)).to.deep.include({ executed: false });
+      expect((await r.proposalStore.get(proposalId)).status).to.equal('rejected');
+      const r2 = rig();
+      await agentProposes(r2); // human_review path
+      expect((await r2.proposals.executeModeB([...r2.proposalStore.rows.keys()][0])).reason).to.equal('NOT_A_CANDIDATE');
+      expect(r2.intents).to.have.length(0);
+    });
   });
 
   it('an approved STRATEGY proposal becomes a new DRAFT version (it must still be validated)', async () => {

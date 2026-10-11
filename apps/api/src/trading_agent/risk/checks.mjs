@@ -97,7 +97,7 @@ export const MODE_B_CAPS = Object.freeze({ maxOrderNotional: '50', maxDailyNotio
 export const isModeB = (o) => o.origin === 'agent_proposal' && !o.approvedBy;
 
 function modeBCoverage(o, ctx, m, now) {
-  if (m.mode !== 'automated' || m.termsMode !== 'B') return no('MODE_B_MANDATE_REQUIRED', 'a Mode B mandate is required for orders without a per-order approval');
+  if (m.mode !== 'automated' || m.modeCode !== 'B') return no('MODE_B_MANDATE_REQUIRED', 'a Mode B mandate is required for orders without a per-order approval');
   if (!['totp', 'passkey'].includes(m.stepUpMethod)) return no('MANDATE_NOT_APPROVED', 'Mode B mandate must be step-up signed');
   if (!o.strategyVersionId || o.strategyVersionId !== m.strategyVersionId) return no('MODE_B_STRATEGY_MISMATCH', 'the order is not for the strategy version the mandate binds');
   if (!Array.isArray(m.instruments) || !m.instruments.includes(o.instrument)) return no('MODE_B_INSTRUMENT', 'the mandate does not cover this instrument');

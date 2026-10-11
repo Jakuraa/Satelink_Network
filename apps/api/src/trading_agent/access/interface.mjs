@@ -39,6 +39,7 @@ export function createMachineInterface({ orchestrator, decisionStore, proposals,
       if (!ID('mdt').test(body?.mandateId ?? '')) throw bad('mandateId required: proposals are bound to a mandate');
       if (k.mandateId && body.mandateId !== k.mandateId) throw new AccessError(403, 'MANDATE_MISMATCH', 'this key is bound to a different mandate');
       if (!INSTRUMENT.test(body.instrument ?? '') || !['buy', 'sell'].includes(body.side) || typeof body.quantity !== 'string') throw bad('instrument, side and quantity (decimal string) required');
+      if (body.strategyVersionId != null && !ID('stv').test(body.strategyVersionId)) throw bad('strategyVersionId malformed');
       if (body.decisionId != null) {
         const d = await decisionStore.get(body.decisionId);
         if (!d || (d.subject?.principalId ?? d.principal_id) !== k.ownerPrincipalId) throw new AccessError(404, 'NOT_FOUND', 'decision not found');
@@ -46,7 +47,7 @@ export function createMachineInterface({ orchestrator, decisionStore, proposals,
       const created = await proposals.create({
         principalId: k.ownerPrincipalId, proposedBy: principal.principalId, proposedByKind: principal.kind, mandateId: body.mandateId,
         decisionId: body.decisionId ?? null, instrument: body.instrument, side: body.side, quantity: body.quantity,
-        limitPrice: body.limitPrice ?? null, rationale: String(body.rationale ?? '').slice(0, 2000),
+        limitPrice: body.limitPrice ?? null, ...(body.strategyVersionId ? { strategyVersionId: body.strategyVersionId } : {}), rationale: String(body.rationale ?? '').slice(0, 2000),
         executionPath: k.scope === Scope.EXECUTE_UNDER_MANDATE ? 'mode_b_candidate' : 'human_review', requestId,
       });
       await guard.meter(principal, 'propose', requestId);
