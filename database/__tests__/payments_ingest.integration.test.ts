@@ -22,6 +22,8 @@ import { isLedgerKind } from '../../libs/financial-domain/src/ledger/ledger-kind
 import { ingestCanonicalEvent, ingestWebhook, recordIntent } from '../../apps/api/src/payments/ingest.mjs';
 import { createPayramAdapter } from '../../apps/api/src/payments/adapters/payram.mjs';
 import { sha256Hex } from '../../apps/api/src/payments/contract.mjs';
+import { reconcileProvider } from '../../apps/api/src/payments/reconcile.mjs';
+import { effectivePlan, planGate, queueRenewalReminders, loadPlanCatalog } from '../../apps/api/src/payments/plans.mjs';
 
 const MIGRATIONS_DIR = resolve(import.meta.dirname ?? new URL('.', import.meta.url).pathname, '..', 'migrations');
 
@@ -283,3 +285,94 @@ describe('payment ingestion (single transaction)', () => {
     expect(await balance(pool, await accountFor(pool, 'revenue', 'INR'))).toBe(0n);
   });
 });
+
+describe('Trading AI entitlements (Wave 1.7)', () => {
+  const catalog = loadPlanCatalog();
+  const day = (iso: string) => new Date(iso);
+
+  it('a paid crypto period grants Pro; after period + grace it falls back to Free', async () => {
+    const pool = await freshPool('plans_eff');
+    await recordIntent(pool, intent());
+    await ingestCanonicalEvent(pool, ev(), { now: day('2026-10-12T00:00:00Z') });
+    expect((await effectivePlan(pool, 'acct_c1', { catalog, now: day('2026-10-20T00:00:00Z') })).plan.id).toBe('trading_ai_pro');
+    const grace = await effectivePlan(pool, 'acct_c1', { catalog, now: day('2026-11-12T12:00:00Z') });
+    expect(grace).toMatchObject({ inGrace: true });
+    expect(grace.plan.id).toBe('trading_ai_pro');
+    expect((await effectivePlan(pool, 'acct_c1', { catalog, now: day('2026-11-16T00:00:00Z') })).plan.id).toBe('trading_ai_free');
+  });
+
+  it('planGate uses the paid limits; a refunded period no longer counts', async () => {
+    const pool = await freshPool('plans_gate');
+    await recordIntent(pool, intent({ provider: 'razorpay', currency: 'INR', amountMinor: 100n }));
+    const base = { provider: 'razorpay', providerPaymentId: 'p1', currency: 'INR', network: null };
+    await ingestCanonicalEvent(pool, ev({ ...base, providerEventId: 'cap', amountMinor: 100n }), { now: day('2026-10-12T00:00:00Z') });
+    const usage = { countToday: async () => 10 };
+    const now = day('2026-10-13T00:00:00Z');
+    expect(await planGate(pool, { customerAccountId: 'acct_c1', feature: 'agentRuns', usage, catalog, now })).toMatchObject({ allowed: true, plan: 'trading_ai_pro', limit: 50 });
+    await ingestCanonicalEvent(pool, ev({ ...base, providerEventId: 'ref', status: 'refunded', amountMinor: 100n }));
+    expect(await planGate(pool, { customerAccountId: 'acct_c1', feature: 'agentRuns', usage, catalog, now })).toMatchObject({ allowed: false, plan: 'trading_ai_free' });
+  });
+
+  it('renewal reminders: T-7, T-3, T-0 each queued once; none after an early renewal; never a charge', async () => {
+    const pool = await freshPool('plans_remind');
+    await recordIntent(pool, intent());
+    await ingestCanonicalEvent(pool, ev(), { now: day('2026-10-12T00:00:00Z') }); // ends 2026-11-11
+    const at = async (iso: string) => (await queueRenewalReminders(pool, { catalog, now: day(iso) })).queued;
+    expect(await at('2026-10-20T00:00:00Z')).toBe(0);
+    expect(await at('2026-11-04T00:00:00Z')).toBe(1); // T-7
+    expect(await at('2026-11-04T06:00:00Z')).toBe(0); // idempotent
+    expect(await at('2026-11-08T00:00:00Z')).toBe(1); // T-3
+    expect(await at('2026-11-11T00:00:00Z')).toBe(1); // T-0
+    expect(await count(pool, `SELECT COUNT(*) n FROM outbox WHERE event_type='subscription.renewal_due'`)).toBe(3);
+    expect(await count(pool, `SELECT COUNT(*) n FROM payment_events`)).toBe(1); // reminders never create payments
+    // early renewal stacks a new period → no further reminder for the old one
+    await recordIntent(pool, intent({ canonicalRef: 'inv_renew' }));
+    await ingestCanonicalEvent(pool, ev({ canonicalRef: 'inv_renew', providerEventId: 'r2:succeeded:19', providerPaymentId: 'r2' }), { now: day('2026-11-05T00:00:00Z') });
+    const pool2Count = await count(pool, `SELECT COUNT(*) n FROM outbox WHERE event_type='subscription.renewal_due'`);
+    await at('2026-11-10T00:00:00Z');
+    expect(await count(pool, `SELECT COUNT(*) n FROM outbox WHERE event_type='subscription.renewal_due'`)).toBe(pool2Count);
+  });
+});
+
+describe('provider reconciliation (Wave 1.9)', () => {
+  const W = { windowStart: new Date('2000-01-01T00:00:00Z'), windowEnd: new Date('2100-01-01T00:00:00Z') };
+  const fakeAdapter = (id: string) => ({ id, reconcile: async () => [] });
+
+  it('clean when provider records, events and postings agree', async () => {
+    const pool = await freshPool('recon_clean');
+    await recordIntent(pool, intent());
+    await ingestCanonicalEvent(pool, ev());
+    const r = await reconcileProvider(pool, fakeAdapter('payram'), { ...W, providerRecords: [{ providerPaymentId: 'ref1', status: 'succeeded', amountMinor: 19_000_000n, currency: 'USDT' }] });
+    expect(r).toMatchObject({ status: 'clean', mismatches: [] });
+    expect((await pool.query(`SELECT status, provider_records, payment_events, ledger_postings FROM provider_reconciliation_runs`)).rows[0]).toEqual({ status: 'clean', provider_records: 1, payment_events: 1, ledger_postings: 1 });
+    expect(await count(pool, `SELECT COUNT(*) n FROM outbox WHERE event_type='payments.reconciliation_mismatch'`)).toBe(0);
+  });
+
+  it('flags missing_event, status/amount mismatch, orphan_event and missing_posting; alerts once; never touches the ledger', async () => {
+    const pool = await freshPool('recon_mm');
+    await recordIntent(pool, intent());
+    await ingestCanonicalEvent(pool, ev()); // ref1 settled 19 USDT
+    await ingestCanonicalEvent(pool, ev({ canonicalRef: null, providerEventId: 'orph:succeeded:1', providerPaymentId: 'orph', amountMinor: 1_000_000n }));
+    // a settled event with no posting (simulates a pre-Wave-1 or manual insert)
+    await pool.query(`INSERT INTO payment_events (provider, provider_event_id, provider_payment_id, amount_minor, currency, status, occurred_at, raw_hash)
+                      VALUES ('payram','np:succeeded:2','np',2000000,'USDT','succeeded',now(),$1)`, [sha256Hex('np')]);
+    const ledgerBefore = await count(pool, `SELECT COUNT(*) n FROM ledger_entries`);
+    const r = await reconcileProvider(pool, fakeAdapter('payram'), { ...W, providerRecords: [
+      { providerPaymentId: 'ref1', status: 'succeeded', amountMinor: 18_000_000n, currency: 'USDT' },
+      { providerPaymentId: 'np', status: 'refunded', amountMinor: 2_000_000n, currency: 'USDT' },
+      { providerPaymentId: 'never', status: 'succeeded', amountMinor: 5n, currency: 'USDT' },
+    ] });
+    expect(r.status).toBe('mismatch');
+    expect(new Set(r.mismatches.map((m: { kind: string }) => m.kind))).toEqual(new Set(['amount_mismatch', 'status_mismatch', 'missing_event', 'orphan_event', 'missing_posting']));
+    expect(await count(pool, `SELECT COUNT(*) n FROM outbox WHERE event_type='payments.reconciliation_mismatch' AND severity='critical'`)).toBe(1);
+    expect(await count(pool, `SELECT COUNT(*) n FROM ledger_entries`)).toBe(ledgerBefore);
+  });
+
+  it('a provider without API access records an error run, not a false clean', async () => {
+    const pool = await freshPool('recon_err');
+    const r = await reconcileProvider(pool, { id: 'cashfree', reconcile: async () => { throw new Error('cashfree.reconcile(): no Cashfree account'); } }, { ...W, logger: { error() {} } });
+    expect(r.status).toBe('error');
+    expect((await pool.query(`SELECT status FROM provider_reconciliation_runs`)).rows[0].status).toBe('error');
+  });
+});
+
