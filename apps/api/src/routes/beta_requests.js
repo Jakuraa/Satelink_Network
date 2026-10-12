@@ -11,10 +11,19 @@ import {
   validateBetaRequest,
   insertBetaRequest,
   sendBetaRequestEmails,
+  betaFounderEmailStatus,
 } from '../beta/beta_requests.mjs';
 
-export function createBetaRequestsRouter(pool, { sendEmails = sendBetaRequestEmails } = {}) {
+export function createBetaRequestsRouter(pool, { sendEmails = sendBetaRequestEmails, env = process.env, warn = console.warn } = {}) {
   const router = express.Router();
+
+  // Startup warning only — never blocks the route. Surfaced on /admin/config too.
+  const founderEmail = betaFounderEmailStatus(env);
+  if (!founderEmail.dedicated) {
+    warn(`[beta-requests] BETA_REQUESTS_FOUNDER_EMAIL is not set — ${founderEmail.effective
+      ? 'falling back to FOUNDER_EMAIL for founder notifications'
+      : 'founder will NOT be notified of new beta requests (rows are still stored)'}`);
+  }
 
   router.post('/request', betaRequestLimiter, express.json({ limit: '16kb' }), async (req, res) => {
     const parsed = validateBetaRequest(req.body);

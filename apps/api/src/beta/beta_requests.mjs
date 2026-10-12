@@ -115,6 +115,16 @@ export function senderConfigured(env = process.env) {
   return Boolean(env.RESEND_API_KEY);
 }
 
+/** Founder-notification recipient state. `dedicated` is false when
+ * BETA_REQUESTS_FOUNDER_EMAIL is unset (founder action) — FOUNDER_EMAIL may
+ * still cover it as a fallback; `effective` says whether anyone is notified. */
+export function betaFounderEmailStatus(env = process.env) {
+  return {
+    dedicated: Boolean(env.BETA_REQUESTS_FOUNDER_EMAIL),
+    effective: Boolean(env.BETA_REQUESTS_FOUNDER_EMAIL || env.FOUNDER_EMAIL),
+  };
+}
+
 /** Resend delivery, same pattern as console_accounts/alerts.mjs: returns
  * 'sent' | 'skipped_no_sender', throws on a provider error — callers decide
  * whether that's fatal. Never blocks the row being stored. */
