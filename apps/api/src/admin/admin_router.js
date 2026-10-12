@@ -23,6 +23,7 @@ import {
   upsertCompetitorPricePoint,
 } from '../economics/pricing_intelligence/index.js';
 import { PRICE_PER_CALL_USDT } from '../billing/credit_service.mjs';
+import { betaFounderEmailStatus } from '../beta/beta_requests.mjs';
 
 // Mirrors BAD_ASNS in apps/api/src/middleware/free_tier_gate.js — kept as a
 // separate literal here rather than imported so the admin router has no
@@ -935,6 +936,8 @@ export function createAdminRouter(pool, redis) {
       USDT_ADDRESS,
       BREVO_CONFIGURED: process.env.BREVO_API_KEY ? 'true' : 'false',
       ADMIN_TOKEN_CONFIGURED: process.env.ADMIN_SECRET_TOKEN ? 'true' : 'false',
+      BETA_REQUESTS_FOUNDER_EMAIL_CONFIGURED: betaFounderEmailStatus().dedicated ? 'true' : 'false',
+      BETA_REQUESTS_FOUNDER_NOTIFY_EFFECTIVE: betaFounderEmailStatus().effective ? 'true' : 'false',
       NOTE: 'Secret values are never returned. Keys only.',
     });
   });

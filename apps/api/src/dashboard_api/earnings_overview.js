@@ -7,6 +7,9 @@
  * Tables read: revenue_events_v2, epoch_earnings, epochs
  */
 
+import { FOUNDER_WALLETS } from '../payments/founder_wallets.js';
+import { INTERNAL_PREDICATE } from '../services/financial/truth.js';
+
 /**
  * Get aggregated earnings overview for dashboards.
  *
@@ -55,6 +58,28 @@ export async function getEarningsOverview(db, cache) {
         "SELECT COALESCE(SUM(amount_usdt), 0) as total FROM revenue_events_v2 WHERE status = 'success' AND is_test_data = false"
     );
     const totalRevenue = parseFloat(totalRevenueRow?.total || 0);
+
+    // ── External vs Internal Revenue ──
+    const splitRevRow = await queryOne(`
+        SELECT
+            COALESCE(SUM(e.amount_usdt) FILTER (WHERE NOT ${INTERNAL_PREDICATE}), 0) as external_total,
+            COALESCE(SUM(e.amount_usdt) FILTER (WHERE ${INTERNAL_PREDICATE}), 0) as internal_total
+        FROM revenue_events_v2 e
+        LEFT JOIN api_credits t ON t.api_key = e.client_id
+        WHERE e.status = 'success' AND (e.is_test_data = false OR e.is_test_data IS NULL)
+    `, [FOUNDER_WALLETS]);
+    const externalRevenue = parseFloat(splitRevRow?.external_total || 0);
+    const internalRevenue = parseFloat(splitRevRow?.internal_total || 0);
+
+    // ── Total Deposits ──
+    let totalDeposited = null; // null = unavailable, never 0
+    try {
+        const depositsRow = await queryOne(
+            "SELECT COALESCE(SUM(amount_usdt), 0) as total FROM credit_deposits WHERE status = 'confirmed' AND NOT (lower(wallet_address) = ANY($1::text[]))",
+            [FOUNDER_WALLETS]
+        );
+        totalDeposited = parseFloat(depositsRow?.total || 0);
+    } catch (e) { /* table may not exist → unavailable */ }
 
     // ── Revenue by time window ──
     const revenue24hRow = await queryOne(
@@ -114,6 +139,9 @@ export async function getEarningsOverview(db, cache) {
 
     const result = {
         total_revenue: parseFloat(totalRevenue.toFixed(6)),
+        external_revenue: parseFloat(externalRevenue.toFixed(6)),
+        internal_revenue: parseFloat(internalRevenue.toFixed(6)),
+        total_deposited: totalDeposited == null ? null : parseFloat(totalDeposited.toFixed(6)),
         revenue_24h: parseFloat(revenue24h.toFixed(6)),
         revenue_7d: parseFloat(revenue7d.toFixed(6)),
         revenue_30d: parseFloat(revenue30d.toFixed(6)),

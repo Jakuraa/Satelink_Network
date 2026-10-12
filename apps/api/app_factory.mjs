@@ -34,6 +34,7 @@ import { createMetricsRouter } from "./src/workloads/rpc_gateway/metrics.js";
 import { createIntelligenceRouter } from "./src/routes/intelligence_route.js";
 import { startIntelRefresh } from "./src/intelligence/engine.js";
 import { createMachineIntelRouter } from "./src/routes/machine_intel.js";
+import { createX402KeyRecoveryRouter } from "./src/payments/x402/key_recovery_router.js";
 import { createDepositEconomicsRouter, createVaultRouter } from "./src/routes/deposit_economics.js";
 import { createFreeTierGate, getFreeTierStats } from "./src/middleware/free_tier_gate.js";
 import { bumpConversionStage } from "./src/middleware/upgrade_context.js";
@@ -323,10 +324,8 @@ app.get("/api/mode", (req, res) => {
         chain: "Polygon",
         contract: process.env.REVENUE_VAULT_ADDRESS || "0x577D3716d6Ad5b676d230f5409deF9838FABaCEF"
       },
-      freeTier: {
-        requestsPerDay: 500,
-        apiKeyRequired: false
-      },
+      freeTier: null,
+      authRequired: true,
       status: "https://rpc.satelink.network/api/status",
       pricing: "https://rpc.satelink.network/api/pricing"
     });
@@ -413,6 +412,10 @@ app.get("/api/mode", (req, res) => {
   // Autonomous machine onboarding — /v1/pricing + /v1/machine/register.
   // Mounted BEFORE the "/v1" ai-gateway so its paths are not shadowed.
   app.use("/v1", express.json({ limit: '16kb' }), createMachineV1Router(pool, redis));
+
+  // x402 session-key recovery (2026-10-12): signed EIP-191 challenge → a new
+  // random key, stored hashed. FOUNDER REVIEW: money-adjacent (credential issuance).
+  app.use("/v1/x402/key", createX402KeyRecoveryRouter(pool));
 
   // Machine decision APIs — /v1/compare + /v1/capabilities (pricing intel).
   // Read-only; mounted BEFORE the "/v1" ai-gateway for the same shadowing reason.

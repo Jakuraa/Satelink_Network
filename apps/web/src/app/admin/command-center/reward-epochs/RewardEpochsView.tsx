@@ -93,7 +93,7 @@ export default function RewardEpochsView() {
   ];
 
   const batches = treas ? [
-    { status: "confirmed", label: "Confirmed", count: treas.confirmed_batches, usdt: treas.confirmed_usdt, state: "healthy" as const },
+    { status: "confirmed", label: isDryRun ? "Confirmed (simulated)" : "Confirmed (on-chain)", count: treas.confirmed_batches, usdt: treas.confirmed_usdt, state: "healthy" as const },
     { status: "pending", label: "Pending", count: treas.pending_batches, usdt: null as number | null, state: "degraded" as const },
     { status: "blocked_unfunded", label: "Blocked (unfunded)", count: treas.blocked_unfunded_batches, usdt: treas.blocked_unfunded_usdt, state: "critical" as const },
   ] : [];

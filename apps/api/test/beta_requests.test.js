@@ -167,3 +167,32 @@ describe('GET /admin/beta-requests', () => {
     expect(res.body.data.requests[0].email).to.equal('a@example.com');
   });
 });
+
+describe('beta founder email — startup warning + admin flag (founder action)', () => {
+  it('warns once at router creation when BETA_REQUESTS_FOUNDER_EMAIL is missing', () => {
+    const warnings = [];
+    createBetaRequestsRouter(makeStorePool(), { env: {}, warn: (m) => warnings.push(m) });
+    expect(warnings).to.have.length(1);
+    expect(warnings[0]).to.include('BETA_REQUESTS_FOUNDER_EMAIL is not set');
+    expect(warnings[0]).to.include('will NOT be notified');
+  });
+
+  it('names the FOUNDER_EMAIL fallback when only that is set', () => {
+    const warnings = [];
+    createBetaRequestsRouter(makeStorePool(), { env: { FOUNDER_EMAIL: 'f@example.com' }, warn: (m) => warnings.push(m) });
+    expect(warnings[0]).to.include('falling back to FOUNDER_EMAIL');
+  });
+
+  it('stays silent when BETA_REQUESTS_FOUNDER_EMAIL is set', () => {
+    const warnings = [];
+    createBetaRequestsRouter(makeStorePool(), { env: { BETA_REQUESTS_FOUNDER_EMAIL: 'f@example.com' }, warn: (m) => warnings.push(m) });
+    expect(warnings).to.have.length(0);
+  });
+
+  it('betaFounderEmailStatus reports dedicated vs effective', async () => {
+    const { betaFounderEmailStatus } = await import('../src/beta/beta_requests.mjs');
+    expect(betaFounderEmailStatus({})).to.deep.equal({ dedicated: false, effective: false });
+    expect(betaFounderEmailStatus({ FOUNDER_EMAIL: 'x' })).to.deep.equal({ dedicated: false, effective: true });
+    expect(betaFounderEmailStatus({ BETA_REQUESTS_FOUNDER_EMAIL: 'x' })).to.deep.equal({ dedicated: true, effective: true });
+  });
+});
