@@ -119,8 +119,8 @@ function manifestBody() {
       details: `${base}/v1/pricing`,
     },
     // Primary rail: x402 (USDC on Base). x402-native agents auto-pay the
-    // machine-payable HTTP 402 the endpoint returns after a small free allowance
-    // (accepts carried in the PAYMENT-REQUIRED header, x402 v2). The USDT vault
+    // machine-payable HTTP 402 the endpoint returns (no free allowance — every
+    // call is paid; accepts carried in the PAYMENT-REQUIRED header, x402 v2). The USDT vault
     // rail is preserved for existing integrations under alternative_rails.
     payment: {
       rail: 'x402',
@@ -130,6 +130,14 @@ function manifestBody() {
       payTo: process.env.X402_PAY_TO || '0x966E1Ae22996545015b1414B35234b10719d7Ad4',
       resource: `${base}/rpc/polygon`,
       note: 'permissionless — pay the 402 challenge with any x402 v2 client (@x402/fetch, pay.sh); no account',
+      free_calls: 0,
+      request_headers: ['PAYMENT-SIGNATURE', 'X-PAYMENT', 'PAYMENT'],
+      challenge_header: 'PAYMENT-REQUIRED',
+      response_headers: {
+        'X-Satelink-API-Key': 'one-time session key after a bundle settles (also credited.api_key); send it as X-API-Key to spend the remaining calls',
+        'X-API-Key': 'same value as X-Satelink-API-Key',
+      },
+      key_recover: `${base}/v1/x402/key/recover/challenge → ${base}/v1/x402/key/recover (EIP-191 signature from the paying wallet)`,
       alternative_rails: [
         {
           rail: 'usdt-vault',

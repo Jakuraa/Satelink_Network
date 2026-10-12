@@ -11,6 +11,7 @@
  *     section: signer refund is a one-time manual CLI command.
  */
 
+import { getX402PayerFunnel } from './x402_payer_funnel.js';
 import express from 'express';
 import { IpClassifier }         from './jobs/ip_classifier.js';
 import { OutreachEngine }       from './jobs/outreach_engine.js';
@@ -610,6 +611,15 @@ export function createAdminRouter(pool, redis) {
   });
 
   // OBSERVER — Revenue Funnel (request → billed → settled → withdrawable)
+  // OBSERVER — per-payer x402 funnel (2026-10-12, Step 3.4). Payer counts, not traffic.
+  router.get('/funnel/x402-payers', async (req, res) => {
+    try {
+      ok(res, await getX402PayerFunnel(pool));
+    } catch (err) {
+      res.status(500).json({ ok: false, error: 'funnel_unavailable' });
+    }
+  });
+
   router.get('/revenue/funnel', async (req, res) => {
     try {
       const traffic = await trafficToday();
