@@ -117,14 +117,15 @@ export async function recordX402Settlement(pool, {
        VALUES ('rpc_call', $1, $2, 'completed', $3, $4, $5, null, 'x402', 'x402', $6)`,
       [payer, amountUsd, `x402:${txHash}`, Math.floor(Date.now() / 1000), network, isTest]
     );
-    // M3 shadow ledger — flag-gated (default OFF), isolated pool (NOT this
-    // transaction's client), never throws. Same request_id so it parity-matches.
-    shadowWriteRevenueLedger(pool, { requestId: `x402:${txHash}`, amountUsdt: amountUsd, isTestData: isTest });
-
-    // M6 shadow ledger — Draw
-    shadowWriteDraw(pool, { txHash, payer, amountUsd, isTestData: isTest, network });
-
     await client.query('COMMIT');
+
+    // M3 + M6 shadow ledger — flag-gated (default OFF), isolated pool (NOT this
+    // transaction's client), never throw. Fired only AFTER the settlement has
+    // COMMITTED (same as Dodo /credit): before 2026-10-12 they fired before COMMIT,
+    // so a failed/rolled-back settlement could leave an orphaned shadow ledger
+    // txn for revenue that was never recorded. Same request_id so it parity-matches.
+    shadowWriteRevenueLedger(pool, { requestId: `x402:${txHash}`, amountUsdt: amountUsd, isTestData: isTest });
+    shadowWriteDraw(pool, { txHash, payer, amountUsd, isTestData: isTest, network });
     return {
       creditedKey,
       balanceAfter,
