@@ -148,11 +148,18 @@ describe('onchain-native adapter (existing vault + x402 rails)', () => {
     }
   });
 
-  it('Polygon invoice points at the configured vault and the existing calldata route', async () => {
-    const a = createOnchainNativeAdapter({ env: { VAULT_ADDRESS: '0x577D3716d6Ad5b676d230f5409deF9838FABaCEF' } });
+  it('invoice = exact-amount ERC-20 transfer to the DEDICATED invoice address (never vault/treasury); EIP-681 QR data', async () => {
+    const INV = '0x' + '5a'.repeat(20);
+    const a = createOnchainNativeAdapter({ env: { PAYMENTS_ONCHAIN_INVOICE_ADDRESS: INV, VAULT_ADDRESS: '0x577D3716d6Ad5b676d230f5409deF9838FABaCEF' } });
     const { invoice } = await a.createIntent({ canonicalRef: 'inv', amountMinor: 19_000_000n, currency: 'USDT', network: 'polygon', now: new Date(0) });
-    expect(invoice).to.include({ chainId: 137, payTo: '0x577D3716d6Ad5b676d230f5409deF9838FABaCEF', amountMinor: '19000000', confirmationsRequired: 25 });
-    expect(invoice.calldataUrl).to.equal('/credits/deposit/initiate?amount=19.000000');
+    expect(invoice).to.include({ rail: 'erc20_transfer', chainId: 137, payTo: INV, amountMinor: '19000000', amountDisplay: '19.000000', confirmationsRequired: 25 });
+    expect(invoice.uri).to.equal(`ethereum:0xc2132D05D31c914a87C6611C10748AEb04B58e8F@137/transfer?address=${INV}&uint256=19000000`);
+    const base = await a.createIntent({ canonicalRef: 'inv2', amountMinor: 5_000_000n, currency: 'USDC', network: 'base' });
+    expect(base.invoice).to.include({ chainId: 8453, token: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', confirmationsRequired: 10 });
+    const refuse = async (env) => { try { await createOnchainNativeAdapter({ env }).createIntent({ canonicalRef: 'x', amountMinor: 1n, currency: 'USDT', network: 'polygon' }); return null; } catch (e) { return e.code; } };
+    expect(await refuse({})).to.equal('NOT_CONFIGURED');
+    expect(await refuse({ PAYMENTS_ONCHAIN_INVOICE_ADDRESS: '0x966E1Ae22996545015b1414B35234b10719d7Ad4' })).to.equal('NOT_CONFIGURED');
+    expect(await refuse({ PAYMENTS_ONCHAIN_INVOICE_ADDRESS: '0x577D3716d6Ad5b676d230f5409deF9838FABaCEF', VAULT_ADDRESS: '0x577D3716d6Ad5b676d230f5409deF9838FABaCEF' })).to.equal('NOT_CONFIGURED');
   });
 });
 

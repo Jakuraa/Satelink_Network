@@ -13,6 +13,10 @@ import { loadPlanCatalog, quote, effectivePlan } from './plans.mjs';
 import { recordIntent } from './ingest.mjs';
 import { minorToDecimal, PaymentError } from './contract.mjs';
 import { MERCHANT } from './merchant.mjs';
+import { refundPolicyStatus } from './refund_policy.mjs';
+import { verifyInvoiceTransfer } from './onchain_verify.mjs';
+import { ingestCanonicalEvent } from './ingest.mjs';
+import { INVOICE_RAILS, onchainConfig } from './adapters/onchain_native.mjs';
 
 export const METHODS = Object.freeze({
   usdt_polygon: { adapter: 'onchain-native', currency: 'USDT', network: 'polygon' },
@@ -36,11 +40,23 @@ function publicPlans(catalog) {
 export function createPaymentsCheckoutRouter(pool, {
   adapters = {}, catalog = loadPlanCatalog(), resolveSession = (req) => betterAuthSession(pool, req),
   mode = 'test', logger = console, newRef = () => `inv_${randomUUID()}`,
+  refundPolicy = () => refundPolicyStatus(),
+  chainProvider = () => null, // (network) → ethers-shaped provider; mount.mjs supplies real RPCs
+  env = process.env,
 } = {}) {
   const router = express.Router();
   router.use((req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
 
   router.get('/plans/trading-ai', (req, res) => res.json({ ok: true, data: publicPlans(catalog) }));
+
+  // Merchant of record + live refund-policy state (the UI never assumes it is published).
+  router.get('/merchant', async (req, res) => res.json({ ok: true, data: { merchant: MERCHANT, refundPolicy: await refundPolicy() } }));
+
+  // Which payment methods this deployment offers (Razorpay only when its adapter is on).
+  router.get('/checkout/methods', (req, res) => res.json({ ok: true, data: {
+    testMode: mode !== 'live',
+    methods: Object.entries(METHODS).filter(([, m]) => adapters[m.adapter]).map(([id, m]) => ({ id, adapter: m.adapter, currency: m.currency, network: m.network })),
+  } }));
 
   const authed = express.Router();
   authed.use(express.json({ limit: '8kb' }));
@@ -56,14 +72,39 @@ export function createPaymentsCheckoutRouter(pool, {
     }
   });
 
+  // Invoice PREVIEW: the exact amount (intro price decided server-side) with no side effects —
+  // no intent, no payment address. Shown even while the refund policy is unpublished.
+  authed.post('/checkout/quote', async (req, res) => {
+    try {
+      const { planId, method } = req.body ?? {};
+      const m = METHODS[method];
+      if (!m || !adapters[m.adapter]) return res.status(400).json({ ok: false, error: 'unknown_method' });
+      const prior = await pool.query(`SELECT 1 FROM payment_entitlement_grants WHERE customer_account_id = $1 AND product_id LIKE 'trading_ai_%' LIMIT 1`, [req.account.accountId]);
+      const q = quote(catalog, planId, m.currency, { firstPeriod: prior.rowCount === 0, mode });
+      return res.json({ ok: true, data: {
+        planId, method, amount: { amountMinor: String(q.amountMinor), currency: m.currency, display: minorToDecimal(q.amountMinor, m.currency) },
+        introApplied: prior.rowCount === 0 && q.amountMinor !== quote(catalog, planId, m.currency, { mode }).amountMinor,
+        periodDays: q.periodDays, merchant: MERCHANT, refundPolicy: await refundPolicy(), testMode: mode !== 'live',
+      } });
+    } catch (err) {
+      if (err instanceof PaymentError) return res.status(err.code === 'INVALID' ? 400 : 409).json({ ok: false, error: err.code.toLowerCase(), message: err.message });
+      logger.error?.('[payments-checkout] quote failed:', err.message);
+      return res.status(500).json({ ok: false, error: 'internal_error' });
+    }
+  });
+
   authed.post('/checkout/intents', async (req, res) => {
     try {
+      // Checkout COMPLETION is blocked until the refund policy is a published page (any mode).
+      const policy = await refundPolicy();
+      if (!policy.completionAllowed) {
+        return res.status(409).json({ ok: false, error: 'refund_policy_unpublished', message: 'Checkout cannot complete until the refund policy is published.', refundPolicy: policy });
+      }
       const { planId, method } = req.body ?? {};
       const m = METHODS[method];
       if (!m) return res.status(400).json({ ok: false, error: 'unknown_method', methods: Object.keys(METHODS) });
       const adapter = adapters[m.adapter];
       if (!adapter) return res.status(409).json({ ok: false, error: 'method_unavailable', message: `${method} is not enabled` });
-      if (mode === 'live' && !MERCHANT.links.refundPolicy) return res.status(409).json({ ok: false, error: 'refund_policy_missing' });
       const prior = await pool.query(
         `SELECT 1 FROM payment_entitlement_grants WHERE customer_account_id = $1 AND product_id LIKE 'trading_ai_%' LIMIT 1`,
         [req.account.accountId]);
@@ -98,6 +139,40 @@ export function createPaymentsCheckoutRouter(pool, {
     }
   });
 
+  // The customer paid an on-chain invoice: submit the tx hash. The API re-reads the chain and
+  // ingests what it finds (pending / partially_paid / succeeded / overpaid) — never the client's word.
+  authed.post('/checkout/intents/:ref/onchain-tx', async (req, res) => {
+    try {
+      const policy = await refundPolicy();
+      if (!policy.completionAllowed) return res.status(409).json({ ok: false, error: 'refund_policy_unpublished', refundPolicy: policy });
+      const r = await pool.query(
+        `SELECT canonical_ref, network, currency, status FROM payment_intents
+          WHERE canonical_ref = $1 AND customer_account_id = $2 AND provider = 'onchain-native'`,
+        [req.params.ref, req.account.accountId]);
+      const intent = r.rows[0];
+      if (!intent) return res.status(404).json({ ok: false, error: 'not_found' });
+      const rail = INVOICE_RAILS[intent.network];
+      const provider = chainProvider(intent.network);
+      if (!rail || !provider) return res.status(409).json({ ok: false, error: 'chain_unavailable' });
+      const cfg = onchainConfig(env);
+      const v = await verifyInvoiceTransfer(provider, { txHash: String(req.body?.txHash ?? ''), token: rail.token, to: cfg.invoiceAddress ?? '' });
+      if (!v.found) return res.status(422).json({ ok: false, error: v.reason });
+      const event = await adapters['onchain-native'].normalizeEvent({
+        kind: 'invoice_transfer', network: intent.network, txHash: String(req.body.txHash), amountRaw: v.amountRaw,
+        confirmations: v.confirmations, blockTime: v.blockTime, canonicalRef: intent.canonical_ref, customerAccountId: req.account.accountId,
+      });
+      // a tx already used for ANOTHER invoice is refused (one payment settles one invoice)
+      const used = await pool.query(`SELECT canonical_ref FROM payment_events WHERE provider_payment_id = $1 AND canonical_ref IS DISTINCT FROM $2 LIMIT 1`, [event.providerPaymentId, intent.canonical_ref]);
+      if (used.rowCount) return res.status(409).json({ ok: false, error: 'tx_already_used' });
+      const out = await ingestCanonicalEvent(pool, event);
+      return res.json({ ok: true, data: { status: event.status, confirmations: v.confirmations, confirmationsRequired: cfg[rail.confKey], duplicate: out.duplicate } });
+    } catch (err) {
+      if (err instanceof PaymentError) return res.status(err.code === 'INVALID' ? 400 : 409).json({ ok: false, error: err.code.toLowerCase(), message: err.message });
+      logger.error?.('[payments-checkout] onchain-tx failed:', err.message);
+      return res.status(500).json({ ok: false, error: 'internal_error' });
+    }
+  });
+
   authed.get('/checkout/intents/:ref', async (req, res) => {
     try {
       const r = await pool.query(
@@ -112,7 +187,7 @@ export function createPaymentsCheckoutRouter(pool, {
         amount: { amountMinor: i.amount_minor, currency: i.currency, display: minorToDecimal(BigInt(i.amount_minor), i.currency) },
         network: i.network, expiresAt: i.expires_at, updatedAt: i.updated_at,
         entitlement: { planId: plan.plan.id, periodEnd: plan.periodEnd, inGrace: plan.inGrace },
-        receiptReady: ['succeeded', 'overpaid'].includes(i.status), merchant: MERCHANT,
+        receiptReady: ['succeeded', 'overpaid'].includes(i.status), merchant: MERCHANT, refundPolicy: await refundPolicy(),
       } });
     } catch (err) {
       logger.error?.('[payments-checkout] status failed:', err.message);

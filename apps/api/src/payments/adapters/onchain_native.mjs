@@ -33,7 +33,32 @@ export function onchainConfig(env = process.env) {
     vaultAddress: env.VAULT_ADDRESS || env.REVENUE_VAULT_ADDRESS || null,
     usdtAddress: env.USDT_ADDRESS || '0xc2132D05D31c914a87C6611C10748AEb04B58e8F',
     x402PayTo: env.X402_PAY_TO || null,
+    // DEDICATED receiving address for checkout invoices (founder-provided). It must NOT be
+    // the vault (DepositListener auto-credits api_credits) or the treasury 0x966E… (the
+    // /api/keys/deposit claim route credits api_credits) — otherwise one payment could be
+    // credited twice (RPC balance + plan period). Unset → on-chain invoices are NOT_CONFIGURED.
+    invoiceAddress: /^0x[0-9a-fA-F]{40}$/.test(env.PAYMENTS_ONCHAIN_INVOICE_ADDRESS ?? '') ? env.PAYMENTS_ONCHAIN_INVOICE_ADDRESS : null,
+    baseConfirmations: n(env.PAYMENTS_ONCHAIN_BASE_CONFIRMATIONS, 10),
   };
+}
+
+/** Invoice rails: plain ERC-20 transfer of the exact amount to the invoice address. */
+export const INVOICE_RAILS = Object.freeze({
+  polygon: { chainId: 137, currency: 'USDT', token: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F', decimals: 6, confKey: 'polygonConfirmations' },
+  base: { chainId: 8453, currency: 'USDC', token: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', decimals: 6, confKey: 'baseConfirmations' },
+});
+
+/** EIP-681 ERC-20 transfer URI — what the QR encodes. */
+export function eip681Transfer({ token, chainId, to, amountMinor }) {
+  return `ethereum:${token}@${chainId}/transfer?address=${to}&uint256=${BigInt(amountMinor)}`;
+}
+
+export function assertSafeInvoiceAddress(c) {
+  if (!c.invoiceAddress) throw new PaymentError('NOT_CONFIGURED', 'PAYMENTS_ONCHAIN_INVOICE_ADDRESS is not set (founder action)');
+  const forbidden = [c.vaultAddress, c.x402PayTo, '0x966E1Ae22996545015b1414B35234b10719d7Ad4'].filter(Boolean).map((x) => x.toLowerCase());
+  if (forbidden.includes(c.invoiceAddress.toLowerCase())) {
+    throw new PaymentError('NOT_CONFIGURED', 'the invoice address must not be the vault or the treasury (existing paths auto-credit them)');
+  }
 }
 
 function statusFor(received, expected) {
@@ -62,24 +87,18 @@ export function createOnchainNativeAdapter({ env = process.env, lookupIntentAmou
      */
     async createIntent({ canonicalRef, amountMinor, currency, network, now = new Date() }) {
       const c = cfg();
-      if (network === 'polygon' && currency === 'USDT') {
-        if (!c.vaultAddress) throw new PaymentError('NOT_CONFIGURED', 'VAULT_ADDRESS is not set');
+      const rail = INVOICE_RAILS[network];
+      if (rail && rail.currency === currency) {
+        assertSafeInvoiceAddress(c);
         return {
           canonicalRef, providerPaymentId: null,
           invoice: {
-            network: 'polygon', chainId: 137, currency: 'USDT', token: c.usdtAddress, payTo: c.vaultAddress,
-            amountMinor: BigInt(amountMinor).toString(), decimals: 6,
-            // Existing route (GET /credits/deposit/initiate?amount=<usdt>) — returns approve + deposit calldata.
-            calldataUrl: `/credits/deposit/initiate?amount=${baseUnitsToUsdtString(amountMinor)}`,
-            confirmationsRequired: c.polygonConfirmations,
+            rail: 'erc20_transfer', network, chainId: rail.chainId, currency, token: rail.token, decimals: rail.decimals,
+            payTo: c.invoiceAddress, amountMinor: BigInt(amountMinor).toString(), amountDisplay: baseUnitsToUsdtString(amountMinor),
+            uri: eip681Transfer({ token: rail.token, chainId: rail.chainId, to: c.invoiceAddress, amountMinor }),
+            confirmationsRequired: c[rail.confKey],
             expiresAt: new Date(now.getTime() + c.invoiceTtlMinutes * 60_000).toISOString(),
           },
-        };
-      }
-      if (network === 'base' && currency === 'USDC') {
-        return {
-          canonicalRef, providerPaymentId: null,
-          invoice: { network: 'base', chainId: 8453, currency: 'USDC', rail: 'x402', payTo: c.x402PayTo, amountMinor: BigInt(amountMinor).toString(), decimals: 6 },
         };
       }
       throw new PaymentError('UNSUPPORTED', `onchain-native: ${currency} on ${network} is not a supported rail`);
@@ -113,6 +132,24 @@ export function createOnchainNativeAdapter({ env = process.env, lookupIntentAmou
           canonicalRef: record.canonicalRef ?? null,
           customerAccountId: record.customerAccountId ?? (record.from ? String(record.from).toLowerCase() : null),
           productId: null, amountMinor: received, currency: 'USDT', network: 'polygon', status,
+          occurredAt: record.blockTime ? new Date(record.blockTime) : new Date(), raw_hash: sha256Hex(raw),
+        };
+      }
+      if (record.kind === 'invoice_transfer') {
+        // A verified ERC-20 Transfer to the invoice address (see onchain_verify.mjs).
+        const rail = INVOICE_RAILS[record.network];
+        if (!rail) throw new PaymentError('INVALID', `invoice network ${record.network} unsupported`);
+        if (!/^0x[0-9a-fA-F]{64}$/.test(record.txHash ?? '')) throw new PaymentError('INVALID', 'bad txHash');
+        if (!/^\d+$/.test(String(record.amountRaw))) throw new PaymentError('INVALID', 'amountRaw must be integer base units');
+        const received = BigInt(record.amountRaw);
+        const confirmed = Number(record.confirmations ?? 0) >= cfg()[rail.confKey];
+        const expected = record.canonicalRef ? await lookupIntentAmount(record.canonicalRef) : null;
+        const status = confirmed ? statusFor(received, expected === null ? null : BigInt(expected)) : 'pending';
+        const pid = `${record.network}:${record.txHash.toLowerCase()}`;
+        return {
+          provider: id, providerEventId: `${pid}:${status}`, providerPaymentId: pid,
+          canonicalRef: record.canonicalRef ?? null, customerAccountId: record.customerAccountId ?? null,
+          productId: null, amountMinor: received, currency: rail.currency, network: record.network, status,
           occurredAt: record.blockTime ? new Date(record.blockTime) : new Date(), raw_hash: sha256Hex(raw),
         };
       }

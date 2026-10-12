@@ -382,11 +382,31 @@ describe('provider reconciliation (Wave 1.9)', () => {
 
 describe('console checkout API (Wave 1.8)', () => {
   const VAULT = '0x577D3716d6Ad5b676d230f5409deF9838FABaCEF';
-  const mk = (pool: Pool, account: { accountId: string; email: string } | null) => {
+  const PUBLISHED = async () => ({ status: 'published', url: 'https://jakuraa.com/legal/refunds', httpStatus: 200, completionAllowed: true });
+  const UNPUBLISHED = async () => ({ status: 'not_published', url: 'https://jakuraa.com/legal/refunds', httpStatus: 404, completionAllowed: false });
+  const INVOICE_ADDR = '0x' + '5a'.repeat(20);
+  const USDT = '0xc2132D05D31c914a87C6611C10748AEb04B58e8F';
+  const pad = (a: string) => '0x' + a.slice(2).toLowerCase().padStart(64, '0');
+  const fakeChain = () => {
+    const receipts = new Map<string, unknown>();
+    const c = {
+      head: 0,
+      mine(tx: string, t: { token: string; to: string; amount: bigint; from: string; block: number }) {
+        receipts.set(tx, { status: 1, blockNumber: t.block, logs: [{ address: t.token, index: 0, data: '0x' + t.amount.toString(16).padStart(64, '0'),
+          topics: ['0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef', pad(t.from), pad(t.to)] }] });
+      },
+      getTransactionReceipt: async (h: string) => receipts.get(h) ?? null,
+      getBlockNumber: async () => c.head,
+      getBlock: async () => ({ timestamp: 1760227200 }),
+    };
+    return c;
+  };
+  const mk = (pool: Pool, account: { accountId: string; email: string } | null, refundPolicy = PUBLISHED, chain: ReturnType<typeof fakeChain> | null = null) => {
     const app = express();
-    const onchain = createOnchainNativeAdapter({ env: { VAULT_ADDRESS: VAULT }, lookupIntentAmount: async (ref: string) => (await pool.query('SELECT amount_minor::text a FROM payment_intents WHERE canonical_ref=$1', [ref])).rows[0]?.a ?? null });
+    const ENV = { VAULT_ADDRESS: VAULT, PAYMENTS_ONCHAIN_INVOICE_ADDRESS: INVOICE_ADDR };
+    const onchain = createOnchainNativeAdapter({ env: ENV, lookupIntentAmount: async (ref: string) => (await pool.query('SELECT amount_minor::text a FROM payment_intents WHERE canonical_ref=$1', [ref])).rows[0]?.a ?? null });
     let n = 0;
-    app.use('/v1/payments', createPaymentsCheckoutRouter(pool, { adapters: { 'onchain-native': onchain }, resolveSession: async () => account, newRef: () => `inv_test_${++n}`, logger: { error() {} } }));
+    app.use('/v1/payments', createPaymentsCheckoutRouter(pool, { adapters: { 'onchain-native': onchain }, resolveSession: async () => account, newRef: () => `inv_test_${++n}`, logger: { error() {} }, refundPolicy, env: ENV, chainProvider: () => chain }));
     return { app, onchain };
   };
   const post = (app: express.Express, body: object) => request(app).post('/v1/payments/checkout/intents').set('x-satelink-console', '1').set('Content-Type', 'application/json').send(body);
@@ -408,22 +428,47 @@ describe('console checkout API (Wave 1.8)', () => {
     expect((await post(app, { planId: 'trading_ai_pro', method: 'razorpay' })).status).toBe(409); // not enabled here
   });
 
-  it('USDT invoice → on-chain deposit → webhook-free ingest → status poll shows receipt; intro price decided server-side', async () => {
+  it('USDT invoice → customer pays → tx verified on-chain → pending until confirmed → receipt; intro price server-side', async () => {
     const pool = await freshPool('co_flow');
-    const { app, onchain } = mk(pool, { accountId: 'acct_c1', email: 'c@example.test' });
+    const chain = fakeChain();
+    const { app } = mk(pool, { accountId: 'acct_c1', email: 'c@example.test' }, PUBLISHED, chain);
     const first = await post(app, { planId: 'trading_ai_launch', method: 'usdt_polygon', firstPeriod: false });
     expect(first.status).toBe(201);
     expect(first.body.data).toMatchObject({ canonicalRef: 'inv_test_1', amount: { amountMinor: '5000000', currency: 'USDT' }, introApplied: true, testMode: true });
-    expect(first.body.data.invoice).toMatchObject({ chainId: 137, payTo: VAULT, amountMinor: '5000000' });
-    // the listener observes the deposit; the adapter normalises it; ingest settles it
-    const event = await onchain.normalizeEvent({ kind: 'polygon_vault', txHash: '0x' + 'cd'.repeat(32), logIndex: 0, from: '0xabc', amountRaw: '5000000', confirmations: 30, canonicalRef: 'inv_test_1', customerAccountId: 'acct_c1' });
-    expect(event.status).toBe('succeeded');
-    await ingestCanonicalEvent(pool, event);
+    expect(first.body.data.invoice).toMatchObject({ chainId: 137, payTo: INVOICE_ADDR, amountMinor: '5000000', rail: 'erc20_transfer' });
+    const tx = '0x' + 'cd'.repeat(32);
+    chain.mine(tx, { token: USDT, to: INVOICE_ADDR, amount: 5_000_000n, from: '0x' + 'aa'.repeat(20), block: 100 });
+    chain.head = 105; // 6 confirmations < 25
+    const pend = await request(app).post('/v1/payments/checkout/intents/inv_test_1/onchain-tx').set('x-satelink-console', '1').set('Content-Type', 'application/json').send({ txHash: tx });
+    expect(pend.body.data).toMatchObject({ status: 'pending', confirmations: 6, confirmationsRequired: 25 });
+    expect((await request(app).get('/v1/payments/checkout/intents/inv_test_1')).body.data.receiptReady).toBe(false);
+    chain.head = 130;
+    const done = await request(app).post('/v1/payments/checkout/intents/inv_test_1/onchain-tx').set('x-satelink-console', '1').set('Content-Type', 'application/json').send({ txHash: tx });
+    expect(done.body.data.status).toBe('succeeded');
     const poll = await request(app).get('/v1/payments/checkout/intents/inv_test_1');
-    expect(poll.body.data).toMatchObject({ status: 'succeeded', receiptReady: true, entitlement: { planId: 'trading_ai_launch' } });
+    expect(poll.body.data).toMatchObject({ status: 'succeeded', receiptReady: true, entitlement: { planId: 'trading_ai_launch' }, merchant: { gstin: '33AADCF9341B1Z1' } });
     // second purchase: no intro, even though the client asks for it
     const second = await post(app, { planId: 'trading_ai_launch', method: 'usdt_polygon', firstPeriod: true });
     expect(second.body.data).toMatchObject({ amount: { amountMinor: '19000000' }, introApplied: false });
+    // the same tx can't settle a different invoice
+    const reuse = await request(app).post(`/v1/payments/checkout/intents/${second.body.data.canonicalRef}/onchain-tx`).set('x-satelink-console', '1').set('Content-Type', 'application/json').send({ txHash: tx });
+    expect(reuse.status).toBe(409);
+    expect(reuse.body.error).toBe('tx_already_used');
+  });
+
+  it('a tx that sends the wrong token or to another address is not accepted', async () => {
+    const pool = await freshPool('co_wrong');
+    const chain = fakeChain(); chain.head = 200;
+    const { app } = mk(pool, { accountId: 'acct_c1', email: 'c@example.test' }, PUBLISHED, chain);
+    await post(app, { planId: 'trading_ai_pro', method: 'usdt_polygon' });
+    const t1 = '0x' + '01'.repeat(32); chain.mine(t1, { token: '0x' + '99'.repeat(20), to: INVOICE_ADDR, amount: 19_000_000n, from: '0x' + 'aa'.repeat(20), block: 10 });
+    const t2 = '0x' + '02'.repeat(32); chain.mine(t2, { token: USDT, to: '0x966E1Ae22996545015b1414B35234b10719d7Ad4', amount: 19_000_000n, from: '0x' + 'aa'.repeat(20), block: 10 });
+    for (const t of [t1, t2]) {
+      const r = await request(app).post('/v1/payments/checkout/intents/inv_test_1/onchain-tx').set('x-satelink-console', '1').set('Content-Type', 'application/json').send({ txHash: t });
+      expect(r.status).toBe(422);
+      expect(r.body.error).toBe('no_matching_transfer');
+    }
+    expect(await count(pool, `SELECT COUNT(*) n FROM payment_events`)).toBe(0);
   });
 
   it('status poll is owner-only (another account gets 404, never the invoice)', async () => {
@@ -431,6 +476,26 @@ describe('console checkout API (Wave 1.8)', () => {
     await post(mk(pool, { accountId: 'acct_a', email: 'a@example.test' }).app, { planId: 'trading_ai_pro', method: 'usdt_polygon' });
     const other = await request(mk(pool, { accountId: 'acct_b', email: 'b@example.test' }).app).get('/v1/payments/checkout/intents/inv_test_1');
     expect(other.status).toBe(404);
+  });
+
+  it('refund policy NOT published (404): invoice preview works, checkout completion is refused, nothing is created', async () => {
+    const pool = await freshPool('co_refund');
+    const { app } = mk(pool, { accountId: 'acct_c1', email: 'c@example.test' }, UNPUBLISHED);
+    const m = await request(app).get('/v1/payments/merchant');
+    expect(m.body.data.refundPolicy).toMatchObject({ status: 'not_published', httpStatus: 404, completionAllowed: false });
+    const q = await request(app).post('/v1/payments/checkout/quote').set('x-satelink-console', '1').set('Content-Type', 'application/json').send({ planId: 'trading_ai_pro', method: 'usdt_polygon' });
+    expect(q.status).toBe(200);
+    expect(q.body.data).toMatchObject({ amount: { amountMinor: '19000000', currency: 'USDT' }, merchant: { cin: 'U52190TZ2019PTC033093', gstin: '33AADCF9341B1Z1' }, refundPolicy: { completionAllowed: false } });
+    const done = await post(app, { planId: 'trading_ai_pro', method: 'usdt_polygon' });
+    expect(done.status).toBe(409);
+    expect(done.body.error).toBe('refund_policy_unpublished');
+    expect(await count(pool, `SELECT COUNT(*) n FROM payment_intents`)).toBe(0);
+  });
+
+  it('methods endpoint lists only enabled adapters (no Razorpay unless its adapter is on)', async () => {
+    const pool = await freshPool('co_methods');
+    const r = await request(mk(pool, null).app).get('/v1/payments/checkout/methods');
+    expect(r.body.data.methods.map((x: { id: string }) => x.id)).toEqual(['usdt_polygon', 'usdc_base']);
   });
 });
 

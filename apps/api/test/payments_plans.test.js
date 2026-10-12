@@ -55,6 +55,16 @@ describe('merchant of record on checkout/invoices (Wave 1.8)', () => {
       expect(src, k).to.include(`${k}: "${v}"`);
     }
     for (const part of ['38, 39, First Floor, Malaviya Street, Ramnagar', 'Coimbatore', '641009']) expect(MERCHANT.address).to.include(part);
-    expect(MERCHANT.links.refundPolicy, 'no refund-policy page exists yet — never link a 404').to.equal(null);
+    expect(MERCHANT.links.refundPolicy).to.equal('https://jakuraa.com/legal/refunds');
+  });
+});
+
+describe('refund-policy gate (Wave 1.8)', () => {
+  it('reports published only on HTTP 200; 404 and network errors fail closed', async () => {
+    const { refundPolicyStatus } = await import('../src/payments/refund_policy.mjs');
+    const at = (status) => async () => ({ status });
+    expect(await refundPolicyStatus({ fetchImpl: at(200), fresh: true })).to.include({ status: 'published', completionAllowed: true, url: 'https://jakuraa.com/legal/refunds' });
+    expect(await refundPolicyStatus({ fetchImpl: at(404), fresh: true })).to.include({ status: 'not_published', httpStatus: 404, completionAllowed: false });
+    expect(await refundPolicyStatus({ fetchImpl: async () => { throw Object.assign(new Error('x'), { name: 'TimeoutError' }); }, fresh: true })).to.include({ status: 'unreachable', completionAllowed: false });
   });
 });

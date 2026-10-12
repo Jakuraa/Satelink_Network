@@ -30,12 +30,28 @@ export function buildAdapters(pool, env = process.env) {
   return adapters;
 }
 
+/** Wrap a Promise<provider> in the sync shape the router expects. */
+function lazyProvider(p) {
+  return {
+    getTransactionReceipt: async (h) => (await p).getTransactionReceipt(h),
+    getBlockNumber: async () => (await p).getBlockNumber(),
+    getBlock: async (n) => (await p).getBlock(n),
+  };
+}
+
 export function mountPayments(app, pool, { env = process.env, logger = console } = {}) {
   if (!isPaymentsV1Enabled(env)) return false;
   const adapters = buildAdapters(pool, env);
   const webhookAdapters = Object.values(adapters).filter((a) => a.id !== 'onchain-native');
   app.use('/webhooks', createPaymentWebhookRouter(pool, { adapters: webhookAdapters, logger }));
-  app.use('/v1/payments', createPaymentsCheckoutRouter(pool, { adapters, logger, mode: 'test' }));
+  const rpc = { polygon: env.PAYMENTS_RPC_POLYGON, base: env.PAYMENTS_RPC_BASE };
+  const providers = {};
+  const chainProvider = (network) => {
+    if (!rpc[network]) return null;
+    if (!providers[network]) providers[network] = import('ethers').then(({ JsonRpcProvider }) => new JsonRpcProvider(rpc[network]));
+    return lazyProvider(providers[network]);
+  };
+  app.use('/v1/payments', createPaymentsCheckoutRouter(pool, { adapters, logger, mode: 'test', chainProvider, env }));
   logger.info?.(`[payments] PAYMENTS_V1 on — adapters: ${Object.keys(adapters).join(', ')} (test mode)`);
   return true;
 }
