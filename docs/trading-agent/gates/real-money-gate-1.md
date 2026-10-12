@@ -4,13 +4,13 @@
 
 **Verdict: CLOSED**
 
-Generated: 2026-10-07T00:00:00.000Z · evidence hash `sha256:5715dca271d04c947046e72cb9d05bd7e6bb97e5a1f2f73a3aa829fc7716f2d3`
+Generated: 2026-10-07T00:00:00.000Z · evidence hash `sha256:94cd79cc30b1325b8ddffe95341bf83c1da04838e3cd7729e0b10f53e7ced519`
 
 ## Checklist
 
 | ID | Item | Evidence | Detail | Source | Status |
 |---|---|---|---|---|---|
-| G1-01 | Gate 0: every blocker in the register is RESOLVED | **NOT_MET** | 11 not resolved: B-01 OPEN, B-02 PARTIAL, B-03 PARTIAL, B-04 OPEN, B-05 OPEN, B-06 OPEN, B-07 PARTIAL, B-08 OPEN, B-09 OPEN, B-10 PARTIAL, B-11 OPEN | `docs/trading-agent/BLOCKERS.md` | **PENDING-HUMAN** |
+| G1-01 | Gate 0: every blocker in the register is RESOLVED | **NOT_MET** | 11 not resolved: B-01 OPEN, B-02 PARTIAL, B-03 PARTIAL, B-04 OPEN, B-05 PARTIAL, B-06 OPEN, B-07 PARTIAL, B-08 OPEN, B-09 OPEN, B-10 PARTIAL, B-11 OPEN | `docs/trading-agent/BLOCKERS.md` | **PENDING-HUMAN** |
 | G1-02 | Gate 6: 5 consecutive green nightly E2E runs (paper loop + Binance Spot Testnet), with run links | **MISSING** | no nightly run evidence (Stage 30 job not yet running: needs main + trading-testnet secrets) | `docs/trading-agent/gates/evidence/gate-6.json` | **PENDING-HUMAN** |
 | G1-03 | Gate 7: security hardening (KMS envelope encryption, DB role separation, static egress IP, secret + licence scan in CI, daily key re-check, admin step-up) | **MISSING** | no Gate 7 evidence (Stage 28 paused on its KMS STOP) | `docs/trading-agent/gates/evidence/gate-7.json` | **PENDING-HUMAN** |
 | G1-04 | Broker key permissions snapshot (apiRestrictions): no withdrawals / internal / universal transfer; trade + read only; ≤ 24 h old | **MISSING** | no key snapshot (captured by the founder with the adapter validateKey(); never the key itself) | `docs/trading-agent/gates/evidence/broker-keys` | **PENDING-HUMAN** |

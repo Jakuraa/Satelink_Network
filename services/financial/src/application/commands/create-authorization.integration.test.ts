@@ -20,6 +20,7 @@ import { PostgresAuthorizationCreationUnitOfWork } from '../../infrastructure/re
 import { PostgresPrincipalRepository } from '../../infrastructure/repositories/postgres/postgres-principal-repository.js';
 import { createAuthorization, BASE_USDC_ADDRESS, BASE_CHAIN_ID } from './create-authorization.js';
 import type { SignedAuthorizationEnvelope } from '../ports/envelope-verifier.js';
+import { truncateForTest } from '../../../../../libs/testing/src/truncate-for-test.js';
 
 const MIGRATIONS_DIR = resolve(
   import.meta.dirname ?? new URL('.', import.meta.url).pathname,
@@ -112,7 +113,7 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  await pool.query('TRUNCATE principals RESTART IDENTITY CASCADE');
+  await truncateForTest(pool, 'TRUNCATE principals RESTART IDENTITY CASCADE');
 });
 
 async function counts() {

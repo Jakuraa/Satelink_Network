@@ -7,13 +7,18 @@ const SITE = "https://jakuraa.com";
 export default function sitemap(): MetadataRoute.Sitemap {
   const paths = [
     "",
+    "/products",
     "/company",
     "/company/leadership",
+    "/history",
+    "/systems",
+    "/research",
     "/businesses",
     ...businesses.map((b) => `/businesses/${b.slug}`),
     "/technology",
     "/news",
     ...news.map((n) => `/news/${n.slug}`),
+    "/media-kit",
     "/careers",
     "/contact",
     "/legal",

@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
-import { requireSiteTradingAgent } from "@/lib/trading-agent/flag";
 import { CONNECTORS } from "@/lib/trading-agent/status";
 import { StageBadge, TaHeader } from "@/components/trading-agent/Parts";
 
-export const metadata: Metadata = { title: "Brokers — Trading Agent", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "Brokers — Satelink Trading AI" };
 
 export default function Page() {
-  requireSiteTradingAgent();
   return (
     <>
       <TaHeader title="Brokers" lede="Where orders would go. Your money always stays with your broker. Status below comes from one configuration file and can only say what has been evidenced." />

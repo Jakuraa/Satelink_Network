@@ -9,7 +9,7 @@ import { Card, CardTitle } from "@/components/ui/Card";
 
 export const metadata: Metadata = buildMetadata({
   title: "Academy",
-  description: "Learn to build on Satelink: runnable tutorials backed by live endpoints, real-world use cases, and courses. Pay-per-call machine commerce, hands-on.",
+  description: "Learn to build on Satelink: runnable tutorials that call live endpoints, real-world use cases, and courses. Pay-per-call machine commerce, hands-on.",
   path: "/academy",
 });
 

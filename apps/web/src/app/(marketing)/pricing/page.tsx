@@ -52,7 +52,7 @@ export default function PricingPage() {
         <h2 id="plans" className="sr-only">Plans</h2>
         <PlanCards catalog={catalog} />
         <p className="mt-4 text-center text-[13px] text-sl-text-muted">
-          Allowances are for Trading Intelligence market data. {free ? `Free includes about ${free.allowance.weeklyTiRequests.toLocaleString("en-US")} requests a week.` : ""} Prices in USD; local prices at checkout where available.
+          Allowances are for market-data requests. {free ? `Free includes about ${free.allowance.weeklyTiRequests.toLocaleString("en-US")} requests a week.` : ""} Prices in USD; local prices at checkout where available.
         </p>
       </section>
 

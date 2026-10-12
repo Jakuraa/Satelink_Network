@@ -20,6 +20,7 @@ import { reconciliationBody } from './http-server.js';
 import { readReconciliationState, emitEvent } from './state.js';
 import { FakeChainReader } from './adapters/fake-reader.js';
 import type { TransferObservation } from './ports/chain-reader.js';
+import { truncateForTest } from '../../../libs/testing/src/truncate-for-test.js';
 
 const MIGRATIONS_DIR = resolve(
   import.meta.dirname ?? new URL('.', import.meta.url).pathname,
@@ -128,7 +129,7 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  await pool.query('TRUNCATE draws, settlements, ledger_txns, ledger_entries, outbox RESTART IDENTITY CASCADE');
+  await truncateForTest(pool, 'TRUNCATE draws, settlements, ledger_txns, ledger_entries, outbox RESTART IDENTITY CASCADE');
   await pool.query(
     `UPDATE reconciliation_state SET halted=false, drift_minor_units=0, halt_reason=NULL,
        last_run_at=NULL, stuck_settlement_count=0, reconciled_count=0, cycle_duration_ms=0 WHERE id=1`,

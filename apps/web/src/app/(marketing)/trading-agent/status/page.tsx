@@ -1,15 +1,13 @@
 import type { Metadata } from "next";
 import { Badge } from "@satelink/web-ui/ui";
-import { requireSiteTradingAgent } from "@/lib/trading-agent/flag";
 import { CONNECTORS, PLATFORM } from "@/lib/trading-agent/status";
 import { StageBadge, TaHeader } from "@/components/trading-agent/Parts";
 
-export const metadata: Metadata = { title: "Status — Trading Agent", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "Status — Satelink Trading AI" };
 
 const onOff = (on: boolean, yes: string, no: string) => <Badge variant={on ? "live" : "planned"}>{on ? yes : no}</Badge>;
 
 export default function Page() {
-  requireSiteTradingAgent();
   return (
     <>
       <TaHeader title="Status" lede="What is switched on today. This page reads the same configuration as the broker list." />

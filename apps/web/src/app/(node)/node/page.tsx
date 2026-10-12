@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { OPERATOR_PROGRAM_PAUSED } from "@/lib/operator-program";
 import {
   Card,
   CardHeader,
@@ -101,7 +102,6 @@ const usd = (n: unknown) =>
 
 // Flat zero-series placeholders — replaced by live per-node series after a node
 // registers and begins reporting telemetry.
-const ZERO_30 = Array.from({ length: 30 }, (_, i) => ({ t: `D${i + 1}`, v: 0 }));
 const ZERO_24 = Array.from({ length: 24 }, (_, i) => ({
   t: `${String(i).padStart(2, "0")}:00`,
   v: 0,
@@ -257,6 +257,7 @@ function NodePortal() {
     ];
     return (
       <div className="flex flex-col gap-6">
+        <EmptyState icon={Shield} title="Program paused" description={OPERATOR_PROGRAM_PAUSED} />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {kpis.map((k) => (
             <KPICard
@@ -315,9 +316,8 @@ function NodePortal() {
             <KPICard key={k.label} label={k.label} value={k.value} icon={k.icon} loading={loading} />
           ))}
         </div>
-        <Panel title="Earnings Trend" description="USDT earned per day (last 30 days)">
-          <MiniAreaChart data={ZERO_30} color={PRIMARY} id="earnTrend" height={200} />
-        </Panel>
+        {/* Phase 7 (C6): the earnings-trend chart is removed while the operator program is paused. */}
+        <EmptyState icon={Wallet} title="Operator payouts are not active" description={OPERATOR_PROGRAM_PAUSED} />
         <Panel title="Epoch History" description="Revenue and your share per closed epoch">
           {epochId == null ? (
             emptyTable("No epoch data", "Epoch history will populate from the settlement ledger.")

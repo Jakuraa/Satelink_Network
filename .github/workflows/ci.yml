@@ -36,6 +36,16 @@ jobs:
         run: npm run lint --if-present 2>&1 | tail -5
         continue-on-error: true
 
+      # Honest-positioning gate (Phase 7): fails the job on any finding. Deliberately NOT piped
+      # through tail/head, so the script's exit code is the step's exit code.
+      - name: Claims lint (satelink.network)
+        working-directory: apps/web
+        run: npm run lint:claims
+
+      - name: Claims lint (jakuraa.com)
+        working-directory: apps/corporate
+        run: npm run lint:claims
+
   test:
     name: Tests
     runs-on: ubuntu-latest
@@ -101,7 +111,7 @@ jobs:
       - name: Check for leaked secrets
         run: |
           # Check for common secret patterns
-          if grep -rE "(sk_live_[A-Za-z0-9]{32,}|sk_test_[A-Za-z0-9]{32,}|gsk_[A-Za-z0-9]{32,})" \
+          if grep -rE "(sk_(live|test)_[A-Za-z0-9]{32,}|gsk_[A-Za-z0-9]{32,})" \
             --include="*.js" --include="*.ts" --include="*.mjs" \
             --exclude-dir=node_modules --exclude-dir=.git \
             --exclude="*.test.*" --exclude="*.spec.*" \
@@ -117,7 +127,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: [check, test]
-    if: github.ref == 'refs/heads/develop' || github.base_ref == 'main'
+    # No `develop` branch exists — the old `github.ref == 'refs/heads/develop'`
+    # half of this condition never fires; this job runs on PRs targeting main.
+    if: github.base_ref == 'main'
 
     steps:
       - uses: actions/checkout@v7

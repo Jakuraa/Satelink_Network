@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
-import { requireSiteTradingAgent } from "@/lib/trading-agent/flag";
 import { HOW } from "@/lib/trading-agent/copy";
 import { Hypothetical, TaCards, TaHeader } from "@/components/trading-agent/Parts";
 
-export const metadata: Metadata = { title: "How it works — Trading Agent", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "How it works — Satelink Trading AI" };
 
 export default function Page() {
-  requireSiteTradingAgent();
   return (
     <>
       <TaHeader title={HOW.title} />

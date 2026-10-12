@@ -1,13 +1,11 @@
 import type { Metadata } from "next";
 import { Disclosure } from "@satelink/web-ui/ui";
-import { requireSiteTradingAgent } from "@/lib/trading-agent/flag";
 import { AI } from "@/lib/trading-agent/copy";
 import { AI_NOTE, TaHeader } from "@/components/trading-agent/Parts";
 
-export const metadata: Metadata = { title: "AI — Trading Agent", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "AI — Satelink Trading AI" };
 
 export default function Page() {
-  requireSiteTradingAgent();
   return (
     <>
       <TaHeader title={AI.title} />

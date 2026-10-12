@@ -10,6 +10,7 @@ import { Pool } from 'pg';
 import { resolve } from 'node:path';
 import { applyMigrationsForTest } from '../../../../../database/__tests__/apply-migrations.js';
 import { runBackfill } from './backfill-principals.js';
+import { truncateForTest } from '../../../../../libs/testing/src/truncate-for-test.js';
 
 const MIGRATIONS_DIR = resolve(
   import.meta.dirname ?? new URL('.', import.meta.url).pathname,
@@ -49,7 +50,7 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  await pool.query('TRUNCATE accounts, principals RESTART IDENTITY CASCADE');
+  await truncateForTest(pool, 'TRUNCATE accounts, principals RESTART IDENTITY CASCADE');
   await pool.query('TRUNCATE revenue_events_v2');
   await pool.query('TRUNCATE api_deposits');
   // Seed distinct identities across both sources (with a dup and 'public').

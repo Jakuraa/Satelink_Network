@@ -1,4 +1,4 @@
-// Stage 26 — Trading Agent page copy (the claims lint scans this file and the pages).
+// Stage 26 — Satelink Trading AI page copy (the claims lint scans this file and the pages).
 // Rules: plain words; no performance, partnership, approval or availability claims; anything
 // numeric that is not a fact is inside a "Hypothetical" block; legal text is NOT written here —
 // it is a marked placeholder (RPrC: requires professional review) until a lawyer reviews it.
@@ -17,9 +17,9 @@ export const TA_PAGES = [
 ] as const;
 
 export const HOME = {
-  eyebrow: "Satelink Trading Agent · in development",
+  eyebrow: "Satelink Trading AI · paper trading in controlled beta",
   title: "Trading rules you write, limits you sign, orders you approve",
-  lede: "The Trading Agent follows rules you set, inside limits you sign, at a broker that keeps your money. It suggests; you decide. It is not available yet.",
+  lede: "Satelink Trading AI follows rules you set, inside limits you sign, at a broker that keeps your money. It suggests; you decide. Paper trading in controlled beta. Live execution is not yet available.",
   points: [
     { title: "You stay in control", body: "Every order needs your approval and must fit limits you signed. A single switch pauses everything." },
     { title: "Your money stays with your broker", body: "Satelink never holds customer money. Broker keys that could withdraw funds are refused." },
@@ -28,7 +28,7 @@ export const HOME = {
 };
 
 export const PRODUCT = {
-  title: "What the Trading Agent is — and is not",
+  title: "What Satelink Trading AI is — and is not",
   is: [
     "Software that reads market data and your positions, and suggests orders that fit rules you wrote.",
     "A set of limits (size, instruments, daily loss) that every order is checked against before it can be sent.",
@@ -38,7 +38,7 @@ export const PRODUCT = {
     "Not a fund, and not a place to keep money.",
     "Not advice. It does not tell you what to buy or sell.",
     "Not able to send an order on its own: a person approves each one.",
-    "Not available yet. Live trading is off for every account.",
+    "Not live. Paper trading in controlled beta; live execution is not yet available.",
   ],
 };
 
@@ -77,7 +77,7 @@ export const RISK = {
 
 export const PRICING = {
   title: "Pricing",
-  body: "There is no price for the Trading Agent yet, and nobody can be charged for it while it is in development. When pricing is decided it will be published here before anyone is asked to pay.",
+  body: "Pricing at launch. There is no price yet and nobody is charged during the paper beta. Pricing will be published here before anyone is asked to pay.",
 };
 
 export const SECURITY = {
@@ -92,10 +92,10 @@ export const SECURITY = {
 
 export const DOCS = {
   title: "Documentation",
-  body: "The Trading Agent API is not public yet. When it opens, its reference will be published here. Until then, these pages describe how the product works.",
+  body: "Satelink Trading AI API is not public yet. When it opens, its reference will be published here. Until then, these pages describe how the product works.",
 };
 
 export const LEGAL_PLACEHOLDERS = [
   { id: "ta-risk-disclosure", title: "Risk disclosure" },
-  { id: "ta-terms", title: "Trading Agent terms" },
+  { id: "ta-terms", title: "Satelink Trading AI terms" },
 ] as const;

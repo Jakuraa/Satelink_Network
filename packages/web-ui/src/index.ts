@@ -1,10 +1,19 @@
-// @satelink/web-ui — Satelink Signal public-website design system.
+// @satelink/web-ui - Satelink Signal public-website design system.
 // Shared by apps/web (satelink.network) and apps/corporate (jakuraa.com).
 // Consumes --sl-* tokens (./styles/tokens.css); independent of @satelink/ui,
 // which is the OS/admin dashboard system scoped to .satelink-os.
 export * from "./components/ui";
 export { SiteHeader } from "./components/site/SiteHeader";
 export { SiteFooter } from "./components/site/SiteFooter";
+export { FooterWrap } from "./components/site/FooterWrap";
+export type {
+  FooterConfig,
+  FooterColumn,
+  FooterLinkItem,
+  FooterSocialLink,
+  FooterMetaBadge,
+  FooterWrapProps,
+} from "./components/site/FooterWrap";
 export { LiveNetworkStrip } from "./components/site/LiveNetworkStrip";
 // Data-driven shell (§6/§7/§8/§14) — presentational; app supplies the data.
 export { MegaMenuHeader } from "./components/site/MegaMenuHeader";

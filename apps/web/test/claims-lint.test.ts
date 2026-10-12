@@ -1,12 +1,11 @@
-// Stage 26 — claims lint (honest positioning) + the broker-status state machine + page gates.
+// Stage 26 + Phase 7 — claims lint (honest positioning, strict + public tiers), broker-status state machine, public pages.
 import { describe, it, expect } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { lintClaims, lintSource } from "../scripts/claims-lint.mjs";
+import { lintClaims, lintSource, lintPublicClaims, lintPublicSource } from "../scripts/claims-lint.mjs";
 import DISCLAIMERS from "../src/lib/trading-agent/disclaimers.json";
 import { CONNECTORS, PLATFORM, STAGE_REQUIREMENTS, canAdvance, stageIndex, stageIsEvidenced, stageLabel, CONNECTOR_STAGES } from "../src/lib/trading-agent/status";
 import { TA_PAGES, LEGAL_PLACEHOLDERS } from "../src/lib/trading-agent/copy";
-import { siteTradingAgentEnabled } from "../src/lib/trading-agent/flag";
 
 const WEB = resolve(__dirname, "..");
 const APP = join(WEB, "src/app/(marketing)");
@@ -14,13 +13,31 @@ const pageFile = (href: string) => join(APP, href, "page.tsx");
 type Finding = { rule: string; match: string };
 const lint = (src: string, file = "x.tsx"): Finding[] => lintSource(file, src, Object.values(DISCLAIMERS)) as Finding[];
 
-describe("claims lint — acceptance: green on the Trading Agent pages", () => {
+describe("claims lint — acceptance: green on Satelink Trading AI pages and every public page", () => {
   it("scans every page, component and copy module and finds nothing", () => {
     const { files, findings } = lintClaims(WEB);
     expect(files.length).toBeGreaterThanOrEqual(16);
     for (const p of TA_PAGES) expect(files, p.href).toContain(join("src/app/(marketing)", p.href, "page.tsx"));
     expect(findings).toEqual([]);
   });
+  it("public tier: every marketing page, doc, markdown content file and copy module is free of financial claims", () => {
+    const { files, findings } = lintPublicClaims(WEB);
+    expect(files.length).toBeGreaterThan(150);
+    expect(files).toContain("src/content/docs/node-operators.md");
+    expect(findings).toEqual([]);
+  });
+});
+
+describe("claims lint — public tier catches money claims but not technical copy", () => {
+  const pub = (src: string, file = "x.tsx") => (lintPublicSource(file, src) as Finding[]).map((f) => f.rule);
+  for (const [src, rule] of [
+    ["<p>Run a node and earn a share</p>", "PERFORMANCE"], ["<p>12% APY</p>", "PERFORMANCE"], ["<p>Guaranteed payouts</p>", "PERFORMANCE"],
+    ["<p>Official partner of Binance</p>", "PARTNERSHIP"], ["<p>Backed by top funds</p>", "PARTNERSHIP"], ["<p>Start trading today</p>", "AVAILABILITY"],
+  ] as [string, string][]) it(`flags ${rule}: ${src}`, () => expect(pub(src)).toContain(rule));
+  it("markdown lines are copy", () => expect(pub("# Node operators\n\nOperators earn 50%.", "x.md")).toContain("PERFORMANCE"));
+  for (const ok of ["<p>Unpaid calls return HTTP 402</p>", "<p>The MIT-licensed x402-kit</p>", "<p>Attempting to gain unauthorized access</p>", "<p>$0.00003 per call</p>", "<p>It is not yet approved by counsel.</p>"]) {
+    it(`does not flag technical copy: ${ok}`, () => expect(pub(ok)).toEqual([]));
+  }
 });
 
 describe("claims lint — it actually catches bad copy", () => {
@@ -64,7 +81,7 @@ describe("claims lint — it actually catches bad copy", () => {
     expect(DISCLAIMERS.notAdvice).toMatch(/^Nothing on these pages is investment advice/);
     expect(DISCLAIMERS.notAdvice).toMatch(/nobody can promise any outcome/);
     expect(DISCLAIMERS.aiCanBeWrong).toMatch(/can be wrong/);
-    expect(DISCLAIMERS.notAvailable).toMatch(/not available to the public/);
+    expect(DISCLAIMERS.notAvailable).toBe("Paper trading in controlled beta. Live execution is not yet available.");
   });
 });
 
@@ -97,22 +114,23 @@ describe("broker status — one config, a state machine, copy derived from state
   });
 });
 
-describe("pages — gated, noindex, disclosures, legal placeholders", () => {
-  it("the flag is off unless exactly 'true'; every page and the layout 404 without it and are noindex", () => {
-    expect(siteTradingAgentEnabled({})).toBe(false);
-    expect(siteTradingAgentEnabled({ SITE_TRADING_AGENT: "1" })).toBe(false);
-    expect(siteTradingAgentEnabled({ SITE_TRADING_AGENT: "true" })).toBe(true);
+describe("pages — public, indexed, disclosures, legal placeholders", () => {
+  it("every page is public: no flag gate, not noindex, listed in the sitemap, not disallowed in robots", () => {
+    expect(existsSync(join(WEB, "src/lib/trading-agent/flag.ts"))).toBe(false);
     const layout = readFileSync(join(APP, "trading-agent/layout.tsx"), "utf8");
-    expect(layout).toMatch(/requireSiteTradingAgent\(\)/);
-    expect(layout).toMatch(/index: false/);
+    expect(layout).not.toMatch(/requireSiteTradingAgent|index: false|notFound/);
     for (const p of TA_PAGES) {
       expect(existsSync(pageFile(p.href)), p.href).toBe(true);
       const src = readFileSync(pageFile(p.href), "utf8");
-      expect(src, p.href).toMatch(/requireSiteTradingAgent\(\)/);
-      expect(src, p.href).toMatch(/robots: \{ index: false, follow: false \}/);
+      expect(src, p.href).not.toMatch(/requireSiteTradingAgent|index: false/);
     }
-    expect(readFileSync(join(WEB, "src/app/robots.ts"), "utf8")).toMatch(/"\/trading-agent"/);
-    expect(readFileSync(join(WEB, "src/app/sitemap.ts"), "utf8")).not.toMatch(/trading-agent/);
+    expect(readFileSync(join(WEB, "src/app/robots.ts"), "utf8")).not.toMatch(/"\/trading-agent/);
+    expect(readFileSync(join(WEB, "src/app/sitemap.ts"), "utf8")).toMatch(/"\/trading-agent"/);
+  });
+
+  it("status line is verbatim and pricing reads pricing at launch", () => {
+    expect(DISCLAIMERS.notAvailable).toBe("Paper trading in controlled beta. Live execution is not yet available.");
+    expect(readFileSync(join(WEB, "src/lib/trading-agent/copy.ts"), "utf8")).toMatch(/Pricing at launch\./);
   });
 
   it("all 11 brief pages exist; the AI page carries the AI disclosure; every page frame carries advice + independence notes", () => {
@@ -125,7 +143,7 @@ describe("pages — gated, noindex, disclosures, legal placeholders", () => {
   });
 
   it("legal text is not written: Risk and Pricing show RPrC placeholders only", () => {
-    expect(LEGAL_PLACEHOLDERS.map((l) => l.title)).toEqual(["Risk disclosure", "Trading Agent terms"]);
+    expect(LEGAL_PLACEHOLDERS.map((l) => l.title)).toEqual(["Risk disclosure", "Satelink Trading AI terms"]);
     expect(readFileSync(pageFile("/trading-agent/risk"), "utf8")).toMatch(/<LegalPlaceholder \{\.\.\.LEGAL_PLACEHOLDERS\[0\]\} \/>/);
     expect(readFileSync(pageFile("/trading-agent/pricing"), "utf8")).toMatch(/<LegalPlaceholder \{\.\.\.LEGAL_PLACEHOLDERS\[1\]\} \/>/);
     expect(readFileSync(join(WEB, "src/components/trading-agent/Parts.tsx"), "utf8")).toMatch(/RPrC — this section requires professional \(legal\) review/);

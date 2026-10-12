@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     template: "%s — Satelink Docs",
   },
   description:
-    "Documentation for the Satelink DePIN RPC network: quick start, API reference, billing, node operators, machine customers, and the on-chain revenue model.",
+    "Documentation for Satelink: Satelink Trading AI and the legacy Satelink RPC gateway (quick start, API reference, billing, machine customers).",
 };
 
 export default function DocsLayout({ children }: { children: React.ReactNode }) {

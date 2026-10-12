@@ -2,8 +2,7 @@
 
 ## Branch Strategy
 
-- `main` — production (protected, auto-deploys to Railway/Vercel)
-- `develop` — integration branch
+- `main` — production (protected, auto-deploys to Railway/Vercel) — the single source of truth; no `develop` branch exists
 - `feature/*` — new features
 - `hotfix/*` — emergency fixes
 
@@ -19,10 +18,10 @@ test(task-id): test additions
 
 ## Pull Request Process
 
-1. Branch from `develop`
+1. Branch from `main`
 2. Run tests: `npm test`
 3. Run lint: `npm run lint`
-4. Create PR to `develop`
+4. Create PR to `main`
 5. Merge after CI passes
 
 ## Security

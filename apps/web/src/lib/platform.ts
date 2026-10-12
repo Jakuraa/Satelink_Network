@@ -174,7 +174,6 @@ export const PLATFORM: Record<PlatformSlug, PlatformFacts> = {
     ],
     resources: [
       { label: "RevenueVaultV2 on Polygonscan", href: "https://polygonscan.com/address/0x577D3716d6Ad5b676d230f5409deF9838FABaCEF" },
-      { label: "Network", href: "/network" },
       { label: "Docs", href: DOCS },
     ],
   },

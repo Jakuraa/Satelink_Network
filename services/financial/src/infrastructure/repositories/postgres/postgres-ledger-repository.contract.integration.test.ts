@@ -23,6 +23,7 @@ import {
 } from '@satelink/financial-domain';
 import { Money, USDT } from '@satelink/kernel';
 import type { Result } from '@satelink/kernel';
+import { truncateForTest } from '../../../../../../libs/testing/src/truncate-for-test.js';
 
 const MIGRATIONS_DIR = resolve(
   import.meta.dirname ?? new URL('.', import.meta.url).pathname,
@@ -72,7 +73,7 @@ runLedgerRepositoryContract('Postgres', async () => ({
   repo: new PostgresLedgerRepository(pool),
   ensureAccount,
   reset: async () => {
-    await pool.query('TRUNCATE ledger_entries RESTART IDENTITY CASCADE');
+    await truncateForTest(pool, 'TRUNCATE ledger_entries RESTART IDENTITY CASCADE');
   },
   dispose: async () => {
     /* container + pool owned by the file-level afterAll */
@@ -88,7 +89,7 @@ function must<T, E extends { toString(): string }>(r: Result<T, E>): T {
 
 describe('BalanceCalculator agrees with the SQL account_balances view', () => {
   it('posted credit, posted debit, and pending debit reconcile exactly', async () => {
-    await pool.query('TRUNCATE ledger_entries RESTART IDENTITY CASCADE');
+    await truncateForTest(pool, 'TRUNCATE ledger_entries RESTART IDENTITY CASCADE');
     await ensureAccount('acct_bal');
     await ensureAccount('acct_other');
     const repo = new PostgresLedgerRepository(pool);

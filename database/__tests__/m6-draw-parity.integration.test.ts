@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import { applyMigrationsForTest } from './apply-migrations.js';
 import { computeDrawParity } from '../../apps/api/src/ledger/draw_parity.js';
 import { shadowWriteDraw } from '../../apps/api/src/ledger/shadow_draw_write.js';
+import { truncateForTest } from '../../libs/testing/src/truncate-for-test.js';
 
 const MIGRATIONS_DIR = resolve(
   import.meta.dirname ?? new URL('.', import.meta.url).pathname,
@@ -47,7 +48,7 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  await pool.query('TRUNCATE payment_sources, draws RESTART IDENTITY CASCADE');
+  await truncateForTest(pool, 'TRUNCATE payment_sources, draws RESTART IDENTITY CASCADE');
 });
 
 describe('computeDrawParity', () => {
@@ -112,7 +113,7 @@ describe('computeDrawParity', () => {
 describe('shadowWriteDraw (plain JS)', () => {
   beforeEach(async () => {
     delete process.env.DRAW_SHADOW_WRITE;
-    await pool.query('TRUNCATE draws, settlements, ledger_entries CASCADE');
+    await truncateForTest(pool, 'TRUNCATE draws, settlements, ledger_entries CASCADE');
   });
 
   async function seedDeps(payer, txHash) {

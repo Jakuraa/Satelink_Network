@@ -3,7 +3,7 @@
    from the unified design system; this file is the Jakuraa brand layer. */
 @import "../../../packages/web-ui/src/styles/foundation.css";
 
-/* Jakuraa editorial palette — ivory, ink, stone greys, one deep green accent
+/* Jakuraa editorial palette - ivory, ink, stone greys, one deep green accent
    and a warm secondary used sparingly for small highlights. */
 :root {
   --ivory: #faf8f3;
@@ -18,33 +18,12 @@
   --amber: #b8742a;
   --amber-soft: #f4e8d8;
   --amber-ink: #8a5217;
-  /* the Satelink band stays deep green in both themes */
+  /* the Satelink band stays deep green */
   --band: #1f4d3a;
   --on-band: #faf8f3;
   --on-band-muted: #d5e2da;
   --on-band-rule: #8fb09d;
   color-scheme: light;
-}
-
-/* True dark mode (system preference; jakuraa.com has no toggle). Same roles,
-   inverted: ivory → deep warm black, ink → warm white, green lifted for AA. */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --ivory: #12110e;
-    --ivory-2: #1a1915;
-    --ink: #efece4;
-    --stone-1: #2a2823;
-    --stone-2: #3e3b34;
-    --stone-3: #a39e90;
-    --stone-4: #b5b0a3;
-    --green: #86c4a3;
-    --green-soft: #1c2a23;
-    --amber: #d9a05b;
-    --amber-soft: #2a2116;
-    --amber-ink: #e8b878;
-    --band: #173a2c;
-    color-scheme: dark;
-  }
 }
 
 @theme inline {
@@ -65,12 +44,15 @@
   --color-on-band-muted: var(--on-band-muted);
   --color-on-band-rule: var(--on-band-rule);
   --font-serif: var(--font-source-serif), ui-serif, Georgia, serif;
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-dm-sans), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono, "JetBrains Mono"), ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 @layer base {
 html {
   scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
 }
 @media (prefers-reduced-motion: reduce) {
   html {
@@ -90,6 +72,15 @@ a {
   color: inherit;
 }
 
+button, a, [role="button"] {
+  touch-action: manipulation;
+}
+
+/* Prevent iOS zoom on input focus */
+input, textarea, select {
+  font-size: 16px;
+}
+
 :focus-visible {
   outline: 2px solid var(--green);
   outline-offset: 3px;
@@ -98,23 +89,60 @@ a {
 
 }
 
+/* ─── Prose ─── */
 .prose-j p + p {
   margin-top: 1rem;
 }
 
+/* ─── Link underline utility ─── */
 .link-u {
   text-decoration: underline;
   text-decoration-color: var(--stone-2);
   text-underline-offset: 4px;
-  transition: text-decoration-color 0.15s;
+  transition: text-decoration-color 0.15s ease-out;
 }
 .link-u:hover {
   text-decoration-color: var(--green);
 }
 
+/* ─── Details reset ─── */
 details > summary {
   list-style: none;
 }
 details > summary::-webkit-details-marker {
   display: none;
 }
+
+/* ─── Systems Compass animations ─── */
+@keyframes compass-orbit {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes compass-orbit-reverse {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+@keyframes compass-pulse {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .compass-orbit,
+  .compass-orbit-reverse,
+  .compass-pulse {
+    animation: none !important;
+  }
+}
+
+/* ─── Hero placeholder grid animation ─── */
+@keyframes grid-fade {
+  0%, 100% { opacity: 0.08; }
+  50% { opacity: 0.2; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .grid-animate {
+    animation: none !important;
+  }
+}
+

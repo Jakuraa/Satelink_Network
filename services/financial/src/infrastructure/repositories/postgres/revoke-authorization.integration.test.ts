@@ -29,6 +29,7 @@ import { Money, USDT } from '@satelink/kernel';
 import type { Result } from '@satelink/kernel';
 import { PostgresAuthorizationRepository } from './postgres-authorization-repository.js';
 import { revokeAuthorizations } from '../../../../../../tools/ops/revoke-authorization.js';
+import { truncateForTest } from '../../../../../../libs/testing/src/truncate-for-test.js';
 
 const MIGRATIONS_DIR = resolve(
   import.meta.dirname ?? new URL('.', import.meta.url).pathname,
@@ -59,9 +60,7 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  await pool.query(
-    'TRUNCATE authorizations, authorization_nonces, draws, ledger_entries, ledger_txns, funding_sources, accounts, principals RESTART IDENTITY CASCADE',
-  );
+  await truncateForTest(pool, 'TRUNCATE authorizations, authorization_nonces, draws, ledger_entries, ledger_txns, funding_sources, accounts, principals RESTART IDENTITY CASCADE');
   await pool.query(`INSERT INTO principals (id, kind) VALUES ('prn_owner','machine')`);
   // Re-seed the platform system accounts (migration 005) that TRUNCATE wiped —
   // needed to book a balanced ledger txn in case (e).

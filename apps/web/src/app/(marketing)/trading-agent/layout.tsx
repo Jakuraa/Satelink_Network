@@ -1,12 +1,7 @@
-// Stage 26 — Trading Agent public pages. Flag-gated (SITE_TRADING_AGENT, default OFF ⇒ 404) and
-// noindex until launch; nothing in the live navigation links here.
-import type { Metadata } from "next";
-import { requireSiteTradingAgent } from "@/lib/trading-agent/flag";
+// Satelink Trading AI public pages (Stage 26, made public in Phase 7). Every page frame carries the
+// not-advice, independence and status disclosures (components/trading-agent/Parts.tsx).
 import { TaFrame } from "@/components/trading-agent/Parts";
 
-export const metadata: Metadata = { robots: { index: false, follow: false } };
-
 export default function TradingAgentLayout({ children }: { children: React.ReactNode }) {
-  requireSiteTradingAgent();
   return <TaFrame>{children}</TaFrame>;
 }
