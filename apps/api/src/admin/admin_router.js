@@ -11,6 +11,8 @@
  *     section: signer refund is a one-time manual CLI command.
  */
 
+import { getX402PayerFunnel } from './x402_payer_funnel.js';
+import { getFinancialMetrics, getFinancialAlerts } from './financial_metrics.js';
 import express from 'express';
 import { IpClassifier }         from './jobs/ip_classifier.js';
 import { OutreachEngine }       from './jobs/outreach_engine.js';
@@ -610,6 +612,24 @@ export function createAdminRouter(pool, redis) {
   });
 
   // OBSERVER — Revenue Funnel (request → billed → settled → withdrawable)
+  // OBSERVER — financial metric registry + money alerts (2026-10-12, Step 5).
+  // Unknown = value:null / firing:null, never 0.
+  router.get('/financial/metrics', async (req, res) => {
+    try { ok(res, await getFinancialMetrics(pool)); } catch { res.status(500).json({ ok: false, error: 'metrics_unavailable' }); }
+  });
+  router.get('/financial/alerts', async (req, res) => {
+    try { ok(res, await getFinancialAlerts(pool)); } catch { res.status(500).json({ ok: false, error: 'alerts_unavailable' }); }
+  });
+
+  // OBSERVER — per-payer x402 funnel (2026-10-12, Step 3.4). Payer counts, not traffic.
+  router.get('/funnel/x402-payers', async (req, res) => {
+    try {
+      ok(res, await getX402PayerFunnel(pool));
+    } catch (err) {
+      res.status(500).json({ ok: false, error: 'funnel_unavailable' });
+    }
+  });
+
   router.get('/revenue/funnel', async (req, res) => {
     try {
       const traffic = await trafficToday();

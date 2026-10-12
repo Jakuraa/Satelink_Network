@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { recordSessionKeyDenial } from '../../billing/x402_session_keys.js';
 import crypto from 'crypto';
 import { routeRpcRequest, getRouterStats, initRouterWithPool, getNodeRoutingStatus } from './router.js';
 import { getSupportedChains, getChainConfig, CHAIN_ALIASES } from './providers.js';
@@ -294,6 +295,8 @@ export function createRpcGateway(db) {
         const metered = Boolean(canonical && (apiKey || walletForBilling));
 
         const sendBillingDenial = (verdict) => {
+            // 402-loop instrumentation (admin alert x402_402_loop): fire-and-forget.
+            if (verdict.http === 402 || verdict.code === 'account_not_found') recordSessionKeyDenial(db, apiKey, verdict.code);
             if (verdict.code === 'account_not_found') {
                 return res.status(402).json(paymentRequiredBody(
                     'The API key or wallet you sent matches no account. Register the wallet (see "register") or check the X-API-Key value.'));
