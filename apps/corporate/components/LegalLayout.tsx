@@ -6,6 +6,7 @@ const nav = [
   { href: "/legal/privacy", label: "Privacy" },
   { href: "/legal/terms", label: "Terms of use" },
   { href: "/legal/grievance", label: "Grievance officer" },
+  { href: "/legal/refunds", label: "Refunds and cancellations" },
 ];
 
 export const LEGAL_UPDATED = "24 September 2026";
