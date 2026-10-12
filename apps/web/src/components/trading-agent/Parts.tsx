@@ -1,4 +1,4 @@
-// Stage 26 — shared parts for the Trading Agent public pages.
+// Stage 26 — shared parts for Satelink Trading AI public pages.
 import Link from "next/link";
 import { Badge, Card, CardDescription, CardTitle, Disclosure, SectionHeader } from "@satelink/web-ui/ui";
 import DISCLAIMERS from "@/lib/trading-agent/disclaimers.json";
@@ -8,7 +8,7 @@ import { stageLabel, type ConnectorStage } from "@/lib/trading-agent/status";
 export function TaFrame({ children }: { children: React.ReactNode }) {
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
-      <nav aria-label="Trading Agent" className="mb-8 flex flex-wrap gap-x-4 gap-y-2 text-sm">
+      <nav aria-label="Satelink Trading AI" className="mb-8 flex flex-wrap gap-x-4 gap-y-2 text-sm">
         {TA_PAGES.map((p) => <Link key={p.href} href={p.href} className="text-sl-text-muted hover:text-sl-text">{p.label}</Link>)}
       </nav>
       <p className="mb-6"><Badge variant="planned">{DISCLAIMERS.notAvailable}</Badge></p>

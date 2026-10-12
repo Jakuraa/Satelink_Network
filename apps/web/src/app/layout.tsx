@@ -1,76 +1,74 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono, Source_Serif_4 } from "next/font/google";
+import { Manrope, IBM_Plex_Mono } from "next/font/google";
 import "../../../../packages/ui/src/styles/theme.css";
 import "./globals.css";
 
-// Self-hosted (next/font) fonts, exposed as the CSS variables tokens.css
-// references (--sl-font-sans / --sl-font-display / --sl-font-mono). display:swap.
-// Unified system (2026-09-25): Source Serif 4 is the editorial display face —
-// the same family as jakuraa.com; Inter is body; JetBrains Mono is code/numbers.
-// Inter and Source Serif 4 are variable fonts: no `weight` list means ONE file
-// per family covering every weight (was five + three static files).
-const inter = Inter({
+// Central typography system:
+// - Manrope (400, 500, 600, 700): primary headings, body, navigation, UI
+// - IBM Plex Mono (400, 500, 600): technical labels, protocol identifiers, telemetry
+const manrope = Manrope({
   subsets: ["latin"],
-  variable: "--font-inter",
-  display: "swap",
-});
-const serif = Source_Serif_4({
-  subsets: ["latin"],
-  variable: "--font-source-serif",
-  display: "swap",
-});
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500"],
-  variable: "--font-jetbrains-mono",
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-manrope",
   display: "swap",
 });
 
-const FAVICON =
-  "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%23408A71' rx='18' width='100' height='100'/><text x='50' y='66' font-size='48' fill='white' text-anchor='middle' font-family='system-ui' font-weight='700'>S</text></svg>";
+const ibmPlexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-ibm-plex-mono",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://satelink.network"),
   title: {
-    default: "Satelink — Derived Trading Intelligence for the Machine Economy",
+    default: "Satelink Trading AI — AI trading operating system for people, AI agents and machines",
     template: "%s | Satelink",
   },
   description:
-    "Derived trading intelligence — funding-rate divergence, open interest shifts, market microstructure — computed from public market data, never raw feeds redistributed. One-time USD credit packs from $0.01/call. Runs on our own pay-per-call Polygon RPC gateway ($0.00003/call).",
+    "Reason, validate, score, authorize, execute, learn. AI proposes; deterministic risk and your signed mandate decide. You keep custody; withdrawals are never enabled. Paper trading in controlled beta. Live execution is not yet available.",
   keywords: [
-    "trading intelligence",
-    "funding rate",
-    "open interest",
-    "market microstructure",
-    "derived analytics API",
-    "DePIN",
-    "RPC gateway",
-    "Polygon RPC",
+    "Satelink Trading AI",
+    "AI trading agents",
+    "AI trading operating system",
+    "algorithmic trading",
+    "risk management",
+    "trading mandates",
+    "MCP",
+    "machine commerce",
+    "x402",
     "pay per call API",
-    "USDT settlement",
-    "machine economy",
-    "HTTP 402",
   ],
   authors: [{ name: "Satelink Network" }],
   robots: "index, follow",
-  // No blanket canonical here — a root-level canonical makes EVERY page
+  // No blanket canonical here - a root-level canonical makes EVERY page
   // canonical to "/" (the bug called out in the reposition audit). Each page
   // sets its own via `alternates.canonical` in its metadata.
-  icons: { icon: FAVICON },
+  icons: {
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+    ],
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
   openGraph: {
     type: "website",
     url: "https://satelink.network",
     siteName: "Satelink Network",
-    title: "Satelink — Derived Trading Intelligence for the Machine Economy",
+    title: "Satelink Trading AI — AI trading operating system for people, AI agents and machines",
     description:
-      "Funding-rate divergence, open interest shifts, and market microstructure — derived from public market data. One-time USD credit packs, no subscription. Built on our own pay-per-call Polygon RPC gateway.",
+      "Reason, validate, score, authorize, execute, learn. AI proposes; deterministic risk and your signed mandate decide. You keep custody; withdrawals are never enabled. Paper trading in controlled beta. Live execution is not yet available.",
     images: ["https://satelink.network/og-image.png"],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Satelink — Derived Trading Intelligence for the Machine Economy",
+    title: "Satelink Trading AI — AI trading operating system for people, AI agents and machines",
     description:
-      "Derived market analytics for machine-commerce agents. One-time USD credit packs from $0.01/call, or pay per call via x402 — no subscription.",
+      "Reason, validate, score, authorize, execute, learn. AI proposes; deterministic risk and your signed mandate decide. You keep custody; withdrawals are never enabled. Paper trading in controlled beta. Live execution is not yet available.",
   },
 };
 
@@ -79,7 +77,7 @@ const ORG_JSON_LD = {
   "@type": "Organization",
   name: "Satelink Network",
   description:
-    "Derived trading intelligence and pay-per-call Polygon RPC, metered per call with on-chain and Dodo Payments settlement.",
+    "Satelink Trading AI: an AI trading operating system for people, AI agents and machines, plus machine-commerce rails (x402 payments, metered Polygon RPC). Operated by Jakuraa Commercial Pvt Ltd.",
   url: "https://satelink.network",
   email: "satelinknetwork@gmail.com",
   foundingDate: "2025",
@@ -92,7 +90,7 @@ const INTELLIGENCE_PRODUCT_JSON_LD = {
   "@type": "Product",
   name: "Satelink Trading Intelligence",
   description:
-    "Derived trading intelligence — funding-rate heatmaps, open-interest shifts, liquidation clusters, market microstructure — computed from public market data. Raw exchange feeds are never redistributed.",
+    "Derived trading intelligence - funding-rate heatmaps, open-interest shifts, liquidation clusters, market microstructure - computed from public market data. Raw exchange feeds are never redistributed.",
   url: "https://satelink.network/products/trading-intelligence",
   offers: {
     "@type": "Offer",
@@ -110,7 +108,7 @@ const INTELLIGENCE_PRODUCT_JSON_LD = {
   },
 };
 
-// Secondary — the infrastructure the intelligence product runs on, also sold
+// Secondary - the infrastructure the intelligence product runs on, also sold
 // directly.
 const RPC_PRODUCT_JSON_LD = {
   "@context": "https://schema.org",
@@ -141,7 +139,7 @@ export default function RootLayout({
       lang="en"
       data-theme="light"
       suppressHydrationWarning
-      className={`${inter.variable} ${serif.variable} ${jetbrainsMono.variable}`}
+      className={`${manrope.variable} ${ibmPlexMono.variable}`}
     >
       <head>
         <script

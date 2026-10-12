@@ -11,6 +11,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { adminUiAllowed, isGatedPagePath, isGatedSubdomain } from '@/lib/admin-ui-gate'
+import { isInternalSurface, isProductionDeploy } from '@/lib/internal-surfaces'
 
 const SUBDOMAIN_MAP: Record<string, string> = {
   'developer': '/satelink/os',
@@ -74,6 +75,15 @@ export function middleware(req: NextRequest) {
   // forgeable cookie (/ops) and a client-side, unverified JWT decode (/admin).
   if ((isGatedSubdomain(subdomain) || isGatedPagePath(url.pathname)) && !adminUiAllowed(req)) {
     return new NextResponse('Not Found', { status: 404 })
+  }
+
+  // Phase 7: builder / distributor / design / styleguide are internal — 404 in production,
+  // noindex everywhere else.
+  if (isInternalSurface(url.pathname)) {
+    if (isProductionDeploy()) return new NextResponse('Not Found', { status: 404 })
+    const res = NextResponse.next()
+    res.headers.set('X-Robots-Tag', 'noindex, nofollow')
+    return res
   }
 
   // Redirects apply on the main site host only (not app subdomains), before any

@@ -15,6 +15,7 @@ import { createSettlementAuditRouter } from "./src/services/settlement/audit.js"
 import { createWebhookRouter, ensureWebhookTable } from "./src/workloads/webhooks/index.js";
 import { createOracleRouter } from "./src/workloads/oracle/index.js";
 import { createClaimsRouter } from "./src/routes/claims_route.mjs";
+import { createBetaRequestsRouter } from "./src/routes/beta_requests.js";
 import { createOsEventsRouter } from "./src/realtime/os-events-route.js";
 import { createMachineAccessRouter } from "./src/machine-access/index.js";
 import { createAdminMalRouter } from "./src/routes/admin_mal_route.mjs";
@@ -479,6 +480,9 @@ app.get("/api/mode", (req, res) => {
 
   // Claims API (pull model settlement)
   app.use("/api/nodes", createClaimsRouter(pool));
+
+  // Satelink Trading AI beta waitlist capture (Phase 7 amendment, #511).
+  app.use("/beta", createBetaRequestsRouter(pool));
 
   // SDK Analytics (S4-005)
   app.use("/api", createSdkAnalyticsRouter());

@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@satelink/ui';
 import { Badge } from '@satelink/ui';
 import { toast } from 'sonner';
+import { OPERATOR_PROGRAM_PAUSED } from "@/lib/operator-program";
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "https://rpc.satelink.network";
 const getAuthHeaders = () => {
   const token = typeof window !== "undefined" ? localStorage.getItem("satelink_token") : "";
@@ -74,6 +75,7 @@ export default function NodeEarningsPage() {
       <div>
         <h1 className="text-2xl font-bold text-zinc-50">Node Earnings</h1>
         <p className="text-sm text-zinc-500 mt-1">Your epoch-by-epoch earnings history</p>
+        <p className="text-sm text-amber-400 mt-2" role="status">{OPERATOR_PROGRAM_PAUSED}</p>
       </div>
 
       {loading && <p className="text-zinc-500 text-sm">Loading...</p>}

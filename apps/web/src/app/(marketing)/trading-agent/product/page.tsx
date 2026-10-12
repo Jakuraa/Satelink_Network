@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
-import { requireSiteTradingAgent } from "@/lib/trading-agent/flag";
 import { PRODUCT } from "@/lib/trading-agent/copy";
 import { TaHeader } from "@/components/trading-agent/Parts";
 
-export const metadata: Metadata = { title: "Product — Trading Agent", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "Product — Satelink Trading AI" };
 
 export default function Page() {
-  requireSiteTradingAgent();
   return (
     <>
       <TaHeader title={PRODUCT.title} />

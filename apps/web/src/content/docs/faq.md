@@ -2,9 +2,11 @@
 
 ### What is Satelink?
 
-A DePIN RPC gateway on Polygon PoS. Developers and autonomous machines pay
-$0.00003 per blockchain RPC call in USDT; node operators earn 50% of routed
-revenue; settlement is on-chain and verifiable.
+Satelink Trading AI is an AI trading operating system for people, AI agents
+and machines (paper trading in controlled beta; live execution is not yet
+available). This FAQ covers the legacy Satelink RPC gateway on Polygon PoS,
+where developers and machines pay $0.00003 per blockchain RPC call in USDT.
+The node operator program is paused. Operator payouts are not active.
 
 ### Is this real or a testnet simulation?
 
@@ -48,31 +50,18 @@ Nothing is silently dropped.
 
 ## For node operators
 
-### How much can I earn?
+### Is the node operator program open?
 
-50% of the revenue your node serves: 1M routed calls/month = $30 gross = $15
-to you. Earnings scale with real customer demand — there are no token
-emissions or artificial APY. Early network honesty: demand is still small;
-see the live request counter on the status page before you size hardware.
-
-### Do I need to stake?
-
-No. No staking, no lock-up, and no slashing — going offline just means you
-stop earning while offline.
-
-### How do I get paid?
-
-Earnings accrue per epoch in USDT and become claimable through on-chain
-settlement. Settlement broadcasting is currently in final verification
-(dry-run mode) — accrual and accounting run now; automated broadcasts enable
-once the safety gates clear. See [Revenue Model](/docs/revenue-model).
+No. The node operator program is paused. Operator payouts are not active.
+Nothing accrues to operators while it is paused. See
+[Node Operators](/docs/node-operators).
 
 ## Economics
 
 ### Where does the USDT come from?
 
-Entirely from customers paying for API usage. The split is 50% node
-operators / 30% platform / 20% distribution pool for top-performing nodes.
+Entirely from customers paying for API usage. The node operator program is
+paused. Operator payouts are not active, so no share of it goes to operators.
 
 ### Can the split change?
 

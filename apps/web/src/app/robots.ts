@@ -24,6 +24,9 @@ export default function robots(): MetadataRoute.Robots {
           "/styleguide",
           "/machine-console",
           "/design",
+          // Phase 7: internal surfaces (404 in production; see lib/internal-surfaces.ts).
+          "/builder",
+          "/distributor",
           // Noindex utility surfaces (also carry robots noindex meta).
           "/support/search",
           "/customer-stories",

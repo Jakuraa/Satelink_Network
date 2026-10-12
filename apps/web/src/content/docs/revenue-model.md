@@ -1,3 +1,5 @@
+> **The node operator program is paused. Operator payouts are not active.** The split below describes the original design; the operator share is not paid out.
+
 ## The split
 
 Every metered dollar is divided by fixed protocol rules:

@@ -10,7 +10,7 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 
 export const metadata: Metadata = buildMetadata({
   title: "Tutorials — Academy",
-  description: "Runnable Satelink tutorials, grouped by product: discovery, derived metrics, RPC, and keyless x402 payments. Every tutorial is backed by a live endpoint.",
+  description: "Runnable Satelink tutorials, grouped by product: discovery, derived metrics, RPC, and keyless x402 payments. Every tutorial runs against a live endpoint.",
   path: "/academy/tutorials",
 });
 

@@ -114,3 +114,18 @@ export const apiKeyReadLimiter = rateLimit({
     validate: false,
     message: { ok: false, error: 'Rate limit exceeded' }
 });
+
+// POST /beta/request — public waitlist capture. Tight per-IP bucket: it's a
+// low-volume form, not a billed endpoint, and must not become a spam/DB-bloat
+// vector. Browser submissions arrive via the apps/web proxy (shared Vercel
+// egress IP) so this is a backstop; the authoritative per-real-IP limit runs
+// in apps/web's own route before it forwards the request.
+export const betaRequestLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    keyGenerator: (req) => req.ip,
+    standardHeaders: true,
+    legacyHeaders: false,
+    validate: false,
+    message: { ok: false, error: 'rate_limited' }
+});

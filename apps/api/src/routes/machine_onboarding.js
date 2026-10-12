@@ -93,13 +93,10 @@ function pricingBody() {
     // Per-rail prices with rail/network/status labels (C4): the credits price and
     // the x402 bundle are different rails, never the same product at two prices.
     rails,
-    // M3 — derived trading intelligence product, metered off the SAME credits.
-    intelligence: {
-      catalog: `${API_BASE()}/v1/intelligence`,
-      price_usdt_per_call: rails.intelligence_credits.price_usd_per_request,
-      note: 'Derived analytics from public market data (funding divergence, OI shifts, ' +
-        'liquidation-pressure model, microstructure). Not raw feed redistribution, not advice.',
-    },
+    // Trading Intelligence delisting (founder decision, Phase 7 amendment):
+    // this manifest no longer advertises /v1/intelligence as a standalone
+    // catalog entry. The routes keep serving existing keys unchanged — see
+    // GET /v1/intelligence for live discovery.
   };
 }
 

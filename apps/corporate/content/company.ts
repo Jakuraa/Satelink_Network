@@ -1,4 +1,4 @@
-// Company facts — sourced ONLY from founder-supplied statutory documents
+// Company facts - sourced ONLY from founder-supplied statutory documents
 // (Certificate of Incorporation, GST registration, IEC, Udyam) and founder
 // statements. Do not add figures, people, clients or locations that are not
 // backed by a document. PAN/TAN, DIN, residential addresses, personal phone
@@ -29,7 +29,7 @@ export const company = {
   email: "hello@jakuraa.com",
   // Founder to supply the business telephone number. Rendered only when set.
   phone: null as string | null,
-  // Grievance officer — founder to supply the named officer. Until then the
+  // Grievance officer - founder to supply the named officer. Until then the
   // page lists the designation and the company contact email.
   grievanceOfficer: {
     name: null as string | null,
@@ -48,7 +48,7 @@ export function legalLine() {
   return `${company.legalName} (formerly ${company.formerName}) · CIN ${company.cin} · Registered office: ${registeredOfficeLine()}`;
 }
 
-// Timeline — each entry is backed by a statutory record or verifiable repo
+// Timeline - each entry is backed by a statutory record or verifiable repo
 // history. Undated founder-stated events carry no year rather than a guess.
 export const timeline: { when: string; title: string; body: string }[] = [
   {
@@ -81,7 +81,7 @@ export const timeline: { when: string; title: string; body: string }[] = [
 export const principles: { title: string; body: string }[] = [
   {
     title: "Say only what is true",
-    body: "We describe what we operate, what we are registered to do, and what we plan — and we label which is which.",
+    body: "We describe what we operate, what we are registered to do, and what we plan, and we label which is which.",
   },
   {
     title: "Build for the long term",
@@ -92,7 +92,7 @@ export const principles: { title: string; body: string }[] = [
     body: "Our statutory details are published, our registered office is listed, and there is a named route for grievances.",
   },
   {
-    title: "Earn trust in small steps",
+    title: "Build trust in small steps",
     body: "New businesses start as registered capabilities and become operating businesses only when they are genuinely running.",
   },
 ];

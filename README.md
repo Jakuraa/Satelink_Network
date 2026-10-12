@@ -1,23 +1,88 @@
-# Satelink
+# Satelink Trading AI
 
-**Derived trading intelligence and pay-per-call Polygon RPC — for machines and humans.**
+**An AI trading operating system for people, AI agents and machines.**
+Reason, validate, score, authorize, execute, learn.
 
-Satelink sells two things on one billing account:
+> **Status:** Paper trading in controlled beta. Live execution is not yet available.
+> Live money stays locked behind code-level flags and a signed real-money gate.
 
-1. **Trading intelligence** — funding-rate divergence, open-interest shifts,
-   liquidation clusters, and market microstructure, computed from public
-   market data. We never redistribute a raw exchange feed; every response is
-   a statistic we derive. `$0.01/call`, one-time USD credit pack (no
-   subscription) or pay-per-call via x402.
-2. **RPC gateway** — the infrastructure the intelligence product runs on,
-   also sold directly: standard Polygon (chain 137) JSON-RPC —
-   `eth_call`, `eth_getBalance`, `eth_getLogs`, and the rest — at
-   `$0.00003/call`.
+## What it is
 
-Either product is reachable with no account, no signup, and no commitment:
-call it, get an HTTP `402`, pay the challenge, keep going.
+Satelink Trading AI is one core with three kinds of client:
 
-## Status (honest)
+- **People** use the web app: describe capital, limits and markets, read a GO / WAIT / REJECT
+  decision card with its evidence, and authorise a paper order with a one-time code.
+- **External AI agents** use the API or MCP tools: read, evaluate, propose. They are scoped by
+  key, budgeted and metered.
+- **Machines and bots** use the same API, with the same checks.
+
+Inside, specialised AI agents (market, regime, risk explainer, portfolio, review) reason about the
+market. Deterministic engines (features, regime, liquidity, data confidence, walk-forward, stress)
+validate. A scorecard returns **GO, WAIT or REJECT** with a confidence and its evidence, and **a
+failed hard gate always overrides a high score**. Nothing executes unless the risk engine and a
+mandate the user signed allow it. Every step is recorded under one trace so any order can be
+explained, and outcomes feed trading memory for review. A strategy never changes itself while live.
+
+It is **not** a signal service, a chatbot, copy trading, a fund, or investment advice.
+
+## Architecture
+
+```
+AI proposal → Strategy DSL → validation → deterministic engine → scorecard + hard gates
+  → risk engine (20 checks, kill switches) → portfolio check → mandate (TOTP-signed)
+  → OMS (exactly-once) → broker adapter → broker → reconciliation → P&L → memory / feedback
+```
+
+```mermaid
+flowchart LR
+  H[People · web] & A[AI agents · API/MCP] & M[Machines · API] --> ORC[AI orchestrator + agents]
+  ORC --> ENG[Deterministic engines + validation]
+  ENG --> SC[Scorecard: GO / WAIT / REJECT]
+  SC --> P[Proposal]
+  P --> RISK[Risk engine]
+  RISK --> MAN[Signed mandate]
+  MAN --> OMS[OMS] --> BRK[Broker adapter] --> VEN[(Broker)]
+  VEN --> REC[Reconciliation + P&L] --> MEM[Memory + feedback]
+```
+
+Full map with file paths, status per subsystem and the 27-question architecture test:
+[`docs/trading-agent/ARCHITECTURE.md`](https://github.com/Satelink-Protocol/Satelink_Network/blob/trading-agent/integration/docs/trading-agent/ARCHITECTURE.md) (on the `trading-agent/integration` branch).
+
+## Three interfaces
+
+| Interface | For | Status |
+|---|---|---|
+| Web | people | paper beta |
+| REST API | AI agents, machines | built, not public yet |
+| MCP | AI agents | built (read + propose tools only), not public yet |
+
+## Safety boundary
+
+- **AI proposes.** The LLM has no order-placing tool, never sees broker credentials, and cannot
+  change risk limits, mandates, billing, ledger or revenue rules.
+- **Deterministic risk decides.** Kill switches, limits, data freshness and price collars are fixed
+  code. If a check cannot run, the order is refused.
+- **Your signed mandate decides.** Orders must fit limits the user signed with a one-time code.
+- **You keep custody.** Money stays at the user's broker. Satelink never holds customer funds, and
+  withdrawals are never enabled.
+
+## Status
+
+- Paper trading in controlled beta. Live execution is not yet available.
+- `LIVE_TRADING`, `AUTONOMOUS_MODE` and `UPSTOX_AUTOMATED` are locked in code. Live money requires
+  REAL MONEY GATE 1 (`docs/trading-agent/gates/`).
+- Broker connectors (Binance, Upstox, Alpaca) are built for testnet / sandbox / copilot use only.
+  Satelink is not affiliated with, endorsed by or a partner of any of them.
+
+Website: [satelink.network](https://satelink.network) · Company: [Jakuraa Commercial Private Limited](https://jakuraa.com)
+
+## Legacy / internal: machine-commerce rails
+
+Satelink also runs pay-per-call infrastructure for software that pays software: derived market
+statistics and Polygon JSON-RPC, paid via x402 (USDC on Base) or USDT credit deposits. The node
+operator program is paused. Operator payouts are not active.
+
+### Status (honest)
 
 - The gateway is live at `https://rpc.satelink.network` and serves real
   traffic (hundreds of thousands of requests/day, p50 ~50 ms).
@@ -33,7 +98,7 @@ call it, get an HTTP `402`, pay the challenge, keep going.
   discovery tier for intelligence). Paid conversion is early. No revenue
   numbers are advertised here — anything you see is on-chain and verifiable.
 
-## Try it (no key needed)
+### Try it (no key needed)
 
 ```bash
 # RPC
@@ -49,7 +114,7 @@ When the free taste runs out you get a machine-readable `402` response that
 contains everything needed to pay (x402 challenge or instant trial key) —
 agents can self-onboard without a human.
 
-## Machine-consumer quickstart
+### Machine-consumer quickstart
 
 1. **Discover the service.** `GET /.well-known/satelink.json` — the machine
    manifest: chain, pricing, payment rails, and the exact onboarding request
@@ -71,7 +136,7 @@ curl https://rpc.satelink.network/.well-known/satelink.json
 curl https://rpc.satelink.network/v1/pricing
 ```
 
-## Ecosystem
+### Ecosystem
 
 - **[x402-kit](https://github.com/Satelink-Protocol/x402-kit)** — standalone,
   MIT-licensed Express middleware that puts an x402 USDC paywall in front of
@@ -79,7 +144,7 @@ curl https://rpc.satelink.network/v1/pricing
 - **MCP server** (`apps/mcp-server`) — gives AI agents Satelink RPC access as
   MCP tools (`satelink-mcp`).
 
-## Contracts (verifiable on-chain)
+### Contracts (verifiable on-chain)
 
 | Contract | Chain | Address |
 |----------|-------|---------|

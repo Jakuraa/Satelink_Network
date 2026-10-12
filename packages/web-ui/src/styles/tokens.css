@@ -1,5 +1,5 @@
 /* ============================================================
-   SATELINK SIGNAL 2.0 — design system tokens (single source of truth)
+   SATELINK SIGNAL 2.0 - design system tokens (single source of truth)
    §2 of the web-v3-experience build (P1).
 
    Imported AFTER globals.css in app/layout.tsx, so these @layer base
@@ -16,7 +16,7 @@
 
    The legacy bg / text / accent names and the bare shadcn names
    (--background, --card, --border, …) are re-declared here as thin
-   ALIASES onto --sl-* — so every existing page keeps rendering while
+   ALIASES onto --sl-* - so every existing page keeps rendering while
    new components consume --sl-* directly. The admin dashboard's scoped
    .theme-shadcn / .satelink-os slate palette (globals.css) is left in
    place: it is scoped and never leaks to public pages.
@@ -38,13 +38,13 @@
     --sl-text:          #1A1915;
     --sl-text-muted:    #55524A;
     --sl-text-subtle:   #6B675C; /* deepened from #76819A for AA on 11px labels */
-    /* brand / platform (teal) — deepened for AA: white text on --sl-accent is
+    /* brand / platform (teal) - deepened for AA: white text on --sl-accent is
        5.10:1 and accent-as-text on bg/surface is >=4.76:1 (see DECISIONS.md). */
     --sl-accent:        #0B7A6B;
     --sl-accent-strong: #085F53;
     --sl-accent-ink:    #FFFFFF;
     --sl-accent-soft:   #0B7A6B14;
-    /* product rails — colour carries meaning */
+    /* product rails - colour carries meaning */
     --sl-machine:       #5B5BF0; /* agents / x402 / machine rail (indigo) */
     --sl-market:        #F29F38; /* trading intelligence data (amber)    */
     --sl-settle:        #1FA8E0; /* settlement / on-chain (sky)          */
@@ -56,7 +56,7 @@
     --sl-grad-hero: none;
     --sl-grad-brand: linear-gradient(120deg, #0E9F8B 0%, #1FA8E0 45%, #5B5BF0 100%);
 
-    /* data semantics (charts, deltas) — kept from Signal 1 */
+    /* data semantics (charts, deltas) - kept from Signal 1 */
     --sl-up:            #059669;
     --sl-down:          #DC2626;
     --sl-warn:          #B7791F;
@@ -68,9 +68,9 @@
     --sl-ring:     0 0 0 3px rgb(10 124 109 / .30);
 
     /* type */
-    --sl-font-sans: var(--font-inter, "Inter"), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-    --sl-font-display: var(--font-source-serif, "Source Serif 4"), ui-serif, Georgia, "Times New Roman", serif;
-    --sl-font-mono: var(--font-jetbrains-mono, "JetBrains Mono"), ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sl-font-sans: var(--font-manrope, "Manrope"), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --sl-font-display: var(--font-manrope, "Manrope"), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --sl-font-mono: var(--font-ibm-plex-mono, "IBM Plex Mono"), ui-monospace, SFMono-Regular, Menlo, monospace;
     /* display type scale */
     --sl-display-1: clamp(2.75rem, 6vw, 5rem);
     --sl-display-2: clamp(2rem, 4vw, 3.25rem);

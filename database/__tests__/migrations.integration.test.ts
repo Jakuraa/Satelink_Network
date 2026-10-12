@@ -161,7 +161,7 @@ describe('M2 — ledger schema migrations', { timeout: 120_000 }, () => {
 
   // The exact count is derived from the applied list above so adding a
   // migration only requires updating that one list.
-  const MIGRATION_COUNT = 28;
+  const MIGRATION_COUNT = 36;
 
   it('re-running applies nothing (idempotent)', async () => {
     const result = await migrate(connectionString, MIGRATIONS_DIR);

@@ -6,18 +6,12 @@
 // the actual payment enforcement (src/payments/x402/middleware.js) reads, but
 // is an independent file so a change here can never affect payment behavior.
 //
-// HONESTY NOTE (updated, M3 clean rebuild): the four /v1/intelligence/*
-// routes are now REAL and serving (src/routes/intelligence_route.js,
-// src/intelligence/{compute,connectors,engine}.js). Payment mechanism is
-// DIFFERENT from /rpc/polygon's direct x402 challenge, though: x402Middleware
-// is hardwired to the /rpc resource (its `routes` config and `resource` string
-// are literal, not path-generic — confirmed by reading its source), so
-// intelligence calls are metered via the canonical api_credits balance
-// instead — funded by the SAME x402 bundle payment on /rpc/polygon, or a
-// direct USDT deposit. `live: true` below means the route serves real data to
-// a funded API key; it does NOT mean this specific path negotiates its own
-// x402 402 challenge. See the route's own 402 body (no API key) for the exact
-// acquire-credits pointer.
+// Trading Intelligence delisting (founder decision, Phase 7 amendment): the
+// /v1/intelligence/* routes keep serving existing keys (src/routes/
+// intelligence_route.js) — this file only stops ADVERTISING them as a
+// standalone, independently-discoverable product in the x402 catalog. They
+// were never x402-payable here anyway (metered via api_credits, not a direct
+// 402 challenge on this path) — see /v1/intelligence for discovery instead.
 
 import { Router } from 'express';
 import { railPrices, bundlePriceText } from '../pricing_v2/rails.mjs';
@@ -26,13 +20,6 @@ const API_BASE = () => process.env.API_BASE_URL || 'https://rpc.satelink.network
 const X402_NETWORK = () => process.env.X402_NETWORK || 'eip155:8453';
 const X402_PAY_TO = () => process.env.X402_PAY_TO || '0x966E1Ae22996545015b1414B35234b10719d7Ad4';
 
-const INTELLIGENCE_ROUTES = [
-  ['funding-rate-heatmap', 'Funding-rate heatmap across perp markets — derived analytics, not raw quotes.'],
-  ['open-interest-shifts', 'Recent shifts in open interest across markets — derived, not raw quotes.'],
-  ['liquidation-clusters', 'Clustered liquidation levels/density — derived, not raw quotes.'],
-  ['market-microstructure', 'Market microstructure summary (spread, depth, imbalance) — derived, not raw quotes.'],
-];
-
 function listing() {
   const base = API_BASE();
   const network = X402_NETWORK();
@@ -40,7 +27,6 @@ function listing() {
   // Prices from the PlanCatalog (railPrices; x402 env overrides honoured, as enforcement does).
   const rails = railPrices();
   const bundle = rails.rpc_x402_bundle;
-  const ti = rails.intelligence_credits;
   return {
     schema_version: '1.0',
     service: 'Satelink',
@@ -60,18 +46,6 @@ function listing() {
           'eth_blockNumber, eth_getLogs, eth_getTransactionReceipt, eth_sendRawTransaction, and the rest).',
         live: true,
       },
-      ...INTELLIGENCE_ROUTES.map(([path, description]) => ({
-        method: 'GET',
-        resource: `${base}/v1/intelligence/${path}`,
-        price: `$${ti.price_usd_per_request}/call`,
-        description,
-        live: true,
-        // C5: these routes are metered from api_credits — NOT an x402 challenge on this path.
-        rail: 'api_credits',
-        x402_challenge: false,
-        status: ti.status,
-        note: 'Metered via api_credits (funded by the x402 bundle on /rpc/polygon or a USDT deposit) — not a direct x402 challenge on this path. Free discovery: GET /v1/intelligence.',
-      })),
     ],
     rails,
     manifest_url: `${base}/.well-known/satelink.json`,

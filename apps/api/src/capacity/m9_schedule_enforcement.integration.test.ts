@@ -24,6 +24,7 @@ import { PostgresPrincipalRepository } from '../../../../services/financial/src/
 import { PostgresAuthorizationCreationUnitOfWork } from '../../../../services/financial/src/infrastructure/repositories/postgres/postgres-authorization-creation-unit-of-work.js';
 import { createAuthorization, BASE_USDC_ADDRESS, BASE_CHAIN_ID } from '../../../../services/financial/src/application/commands/create-authorization.js';
 import type { SignedAuthorizationEnvelope } from '../../../../services/financial/src/application/ports/envelope-verifier.js';
+import { truncateForTest } from '../../../../libs/testing/src/truncate-for-test.js';
 
 const MIGRATIONS_DIR = resolve(
   import.meta.dirname ?? new URL('.', import.meta.url).pathname,
@@ -144,7 +145,7 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  await pool.query('TRUNCATE principals RESTART IDENTITY CASCADE');
+  await truncateForTest(pool, 'TRUNCATE principals RESTART IDENTITY CASCADE');
   // Also truncate schedule_state (depends on authorizations via FK, so cascade handles it).
   // But schedule_state has its own FK to principals via authorizations, so we
   // need to delete it before truncating principals.

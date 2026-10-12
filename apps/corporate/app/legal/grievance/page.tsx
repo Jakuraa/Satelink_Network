@@ -26,7 +26,7 @@ export default function Grievance() {
       <h2>What happens next</h2>
       <p>
         We acknowledge grievances and aim to resolve them promptly, within the timelines required by applicable law. The
-        contact form on our <a href="/contact">contact page</a> can also be used — choose the topic &quot;Grievance&quot;.
+        contact form on our <a href="/contact">contact page</a> can also be used - choose the topic &quot;Grievance&quot;.
       </p>
     </LegalPage>
   );

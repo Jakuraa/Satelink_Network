@@ -5,7 +5,7 @@ import { ArrowLink, Container, DefinitionList, PageHero, SectionHeading } from "
 
 export const metadata: Metadata = {
   title: "Company",
-  description: `About ${company.legalName} (formerly ${company.formerName}) — history, principles and governance.`,
+  description: `About ${company.legalName} (formerly ${company.formerName}) - history, principles and governance.`,
 };
 
 export default function CompanyPage() {
@@ -17,15 +17,23 @@ export default function CompanyPage() {
         lede={
           <p>
             {company.legalName} (formerly {company.formerName}) was incorporated in Coimbatore on {company.incorporatedDisplay}.
-            Today it operates a technology business, Satelink, and holds registrations for trade, international trade and
-            industrial manufacturing.
+            Today it builds Satelink, whose flagship product is Satelink Trading AI, and holds registrations for trade,
+            international trade and industrial manufacturing.
           </p>
         }
       />
 
       <section aria-labelledby="history" className="border-t border-stone-1 py-20">
         <Container>
-          <SectionHeading id="history" title="History" />
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <SectionHeading id="history" title="History" />
+            <Link
+              href="/history"
+              className="font-mono text-xs text-green hover:underline uppercase tracking-wider"
+            >
+              Explore Complete 2019 - 2026 Archive & Timeline →
+            </Link>
+          </div>
           <ol className="relative mt-12 space-y-10 border-l border-stone-2 pl-8 sm:ml-40">
             {timeline.map((t) => (
               <li key={t.title} className="relative">
@@ -36,6 +44,18 @@ export default function CompanyPage() {
               </li>
             ))}
           </ol>
+          <div className="mt-12 rounded-xl border border-stone-1 bg-ivory-2/60 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h4 className="font-serif text-lg text-ink">Institutional History & Corporate Archive</h4>
+              <p className="text-sm text-stone-4 mt-1">Read the complete operational story of Falcor Power Tools, Wholesale Syndicate supermarket, crypto mining rigs, and the road to Satelink.</p>
+            </div>
+            <Link
+              href="/history"
+              className="shrink-0 rounded-full bg-ink px-5 py-2.5 font-sans text-xs font-medium text-ivory hover:bg-stone-4 transition-colors"
+            >
+              View History Timeline
+            </Link>
+          </div>
         </Container>
       </section>
 
