@@ -52,6 +52,24 @@ describe('Catalog consistency (C8): one price, every surface', () => {
     assert.deepEqual(body.rails, r);
   });
 
+  it('no discovery surface advertises free calls; x402 headers + key recovery are documented (2026-10-12)', async () => {
+    const { createMachineIntelRouter } = await import('../src/routes/machine_intel.js');
+    const app = express();
+    app.use('/.well-known', createWellKnownSatelinkRouter());
+    app.use('/v1', createMachineIntelRouter({ query: async () => ({ rows: [], rowCount: 0 }) }, null));
+    const m = (await request(app).get('/.well-known/satelink.json')).body;
+    assert.equal(m.payment.free_calls, 0);
+    assert.deepEqual(m.payment.request_headers, ['PAYMENT-SIGNATURE', 'X-PAYMENT', 'PAYMENT']);
+    assert.ok(m.payment.response_headers['X-Satelink-API-Key']);
+    assert.match(m.payment.key_recover, /\/v1\/x402\/key\/recover/);
+    const cap = (await request(app).get('/v1/capabilities')).body;
+    assert.equal(cap.free_calls, 0);
+    assert.ok(!cap.auth_modes.some((a) => /free/i.test(a.mode)), 'no free-tier auth mode');
+    for (const t of cap.tiers) assert.ok(t.cost_per_call_usd > 0, `tier ${t.tier} must be charged`);
+    // the mode name and descriptive notes may say "free"; a positive free allowance may not
+    for (const body of [m, cap]) assert.doesNotMatch(JSON.stringify(body), /"free_calls":[1-9]|free (allowance|taste|calls per)/i);
+  });
+
   it('/.well-known/satelink.json and /v1/pricing show the catalog prices', async () => {
     const r = railPrices();
     const app = express();
