@@ -107,3 +107,22 @@ Provider dashboards are external records only.
 - Railway API is active. CIN/GSTIN are correct.
 - Phase-2 rotations are deferred until before launch; B-01..B-04 stay OPEN.
 - APPROVED: an additive extension of the ledger transaction-kind CHECK constraint (migration-019 pattern) for `payment`, `subscription`, `commission`, `rebate`, `provider_fee`. Nothing else in existing Financial OS tables may change without asking.
+- `BETA_REQUESTS_FOUNDER_EMAIL` is set on Railway (verify: startup warning gone; a `+test` beta request emails the founder; test row deleted).
+- **Razorpay suspended** Jakuraa Commercial Pvt Ltd (terms of use). Adapter → `capabilities().available=false`, reason `provider_suspended`; removed from checkout methods; code kept.
+- Cashfree and Dodo applications submitted — **pending**. Adapters stay disabled until approval is evidenced.
+- Transacty: not applied. Adapter is code-only and gated (`PAYMENT_TRANSACTY` off).
+- APPROVED: `POST /api/keys/deposit` atomicity fix (cfab183b pattern) as its own commit with a crash/retry regression test, only after the defect is confirmed (confirmed 2026-10-12 → PR #523).
+- Ownership: Claude Code is the only agent editing money paths this round (x402 middleware, credit_service, deposit routes, ledger, payments, settlement). Other agents' commits there (e.g. PR #521) are reviewed as outside contributions.
+
+## Part 11 — payment acceptance criteria, items 1–8 (authoritative text, master directive)
+
+Committed here so the list is never "missing" again. Wave 1.10 maps one automated test to each item.
+
+1. A valid payment can be associated with the correct customer and product.
+2. A duplicate webhook cannot create duplicate credits or ledger entries.
+3. A failed or pending payment cannot incorrectly grant permanent entitlements.
+4. A refund or reversal updates the canonical financial state correctly.
+5. Provider reconciliation detects discrepancies.
+6. Switching providers does not create a second source of truth.
+7. Metered usage flows through the existing Financial OS accounting pipeline.
+8. Subscription entitlements remain consistent across dashboards and APIs.
