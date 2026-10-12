@@ -324,7 +324,33 @@ export async function creditAccount(pool, { apiKey, wallet, amountUsdt, txHash, 
   }
 
   const depositor = fromAddress || account.wallet_address || null;
-  await pool.query(
+
+  // Atomicity (2026-10-12, founder-approved): the api_deposits INSERT and the
+  // api_credits UPDATE must commit together. Handed a pg Pool (DepositListener),
+  // every pool.query is its own autocommit — a crash between the two left a
+  // deposit recorded (so the tx_hash dedupe blocks any retry) but never credited.
+  // With a Pool we now take one client and wrap both in BEGIN/COMMIT. A caller
+  // that passes its own client (Dodo /credit, inside its transaction) keeps
+  // control of that transaction and is unchanged.
+  const isPool = typeof pool.connect === 'function' && typeof pool.release !== 'function' && 'totalCount' in pool;
+  if (!isPool) return writeCredit(pool, { key, txHash, amount, depositor, account, tier, dailyLimit, fundingSource });
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const out = await writeCredit(client, { key, txHash, amount, depositor, account, tier, dailyLimit, fundingSource });
+    await client.query('COMMIT');
+    return out;
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+/** The two writes of a credit, on one connection/transaction chosen by the caller. */
+async function writeCredit(db, { key, txHash, amount, depositor, account, tier, dailyLimit, fundingSource }) {
+  await db.query(
     // credited_usdt == amount_usdt here: this path always credits 1:1 (no
     // bundle pricing). Only x402 bundle settlements (settlement.js) diverge.
     `INSERT INTO api_deposits (api_key, tx_hash, amount_usdt, credited_usdt, from_address, tier_before, tier_after, is_test_data)
@@ -340,7 +366,7 @@ export async function creditAccount(pool, { apiKey, wallet, amountUsdt, txHash, 
     ? `,
             dodo_funded_usdt = COALESCE(dodo_funded_usdt, 0) + $1`
     : '';
-  const upd = await pool.query(
+  const upd = await db.query(
     `UPDATE api_credits
         SET credits_usdt    = COALESCE(credits_usdt, 0) + $1,
             total_deposited = COALESCE(total_deposited, 0) + $1,
@@ -350,6 +376,9 @@ export async function creditAccount(pool, { apiKey, wallet, amountUsdt, txHash, 
       RETURNING credits_usdt, tier, daily_limit`,
     [amount, tier || null, dailyLimit || null, key]
   );
+  // The account vanished between resolve and update: throw so the deposit row
+  // rolls back with it, instead of a recorded-but-uncredited deposit.
+  if (upd.rowCount === 0) throw new Error(`api_credits row for ${String(key).slice(0, 12)}… not found during credit`);
 
   return {
     ok: true,

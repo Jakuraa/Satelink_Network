@@ -1,0 +1,37 @@
+{
+  "_comment": "Satelink Trading AI plans (2026-10-12 directive, Wave 1.7). ALL PRICES AND LIMITS: FOUNDER TO CONFIRM. status 'draft' => checkout refuses live mode. UI must read prices from GET /v1/plans/trading-ai, never hard-code them. Amounts are integer minor units per currency (USD cents, USDT/USDC 6dp, INR paise). INR is null until the founder sets it.",
+  "version": "trading-ai-2026-10-v1-draft",
+  "status": "draft",
+  "productFamily": "trading_ai",
+  "periodDays": 30,
+  "graceDays": 3,
+  "renewalReminderDays": [7, 3, 0],
+  "plans": [
+    {
+      "id": "trading_ai_free", "name": "Free", "_comment": "founder to confirm",
+      "price": null,
+      "limits": { "agentRunsPerDay": 5, "deepReasoningPerDay": 0, "backtestsPerDay": 2, "liveStrategies": 0, "apiCallsPerDay": 100 }
+    },
+    {
+      "id": "trading_ai_launch", "name": "Launch", "_comment": "founder to confirm: $5 first month, then renews as Pro ($19)",
+      "price": { "USD": 1900, "USDT": "19000000", "USDC": "19000000", "INR": null },
+      "introPrice": { "USD": 500, "USDT": "5000000", "USDC": "5000000", "INR": null },
+      "renewsAs": "trading_ai_pro",
+      "limits": { "agentRunsPerDay": 50, "deepReasoningPerDay": 10, "backtestsPerDay": 20, "liveStrategies": 1, "apiCallsPerDay": 5000 }
+    },
+    {
+      "id": "trading_ai_pro", "name": "Pro", "_comment": "founder to confirm: $19/mo",
+      "price": { "USD": 1900, "USDT": "19000000", "USDC": "19000000", "INR": null },
+      "limits": { "agentRunsPerDay": 50, "deepReasoningPerDay": 10, "backtestsPerDay": 20, "liveStrategies": 1, "apiCallsPerDay": 5000 }
+    },
+    {
+      "id": "trading_ai_max", "name": "Max", "_comment": "founder to confirm: $79/mo",
+      "price": { "USD": 7900, "USDT": "79000000", "USDC": "79000000", "INR": null },
+      "limits": { "agentRunsPerDay": 500, "deepReasoningPerDay": 100, "backtestsPerDay": 200, "liveStrategies": 5, "apiCallsPerDay": 50000 }
+    }
+  ],
+  "creditPacks": [
+    { "id": "trading_ai_credits_10", "name": "10 USD credit pack", "_comment": "founder to confirm", "price": { "USD": 1000, "USDT": "10000000", "USDC": "10000000", "INR": null } },
+    { "id": "trading_ai_credits_50", "name": "50 USD credit pack", "_comment": "founder to confirm", "price": { "USD": 5000, "USDT": "50000000", "USDC": "50000000", "INR": null } }
+  ]
+}

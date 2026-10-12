@@ -53,6 +53,7 @@ import { startPricingReconcile } from './src/pricing_v2/reconcile.mjs';
 import { createAdminRouter, requireAdminAuth } from './src/admin/admin_router.js';
 import { ensureAdminTables } from './src/admin/ensure_admin_tables.js';
 import { createVnextKernelRouter } from './src/vnext/http/kernel_router.js';
+import { mountPayments } from './src/payments/mount.mjs';
 
 export function createApp(pool, redis) {
   // Initialize the payment gate. Free RPC removed (Phase 2, 2026-09): with
@@ -438,6 +439,10 @@ app.get("/api/mode", (req, res) => {
   // links, settings, per-agent limits, request log, wallet links. Not mounted
   // unless the flag is 'true' (read at boot). FOUNDER REVIEW: money-adjacent.
   if (isConsoleAccountsEnabled()) app.use("/v1/me", createMeRouter(pool));
+
+  // PAYMENTS_V1 (2026-10-12 directive, Wave 1.8) — /webhooks/:provider + /v1/payments/*.
+  // Not mounted unless the flag is 'true' (read at boot). Test mode only. FOUNDER REVIEW: money path.
+  mountPayments(app, pool);
 
   // Pricing V2 — PlanCatalog (public, read-only; the source for console
   // Billing and satelink.network/pricing). Dodo V2 webhooks + the daily
