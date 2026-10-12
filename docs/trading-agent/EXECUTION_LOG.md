@@ -193,3 +193,24 @@ PHASE 6 COMPLETE.
 ## Phase 9 — Go-live handoff (2026-10-11)
 - `docs/trading-agent/GO_LIVE_FOUNDER_CHECKLIST.md`: 14 ordered founder actions, Claude Code follow-ups, per-broker / per-interface status.
 - `BLOCKERS.md` B-05 OPEN → PARTIAL (copy fixed in held #511; not deployed). Register test: 7 passing.
+
+## 2026-10-12/13 — escalation round (Claude Code; sole money-path editor)
+Board: `docs/platform/EXECUTION_BOARD.md` (PR #528). Health check (api /health, satelink.network, console, jakuraa.com) = 200 ×4 before and after every merge below.
+
+| step | evidence |
+|---|---|
+| 1.3 | #521 key = `x402_<payer>` (settlement.js:67) — deterministic, plaintext, accepted by #521's `isApiKey` → **critical**; #521 closed |
+| 2.1 | **#522** `0bb1cd18` merged + deployed (recover endpoint live after ~360 s); prod: guessed `x402_<addr>` → 402, random-shaped key → 402; capabilities no free tier; provider.json `freeTier:null`. Local: k-suite 10/10, full api 456 / 3 pre-existing (main 439 / 4) |
+| 1.5 / 4.3 | `/api/keys/deposit` non-atomic confirmed (d1/d2 red on main) → **#523** `113cd7c6` merged + deployed |
+| 2.3 | **#517** `e01c8f5b` merged + deployed; `railway logs --filter beta-requests` → 0 lines (filter validated) |
+| 2.4 | main merged into integration (`07f74bd8`, `6ed8079e`) and #520 (`f50cdeb2`, `687cc455`): integration **266/266**, api 1235 / 3 pre-existing |
+| 2.6 | Razorpay `provider_suspended`, Cashfree/Dodo adapters `application_pending` (`38112a7b`) |
+| 3.1/3.4 | **#524** deployed: capabilities `free_calls:0`, well-known request headers; `/admin/funnel/x402-payers` 401 w/o token |
+| 4.1 | refund policy draft **#525** (DO NOT MERGE without founder "approved") |
+| 4.2 | invoice-address validator + listener separation (`bbcd2298`) |
+| 4.4 | Part 11 items 1–8 **8/8 PASS** (`7ae91537`) |
+| 5 | **#526** deployed; `/admin/*` 28/28 GET → 401; `/api/financial/truth` is public (founder decision) |
+| 6 | **#527** deployed: registry in `.well-known`; MCP $0.10-per-call loop fixed in repo (package republish = founder) |
+| 7 | Transacty adapter code-only, flag off, 7/7 fixtures (`20b9020e`); `docs/platform/TRANSACTY_READINESS.md` |
+| 1.4 / 3.2 / 3.3 | BLOCKED: prod DB read not permitted to this session; paid test needs a founder-funded wallet |
+| incident | one recover-challenge probe wrote a single 10-min nonce row in prod (`0x…dEaD` has an account) — harmless, auto-purged |
