@@ -98,8 +98,13 @@ export function createMachineIntelRouter(pool, redis) {
         chains,
         auth_modes: [
           { mode: 'api_key', header: 'X-API-Key', onboarding: `${base}/v1/machine/register` },
-          ...(x402.enabled ? [{ mode: 'x402', header: 'PAYMENT', note: 'per-call USDC payment, no account required' }] : []),
-          { mode: 'anonymous_free_tier', note: `rate-limited; HTTP 402 with payment instructions when exhausted` },
+          ...(x402.enabled ? [{
+            mode: 'x402',
+            headers: ['PAYMENT-SIGNATURE', 'X-PAYMENT', 'PAYMENT'],
+            header: 'PAYMENT-SIGNATURE',
+            note: `$${x402.bundlePriceUsd} USDC on Base buys ${x402.bundleCalls.toLocaleString('en-US')} calls; subsequent calls reuse the returned X-API-Key`,
+          }] : []),
+          { mode: 'anonymous', note: 'All /rpc requests require an X-API-Key or an x402 payment challenge response.' },
         ],
         payment_rails: [
           {

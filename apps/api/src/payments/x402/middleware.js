@@ -265,7 +265,7 @@ export function createX402Middleware(pool, logger) {
     if (!cfg.enabled) return next();
 
     const path = (req.originalUrl || req.url).split('?')[0];
-    const paymentHeader = req.header('payment-signature') || req.header('x-payment');
+    const paymentHeader = req.header('payment-signature') || req.header('x-payment') || req.header('payment');
 
     // ---- Rail 2: an x402 payment is attached — verify, settle, serve ----
     if (paymentHeader) {
@@ -343,6 +343,10 @@ export function createX402Middleware(pool, logger) {
       bumpFunnelDaily(pool, 'x402_settled');
 
       for (const [key, value] of Object.entries(settle.headers || {})) res.setHeader(key, value);
+      if (recorded.creditedKey) {
+        res.set('X-API-Key', recorded.creditedKey);
+        res.set('X-Satelink-API-Key', recorded.creditedKey);
+      }
       // The billing wallet is the facilitator-verified payer (signature-
       // recovered), carried on a trusted request-scoped field. Downstream
       // (rpc_gateway) reads req.x402.wallet — NEVER a client-supplied header —
@@ -357,8 +361,12 @@ export function createX402Middleware(pool, logger) {
       // Tell the machine how to continue: credited identity + remaining calls
       // appended to the JSON response body of this (served) request.
       const credited = {
+        api_key: recorded.creditedKey,
         wallet: (settle.payer || '').toLowerCase(),
         calls_remaining: recorded.callsRemaining,
+        how_to_reuse: recorded.creditedKey
+          ? `Send X-API-Key: ${recorded.creditedKey} on subsequent requests to use remaining calls without paying again.`
+          : undefined,
       };
       const settleJson = res.json.bind(res);
       res.json = (body) =>

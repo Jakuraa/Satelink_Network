@@ -46,17 +46,17 @@ export default function AdminLedgerPage() {
     <div className="space-y-6 animate-fade-in">
       <KPIGrid columns={4}>
         <StatCard
-          label="Settled On-Chain (USDT)"
+          label="Internal Settlement Accruals (USDT)"
           value={t != null ? `$${num(t.confirmed_usdt).toFixed(4)}` : "—"}
-          caption="Confirmed settlement batches"
+          caption={t != null ? (t.dry_run ? "Simulated internal batches (DRY RUN)" : "Confirmed internal batch rollups") : "—"}
           icon={Landmark}
           accent
           loading={loading}
         />
         <StatCard
-          label="Confirmed Batches"
+          label="Settlement Batches"
           value={t != null ? String(num(t.confirmed_batches)) : "—"}
-          caption="Finalized distribution runs"
+          caption="Aggregated epoch distribution batches"
           icon={FileCheck}
           loading={loading}
         />
@@ -80,7 +80,7 @@ export default function AdminLedgerPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <DashboardSection title="Settlement Batch Breakdown" description="Distribution runs grouped by status (settlement_batches)">
           <div className="p-4 space-y-3">
-            <BatchRow label="Confirmed" count={num(t?.confirmed_batches)} usdt={num(t?.confirmed_usdt)} tone="emerald" />
+            <BatchRow label="Confirmed (internal rollups)" count={num(t?.confirmed_batches)} usdt={num(t?.confirmed_usdt)} tone="emerald" />
             <BatchRow label="Pending" count={num(t?.pending_batches)} tone="amber" />
             <BatchRow label="Blocked (unfunded signer)" count={num(t?.blocked_unfunded_batches)} usdt={num(t?.blocked_unfunded_usdt)} tone="red" />
             <div className="flex items-center justify-between pt-3 mt-1 border-t border-border text-xs">

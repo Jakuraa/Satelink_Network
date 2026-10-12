@@ -40,7 +40,7 @@ export const TIER_DAILY_LIMIT = {
 const WALLET_RE = /^0x[0-9a-fA-F]{40}$/;
 
 function isApiKey(s) {
-  return typeof s === 'string' && s.startsWith('sk_');
+  return typeof s === 'string' && (s.startsWith('sk_') || s.startsWith('x402_'));
 }
 
 // payment_hold is a newer column (migration 033 / ensureBillingTables). Read it
