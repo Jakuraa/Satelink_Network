@@ -45,3 +45,16 @@ describe('Trading AI plan catalog (founder to confirm)', () => {
     expect(planById(c, 'trading_ai_max').limits.liveStrategies).to.equal(5);
   });
 });
+
+describe('merchant of record on checkout/invoices (Wave 1.8)', () => {
+  it('matches the verified company facts in apps/corporate/content/company.ts (no drift)', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { MERCHANT } = await import('../src/payments/merchant.mjs');
+    const src = readFileSync(new URL('../../corporate/content/company.ts', import.meta.url), 'utf8');
+    for (const [k, v] of [['legalName', MERCHANT.legalName], ['cin', MERCHANT.cin], ['gstin', MERCHANT.gstin]]) {
+      expect(src, k).to.include(`${k}: "${v}"`);
+    }
+    for (const part of ['38, 39, First Floor, Malaviya Street, Ramnagar', 'Coimbatore', '641009']) expect(MERCHANT.address).to.include(part);
+    expect(MERCHANT.links.refundPolicy, 'no refund-policy page exists yet — never link a 404').to.equal(null);
+  });
+});

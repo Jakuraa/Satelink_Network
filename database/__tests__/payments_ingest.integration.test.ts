@@ -22,6 +22,10 @@ import { isLedgerKind } from '../../libs/financial-domain/src/ledger/ledger-kind
 import { ingestCanonicalEvent, ingestWebhook, recordIntent } from '../../apps/api/src/payments/ingest.mjs';
 import { createPayramAdapter } from '../../apps/api/src/payments/adapters/payram.mjs';
 import { sha256Hex } from '../../apps/api/src/payments/contract.mjs';
+import express from 'express';
+import request from 'supertest';
+import { createPaymentsCheckoutRouter } from '../../apps/api/src/payments/checkout_router.mjs';
+import { createOnchainNativeAdapter } from '../../apps/api/src/payments/adapters/onchain_native.mjs';
 import { reconcileProvider } from '../../apps/api/src/payments/reconcile.mjs';
 import { effectivePlan, planGate, queueRenewalReminders, loadPlanCatalog } from '../../apps/api/src/payments/plans.mjs';
 
@@ -373,6 +377,60 @@ describe('provider reconciliation (Wave 1.9)', () => {
     const r = await reconcileProvider(pool, { id: 'cashfree', reconcile: async () => { throw new Error('cashfree.reconcile(): no Cashfree account'); } }, { ...W, logger: { error() {} } });
     expect(r.status).toBe('error');
     expect((await pool.query(`SELECT status FROM provider_reconciliation_runs`)).rows[0].status).toBe('error');
+  });
+});
+
+describe('console checkout API (Wave 1.8)', () => {
+  const VAULT = '0x577D3716d6Ad5b676d230f5409deF9838FABaCEF';
+  const mk = (pool: Pool, account: { accountId: string; email: string } | null) => {
+    const app = express();
+    const onchain = createOnchainNativeAdapter({ env: { VAULT_ADDRESS: VAULT }, lookupIntentAmount: async (ref: string) => (await pool.query('SELECT amount_minor::text a FROM payment_intents WHERE canonical_ref=$1', [ref])).rows[0]?.a ?? null });
+    let n = 0;
+    app.use('/v1/payments', createPaymentsCheckoutRouter(pool, { adapters: { 'onchain-native': onchain }, resolveSession: async () => account, newRef: () => `inv_test_${++n}`, logger: { error() {} } }));
+    return { app, onchain };
+  };
+  const post = (app: express.Express, body: object) => request(app).post('/v1/payments/checkout/intents').set('x-satelink-console', '1').set('Content-Type', 'application/json').send(body);
+
+  it('public plan read carries prices from config and the merchant block; no session needed', async () => {
+    const pool = await freshPool('co_plans');
+    const r = await request(mk(pool, null).app).get('/v1/payments/plans/trading-ai');
+    expect(r.status).toBe(200);
+    expect(r.body.data.plans.find((p: { id: string }) => p.id === 'trading_ai_pro').price.USDT).toEqual({ amountMinor: '19000000', display: '19.000000' });
+    expect(r.body.data.merchant).toMatchObject({ legalName: 'Jakuraa Commercial Private Limited', cin: 'U52190TZ2019PTC033093', gstin: '33AADCF9341B1Z1' });
+  });
+
+  it('intent creation needs a session and the console CSRF header', async () => {
+    const pool = await freshPool('co_auth');
+    expect((await post(mk(pool, null).app, { planId: 'trading_ai_pro', method: 'usdt_polygon' })).status).toBe(401);
+    const { app } = mk(pool, { accountId: 'acct_c1', email: 'c@example.test' });
+    expect((await request(app).post('/v1/payments/checkout/intents').set('Content-Type', 'application/json').send({ planId: 'trading_ai_pro', method: 'usdt_polygon' })).status).toBe(403);
+    expect((await post(app, { planId: 'trading_ai_pro', method: 'bitcoin' })).status).toBe(400);
+    expect((await post(app, { planId: 'trading_ai_pro', method: 'razorpay' })).status).toBe(409); // not enabled here
+  });
+
+  it('USDT invoice → on-chain deposit → webhook-free ingest → status poll shows receipt; intro price decided server-side', async () => {
+    const pool = await freshPool('co_flow');
+    const { app, onchain } = mk(pool, { accountId: 'acct_c1', email: 'c@example.test' });
+    const first = await post(app, { planId: 'trading_ai_launch', method: 'usdt_polygon', firstPeriod: false });
+    expect(first.status).toBe(201);
+    expect(first.body.data).toMatchObject({ canonicalRef: 'inv_test_1', amount: { amountMinor: '5000000', currency: 'USDT' }, introApplied: true, testMode: true });
+    expect(first.body.data.invoice).toMatchObject({ chainId: 137, payTo: VAULT, amountMinor: '5000000' });
+    // the listener observes the deposit; the adapter normalises it; ingest settles it
+    const event = await onchain.normalizeEvent({ kind: 'polygon_vault', txHash: '0x' + 'cd'.repeat(32), logIndex: 0, from: '0xabc', amountRaw: '5000000', confirmations: 30, canonicalRef: 'inv_test_1', customerAccountId: 'acct_c1' });
+    expect(event.status).toBe('succeeded');
+    await ingestCanonicalEvent(pool, event);
+    const poll = await request(app).get('/v1/payments/checkout/intents/inv_test_1');
+    expect(poll.body.data).toMatchObject({ status: 'succeeded', receiptReady: true, entitlement: { planId: 'trading_ai_launch' } });
+    // second purchase: no intro, even though the client asks for it
+    const second = await post(app, { planId: 'trading_ai_launch', method: 'usdt_polygon', firstPeriod: true });
+    expect(second.body.data).toMatchObject({ amount: { amountMinor: '19000000' }, introApplied: false });
+  });
+
+  it('status poll is owner-only (another account gets 404, never the invoice)', async () => {
+    const pool = await freshPool('co_owner');
+    await post(mk(pool, { accountId: 'acct_a', email: 'a@example.test' }).app, { planId: 'trading_ai_pro', method: 'usdt_polygon' });
+    const other = await request(mk(pool, { accountId: 'acct_b', email: 'b@example.test' }).app).get('/v1/payments/checkout/intents/inv_test_1');
+    expect(other.status).toBe(404);
   });
 });
 
