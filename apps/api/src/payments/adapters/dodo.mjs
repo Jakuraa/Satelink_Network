@@ -14,8 +14,9 @@ export const DODO_EVENT_MAP = Object.freeze({
   'payment.failed': 'failed',
   'payment.cancelled': 'failed',
   'refund.succeeded': 'refunded',
-  'dispute.opened': 'disputed',
-  'dispute.lost': 'disputed',
+  'dispute.opened': 'dispute_open', // inert: no money has moved yet
+  'dispute.won': 'dispute_won',     // inert
+  'dispute.lost': 'disputed',       // reversal
 });
 
 export function createDodoAdapter({ secret = dodoWebhookSecret, now = () => Date.now() } = {}) {

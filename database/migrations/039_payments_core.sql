@@ -7,6 +7,7 @@
 -- Money is integer minor units (NUMERIC(38,0)) + a currency code; nothing here
 -- sums across currencies. No existing table is altered.
 -- Names avoid the existing payment_sources / billing_payments / pv2_* tables.
+-- Status 'disputed' = dispute LOST (reversal); 'dispute_open' / 'dispute_won' never move money.
 -- Down: database/migrations-down/039_payments_core.down.sql (local/ephemeral only).
 
 -- What Satelink asked the customer to pay (checkout / on-chain invoice).
@@ -23,7 +24,8 @@ CREATE TABLE payment_intents (
     period_days          INTEGER     CHECK (period_days IS NULL OR period_days > 0),
     status               TEXT        NOT NULL DEFAULT 'pending'
                            CHECK (status IN ('pending', 'succeeded', 'failed', 'expired', 'refunded',
-                                             'disputed', 'partially_paid', 'overpaid')),
+                                             'disputed', 'partially_paid', 'overpaid',
+                                             'dispute_open', 'dispute_won')),
     expires_at           TIMESTAMPTZ,
     metadata             JSONB       NOT NULL DEFAULT '{}'::jsonb,
     created_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -47,7 +49,8 @@ CREATE TABLE payment_events (
     network              TEXT,
     status               TEXT        NOT NULL
                            CHECK (status IN ('pending', 'succeeded', 'failed', 'expired', 'refunded',
-                                             'disputed', 'partially_paid', 'overpaid')),
+                                             'disputed', 'partially_paid', 'overpaid',
+                                             'dispute_open', 'dispute_won')),
     occurred_at          TIMESTAMPTZ NOT NULL,
     raw_hash             TEXT        NOT NULL,                -- sha256 of the verified raw body; raw is never stored
     ledger_txn_id        TEXT        REFERENCES ledger_txns(txn_id),

@@ -13,8 +13,9 @@ export const RAZORPAY_EVENT_MAP = Object.freeze({
   'payment.failed': 'failed',
   'subscription.charged': 'succeeded',
   'refund.processed': 'refunded',
-  'payment.dispute.created': 'disputed',
-  'payment.dispute.lost': 'disputed',
+  'payment.dispute.created': 'dispute_open', // inert: no money has moved yet
+  'payment.dispute.won': 'dispute_won',      // inert
+  'payment.dispute.lost': 'disputed',        // reversal
 });
 
 /** @param {{ gateway?: RazorpayGateway, keyId?: string, keySecret?: Function, webhookSecret?: Function, fetch?: Function }} o */

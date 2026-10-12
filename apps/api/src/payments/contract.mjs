@@ -23,14 +23,17 @@ import { createHash } from 'node:crypto';
 
 export const PAYMENT_STATUSES = Object.freeze([
   'pending', 'succeeded', 'failed', 'expired', 'refunded', 'disputed', 'partially_paid', 'overpaid',
+  'dispute_open', 'dispute_won',
 ]);
 
 /** Statuses that recognise money (post to the ledger + may grant an entitlement). */
 export const SETTLED_STATUSES = Object.freeze(['succeeded', 'overpaid']);
-/** Statuses that reverse a previously settled payment (post a reversal, revoke the entitlement). */
+/** Statuses that reverse a previously settled payment (post a reversal, revoke the entitlement).
+ * 'disputed' means the dispute was LOST — an opened dispute is 'dispute_open' (inert). */
 export const REVERSAL_STATUSES = Object.freeze(['refunded', 'disputed']);
-/** Statuses that never move money or entitlements. partially_paid is held for support (no grant). */
-export const INERT_STATUSES = Object.freeze(['pending', 'failed', 'expired', 'partially_paid']);
+/** Statuses that never move money or entitlements. partially_paid is held for support (no grant);
+ * dispute_open / dispute_won are recorded for support/alerting only — money only moves if the dispute is lost. */
+export const INERT_STATUSES = Object.freeze(['pending', 'failed', 'expired', 'partially_paid', 'dispute_open', 'dispute_won']);
 
 export const ADAPTER_METHODS = Object.freeze([
   'capabilities', 'getPayment', 'verifyWebhook', 'normalizeEvent', 'refund', 'reconcile',

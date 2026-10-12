@@ -51,7 +51,7 @@ describe('payments contract', () => {
     expect(() => canonicalEvent({ ...ok, status: 'paid' })).to.throw(/unknown status/);
     expect(() => canonicalEvent({ ...ok, currency: 'DOGE' })).to.throw(/unsupported currency/);
     expect(() => canonicalEvent({ ...ok, providerPaymentId: null })).to.throw(/canonicalRef or providerPaymentId/);
-    expect(PAYMENT_STATUSES).to.have.members(['pending', 'succeeded', 'failed', 'expired', 'refunded', 'disputed', 'partially_paid', 'overpaid']);
+    expect(PAYMENT_STATUSES).to.have.members(['pending', 'succeeded', 'failed', 'expired', 'refunded', 'disputed', 'partially_paid', 'overpaid', 'dispute_open', 'dispute_won']);
   });
 
   it('every adapter satisfies the contract', () => {
@@ -178,7 +178,11 @@ describe('razorpay adapter (Stage 27 gateway, test mode only)', () => {
     expect(a.normalizeEvent(body('payment.captured'), h)).to.include({ status: 'succeeded', amountMinor: 159900n, currency: 'INR', canonicalRef: 'inv_r1', customerAccountId: 'acct_c' });
     expect(a.normalizeEvent(body('payment.failed'), h).status).to.equal('failed');
     expect(a.normalizeEvent(body('refund.processed', { refund: { entity: { amount: 50000, currency: 'INR', payment_id: 'pay_1' } } }), h)).to.include({ status: 'refunded', amountMinor: 50000n });
-    expect(a.normalizeEvent(body('payment.dispute.created', { dispute: { entity: { amount: 159900, currency: 'INR', payment_id: 'pay_1' } } }), h).status).to.equal('disputed');
+    const dispute = { dispute: { entity: { amount: 159900, currency: 'INR', payment_id: 'pay_1' } } };
+    // review fix: an OPENED dispute is inert; only a LOST dispute reverses revenue
+    expect(a.normalizeEvent(body('payment.dispute.created', dispute), h).status).to.equal('dispute_open');
+    expect(a.normalizeEvent(body('payment.dispute.won', dispute), h).status).to.equal('dispute_won');
+    expect(a.normalizeEvent(body('payment.dispute.lost', dispute), h).status).to.equal('disputed');
     expect(a.normalizeEvent(body('order.paid'), h)).to.equal(null);
     expect(() => a.normalizeEvent(body('payment.captured'), {})).to.throw(/event-id/);
   });

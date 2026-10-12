@@ -15,6 +15,19 @@ import { postSettledPayment, postReversal } from './ledger_posting.mjs';
 
 const DAY_MS = 86_400_000;
 
+/**
+ * Serialise every event of one payment, whether or not an intent row exists to
+ * lock (a bare top-up has none). Two different events for the same payment
+ * (e.g. FILLED then OVER_FILLED, or refund + dispute) would otherwise both pass
+ * the unlocked "already settled / already reversed" checks under READ COMMITTED
+ * and both post. Keys are locked in sorted order so two events never deadlock.
+ */
+async function lockPayment(client, event) {
+  const keys = [event.canonicalRef && `ref:${event.canonicalRef}`, event.providerPaymentId && `pid:${event.provider}:${event.providerPaymentId}`]
+    .filter(Boolean).sort();
+  for (const k of keys) await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`payments:${k}`]);
+}
+
 async function lockIntent(client, event) {
   if (event.canonicalRef) {
     const r = await client.query('SELECT * FROM payment_intents WHERE canonical_ref = $1 FOR UPDATE', [event.canonicalRef]);
@@ -81,6 +94,7 @@ export async function ingestCanonicalEvent(pool, rawEvent, { now = new Date(), h
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    await lockPayment(client, event);
     const ins = await client.query(
       `INSERT INTO payment_events
          (provider, provider_event_id, provider_payment_id, canonical_ref, customer_account_id, product_id,
@@ -140,7 +154,7 @@ export async function ingestCanonicalEvent(pool, rawEvent, { now = new Date(), h
     }
     await client.query(
       `INSERT INTO outbox (event_id, event_type, severity, payload) VALUES ($1, $2, $3, $4)`,
-      [`payment_event:${eventRowId}`, `payment.${event.status}`, event.status === 'disputed' ? 'warning' : 'info',
+      [`payment_event:${eventRowId}`, `payment.${event.status}`, ['disputed', 'dispute_open'].includes(event.status) ? 'warning' : 'info',
         JSON.stringify({ paymentEventId: String(eventRowId), provider: event.provider, canonicalRef: intent?.canonical_ref ?? event.canonicalRef,
           customerAccountId: intent?.customer_account_id ?? event.customerAccountId, status: event.status,
           amountMinor: event.amountMinor.toString(), currency: event.currency, ledgerTxnId })],

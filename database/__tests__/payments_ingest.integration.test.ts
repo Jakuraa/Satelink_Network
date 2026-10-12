@@ -242,4 +242,44 @@ describe('payment ingestion (single transaction)', () => {
     expect(new Date(rows[1].period_start).getTime()).toBe(new Date(rows[0].period_end).getTime());
     expect(new Date(rows[1].period_end).toISOString()).toBe('2026-12-11T00:00:00.000Z');
   });
+
+  it('review fix: concurrent distinct events for one payment with NO intent post exactly once', async () => {
+    const pool = await freshPool('pay_race');
+    const base = { canonicalRef: null, providerPaymentId: 'race1', amountMinor: 3_000_000n };
+    for (let round = 0; round < 5; round++) {
+      const pid = `race_${round}`;
+      await Promise.all([
+        ingestCanonicalEvent(pool, ev({ ...base, providerPaymentId: pid, providerEventId: `${pid}:succeeded:3` })),
+        ingestCanonicalEvent(pool, ev({ ...base, providerPaymentId: pid, providerEventId: `${pid}:overpaid:4`, status: 'overpaid', amountMinor: 4_000_000n })),
+      ]);
+      expect(await count(pool, `SELECT COUNT(*) n FROM payment_events WHERE provider_payment_id=$1`, [pid])).toBe(2);
+      expect(await count(pool, `SELECT COUNT(*) n FROM payment_events WHERE provider_payment_id=$1 AND ledger_txn_id IS NOT NULL`, [pid])).toBe(1);
+    }
+    expect(await allBalanced(pool)).toBe(true);
+  });
+
+  it('review fix: concurrent refunds never reverse more than was settled', async () => {
+    const pool = await freshPool('pay_race_refund');
+    await recordIntent(pool, intent({ provider: 'razorpay', currency: 'INR', amountMinor: 100_000n }));
+    const base = { provider: 'razorpay', providerPaymentId: 'pay_r', currency: 'INR', network: null };
+    await ingestCanonicalEvent(pool, ev({ ...base, providerEventId: 'cap', amountMinor: 100_000n }));
+    await Promise.all([1, 2, 3].map((n) => ingestCanonicalEvent(pool, ev({ ...base, providerEventId: `ref${n}`, status: 'refunded', amountMinor: 60_000n }))));
+    expect(await balance(pool, await accountFor(pool, 'revenue', 'INR'))).toBe(0n); // capped at 100_000 total, never negative
+    expect(await allBalanced(pool)).toBe(true);
+  });
+
+  it('review fix: an opened dispute moves no money and keeps the entitlement; a lost one reverses', async () => {
+    const pool = await freshPool('pay_dispute');
+    await recordIntent(pool, intent({ provider: 'razorpay', currency: 'INR', amountMinor: 159_900n }));
+    const base = { provider: 'razorpay', providerPaymentId: 'pay_d', currency: 'INR', network: null };
+    await ingestCanonicalEvent(pool, ev({ ...base, providerEventId: 'cap', amountMinor: 159_900n }));
+    const open = await ingestCanonicalEvent(pool, ev({ ...base, providerEventId: 'dsp_open', status: 'dispute_open', amountMinor: 159_900n }));
+    expect(open.ledgerTxnId).toBe(null);
+    expect(await count(pool, `SELECT COUNT(*) n FROM payment_entitlement_grants WHERE status='active'`)).toBe(1);
+    expect(await count(pool, `SELECT COUNT(*) n FROM outbox WHERE event_type='payment.dispute_open' AND severity='warning'`)).toBe(1);
+    const lost = await ingestCanonicalEvent(pool, ev({ ...base, providerEventId: 'dsp_lost', status: 'disputed', amountMinor: 159_900n }));
+    expect(lost.ledgerTxnId).toBe('pay:razorpay:dsp_lost');
+    expect(await count(pool, `SELECT COUNT(*) n FROM payment_entitlement_grants WHERE status='revoked'`)).toBe(1);
+    expect(await balance(pool, await accountFor(pool, 'revenue', 'INR'))).toBe(0n);
+  });
 });
