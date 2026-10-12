@@ -36,15 +36,31 @@ import {
 interface FinancialTruth {
   ok: boolean;
   metered_value_usdt: number;
+  external_revenue_usdt?: number;
+  internal_revenue_usdt?: number;
+  total_deposited_usdt?: number;
   treasury_real_usdt: number;
   withdrawable_now_usdt: number;
   cash_conversion_pct: number;
   status: string;
-  settlement?: { batches_pending: number; batches_confirmed: number };
+  settlement?: {
+    batches_pending: number;
+    batches_confirmed: number;
+    batches_blocked_unfunded?: number;
+    confirmed_batches_usdt?: number;
+    blocked_unfunded_usdt?: number;
+  };
   pipeline: {
-    revenue_events_v2: { count: number; sum_usdt: number };
+    revenue_events_v2: {
+      count: number;
+      sum_usdt: number;
+      external_count?: number;
+      external_usdt?: number;
+      internal_count?: number;
+      internal_usdt?: number;
+    };
     epoch_ledger: { open: number; closed: number; total_revenue: number };
-    settlement_batches?: { confirmed: number; pending?: number };
+    settlement_batches?: { confirmed: number; pending?: number; blocked_unfunded?: number };
     bottleneck?: string;
     bottleneck_reason?: string;
   };
@@ -226,21 +242,28 @@ export default function MissionControlPage() {
 
       {/* ROW 1 — KPI strip */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
-        {/* Card 1: REAL REVENUE */}
+        {/* Card 1: EXTERNAL CUSTOMER REVENUE */}
         <div className="relative bg-zinc-900 border border-zinc-800 rounded-sm p-5 overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-[3px] bg-[hsl(174,80%,38%)]" />
           <div className="flex items-start justify-between mb-3">
-            <span className="text-xs font-medium uppercase tracking-wider text-zinc-500">Real Revenue</span>
+            <div>
+              <span className="text-xs font-medium uppercase tracking-wider text-zinc-500 block">External Customer Revenue</span>
+              <span className="text-[10px] text-zinc-600 block">Metered, excl. founder/treasury & test data — not reconciled on-chain</span>
+            </div>
             <DollarSign className="h-4 w-4 text-zinc-600" />
           </div>
-          <div className="font-mono text-2xl font-bold text-white tabular-nums mb-1">{fin ? usd5(fin.metered_value_usdt) : "—"}</div>
-          <div className="flex items-center gap-1.5">
-            {(fin?.metered_value_usdt ?? 0) > 0 ? (
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-green-500/15 text-green-400">▲ +0%</span>
+          <div className="font-mono text-2xl font-bold text-white tabular-nums mb-1">
+            {fin && fin.external_revenue_usdt != null ? usd5(fin.external_revenue_usdt) : "unavailable"}
+          </div>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {(fin?.external_revenue_usdt ?? 0) > 0 ? (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/15 text-amber-400">Unreconciled</span>
             ) : (
               <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-zinc-500/15 text-zinc-400">—</span>
             )}
-            <span className="text-xs text-zinc-500">Metered value</span>
+            <span className="text-xs text-zinc-500">
+              {fin?.internal_revenue_usdt ? `+${usd5(fin.internal_revenue_usdt)} internal` : "External metered"}
+            </span>
           </div>
         </div>
 
@@ -431,27 +454,39 @@ export default function MissionControlPage() {
         <div className="bg-zinc-900 border border-zinc-800 rounded-sm p-4">
           <div className="text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-3">
             Settlement Pipeline
-            <span className="ml-2 normal-case tracking-normal text-zinc-600">· network-wide</span>
+            <span className="ml-2 normal-case tracking-normal text-zinc-600">· internal epoch rollups & distribution state</span>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
             <div className="rounded-sm bg-zinc-950/40 p-3">
               <div className="text-xs text-zinc-500 mb-1">Open Epochs</div>
               <div className="text-2xl font-mono text-white tabular-nums">{fin ? openEpochs.toLocaleString() : "—"}</div>
+              <div className="text-[10px] text-zinc-600 mt-1">Pending aggregation</div>
             </div>
             <div className="rounded-sm bg-zinc-950/40 p-3">
-              <div className="text-xs text-zinc-500 mb-1">Confirmed Batches</div>
+              <div className="text-xs text-zinc-500 mb-1">Simulated Batches</div>
               <div className="text-2xl font-mono text-white tabular-nums">{fin ? confirmedBatches.toLocaleString() : "—"}</div>
+              <div className="text-[10px] text-zinc-600 mt-1">
+                {fin?.settlement?.confirmed_batches_usdt ? `${usd5(fin.settlement.confirmed_batches_usdt)} internal` : "Simulated/internal"}
+              </div>
             </div>
             <div className="rounded-sm bg-zinc-950/40 p-3">
-              <div className="text-xs text-zinc-500 mb-1">Pending Revenue</div>
+              <div className="text-xs text-zinc-500 mb-1">Blocked (Unfunded)</div>
+              <div className="text-2xl font-mono text-amber-400 tabular-nums">
+                {fin?.settlement?.batches_blocked_unfunded != null ? fin.settlement.batches_blocked_unfunded.toLocaleString() : "unavailable"}
+              </div>
+              <div className="text-[10px] text-amber-500/70 mt-1">Signer gas starved</div>
+            </div>
+            <div className="rounded-sm bg-zinc-950/40 p-3">
+              <div className="text-xs text-zinc-500 mb-1">Total Metered Usage</div>
               <div className="text-2xl font-mono text-white tabular-nums">{fin ? usd5(pendingRevenue) : "—"}</div>
+              <div className="text-[10px] text-zinc-600 mt-1">All billable events</div>
             </div>
           </div>
           {isDryRun && (
             <div className="mt-3 flex items-center gap-2 rounded-sm border border-amber-500/30 bg-amber-500/10 px-3 py-2">
               <span className="size-1.5 shrink-0 rounded-full bg-amber-400" />
               <span className="text-xs text-amber-300">
-                Settlement in DRY_RUN — on-chain execution disabled.
+                Settlement in DRY_RUN — on-chain broadcast disabled. Confirmed batches represent internal accounting aggregations, not external customer revenue.
               </span>
             </div>
           )}

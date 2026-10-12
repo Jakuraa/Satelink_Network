@@ -162,6 +162,8 @@ function manifestBody() {
         rpc: `${base}/rpc/{chain}`,
         auth_header: 'X-API-Key',
         example: `curl -X POST ${base}/rpc/polygon -H "X-API-Key: sk_..." -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'`,
+        x402_reuse: 'After an x402 bundle payment, the response carries a one-time X-Satelink-API-Key (also credited.api_key in the body). Send it as X-API-Key on subsequent requests to spend the remaining bundle calls without paying again. It is shown once and stored only as a hash.',
+        x402_key_recover: `${base}/v1/x402/key/recover/challenge then ${base}/v1/x402/key/recover — sign the challenge (EIP-191) with the paying wallet to get a new key; earlier keys are revoked.`,
       },
       observe: {
         balance: `${base}/api/keys/usage (X-API-Key header)`,

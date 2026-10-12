@@ -71,7 +71,7 @@ function extractAsnPrefix(asnField) {
 const AUTH_SIGNAL_HEADERS = [
   'x-api-key', 'authorization', 'x-admin-key', 'x-admin-token',
   'x-enterprise-key', 'x-payer-address', 'x-wallet-address',
-  'payment-signature', 'x-payment',
+  'payment-signature', 'x-payment', 'payment',
 ];
 const AUTH_SIGNAL_QUERY = ['api_key', 'token'];
 

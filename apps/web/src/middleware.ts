@@ -37,7 +37,11 @@ const REDIRECTS: Record<string, string> = {
   // IA-v2 §3 product-move canonicalization — targets shipped in Phase 7.
   // /intelligence/success is a REAL page (the #398 checkout claim) and is
   // intentionally absent here, so it is never redirected.
-  '/intelligence': '/products/trading-intelligence',
+  // Q27 (2026-10-12): the standalone Trading Intelligence sale page (Dodo
+  // checkout) is removed; both entry points land on Trading AI. The metric
+  // data pages and GET /v1/intelligence stay live.
+  '/products/trading-intelligence': '/trading-agent/product',
+  '/intelligence': '/trading-agent/product',
   '/intelligence/funding-rate-heatmap': '/products/trading-intelligence/funding-rate-heatmap',
   '/intelligence/open-interest-shifts': '/products/trading-intelligence/open-interest-shifts',
   '/intelligence/liquidation-clusters': '/products/trading-intelligence/liquidation-clusters',

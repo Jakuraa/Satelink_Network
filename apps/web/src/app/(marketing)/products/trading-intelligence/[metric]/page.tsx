@@ -9,7 +9,6 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import { buildMetadata } from "@satelink/seo";
 import { Breadcrumbs } from "@satelink/web-ui";
 import { getCatalog, getFallbackCatalog, getMetric } from "@/lib/intelligence";
-import { STARTER_PACK_USD } from "@/lib/products";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { CodeBlock } from "@/components/ui/CodeBlock";
@@ -19,6 +18,8 @@ import samples from "../../../../../../data/intelligence-samples.json";
 type Sample = { fields: string[]; example: string };
 const SAMPLES = samples as Record<string, Sample>;
 const BASE_ROUTE = "/products/trading-intelligence";
+// The standalone TI index page was removed (Q27) and 308s here.
+const TRADING_AI_ROUTE = "/trading-agent/product";
 
 export function generateStaticParams() {
   return getFallbackCatalog().metrics.map((m) => ({ metric: m.slug }));
@@ -59,12 +60,12 @@ export default async function MetricPage({
     <>
       <Breadcrumbs items={[
         { name: "Products", href: "/product/overview" },
-        { name: "Trading Intelligence", href: BASE_ROUTE },
+        { name: "Trading AI", href: TRADING_AI_ROUTE },
         { name: m.name, href: `${BASE_ROUTE}/${m.slug}` },
       ]} />
       <article className="mx-auto max-w-3xl px-4 pb-16 sm:px-6">
-        <Link href={BASE_ROUTE} className="inline-flex items-center gap-1.5 text-sm text-sl-text-muted hover:text-sl-text">
-          <ArrowLeft className="size-4" /> All metrics
+        <Link href={TRADING_AI_ROUTE} className="inline-flex items-center gap-1.5 text-sm text-sl-text-muted hover:text-sl-text">
+          <ArrowLeft className="size-4" /> Satelink Trading AI
         </Link>
 
         <div className="mt-6 flex flex-wrap items-center gap-3">
@@ -119,7 +120,7 @@ export default async function MetricPage({
         )}
 
         <div className="mt-10 flex flex-wrap gap-3 border-t border-sl-border pt-8">
-          <Button asChild size="lg"><Link href="/checkout?plan=starter">Start with ${STARTER_PACK_USD} <ArrowRight className="size-4" /></Link></Button>
+          <Button asChild size="lg"><Link href={TRADING_AI_ROUTE}>See Satelink Trading AI <ArrowRight className="size-4" /></Link></Button>
           <Button asChild variant="secondary" size="lg"><a href="https://docs.satelink.network">Read the docs</a></Button>
         </div>
       </article>

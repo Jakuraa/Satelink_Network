@@ -24,6 +24,7 @@
 import crypto from 'crypto';
 import { authorizeAndMeter, precheckCharge } from '../billing/credit_service.mjs';
 import { parityRecorder } from './parity_recorder.js';
+import { isX402SessionKey, resolveSessionKey } from '../billing/x402_session_keys.js';
 import { getCapacityPath } from '../lib/flags.js';
 
 const CAPACITY_CURRENCY = 'USDC';
@@ -46,7 +47,12 @@ export function enforcementPath() {
 async function resolvePrincipalId(db, { apiKey, wallet }) {
   const candidates = [];
   if (wallet) candidates.push(String(wallet).toLowerCase());
-  if (apiKey) candidates.push(String(apiKey));
+  if (isX402SessionKey(apiKey)) {
+    // Never match a principal on the raw secret; map it to the account it
+    // was issued on (its wallet first — x402 principals are wallet-keyed).
+    const bound = await resolveSessionKey(db, apiKey);
+    if (bound) candidates.push(bound.payer_address, bound.account_api_key);
+  } else if (apiKey) candidates.push(String(apiKey));
   if (candidates.length === 0) return null;
   const { rows } = await db.query(
     `SELECT id FROM principals WHERE external_ref = ANY($1::text[]) LIMIT 1`,

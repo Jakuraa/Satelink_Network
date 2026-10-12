@@ -374,20 +374,41 @@ export function createSimpleApiKeysRouter(pool) {
       `).catch(() => {});
       await pool.query(`ALTER TABLE api_deposits ADD COLUMN IF NOT EXISTS credited_usdt NUMERIC(18,6)`).catch(() => {});
 
-      await pool.query(`
-        INSERT INTO api_deposits (api_key, tx_hash, amount_usdt, credited_usdt, from_address, tier_before, tier_after, is_test_data)
-        VALUES ($1, $2, $3, $3, $4, $5, $6, $7)
-      `, [key, tx_hash, depositAmount, fromAddress, keyRow.rows[0].tier, newTier, isFounderWallet(fromAddress)]);
-
-      // Credit the account
-      await pool.query(`
-        UPDATE api_credits
-        SET credits_usdt = COALESCE(credits_usdt, 0) + $1,
-            total_deposited = COALESCE(total_deposited, 0) + $1,
-            tier = $2,
-            daily_limit = $3
-        WHERE api_key = $4
-      `, [depositAmount, newTier, newLimit, key]);
+      // Atomicity (2026-10-12, founder-approved; same pattern as cfab183b):
+      // the deposit row and the credit commit together. Two autocommit
+      // queries let a crash between them record the deposit (so the tx_hash
+      // dedupe refuses every retry) without ever crediting the account.
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        await client.query(`
+          INSERT INTO api_deposits (api_key, tx_hash, amount_usdt, credited_usdt, from_address, tier_before, tier_after, is_test_data)
+          VALUES ($1, $2, $3, $3, $4, $5, $6, $7)
+        `, [key, tx_hash, depositAmount, fromAddress, keyRow.rows[0].tier, newTier, isFounderWallet(fromAddress)]);
+        const upd = await client.query(`
+          UPDATE api_credits
+          SET credits_usdt = COALESCE(credits_usdt, 0) + $1,
+              total_deposited = COALESCE(total_deposited, 0) + $1,
+              tier = $2,
+              daily_limit = $3
+          WHERE api_key = $4
+        `, [depositAmount, newTier, newLimit, key]);
+        if (upd.rowCount === 0) throw new Error('api_credits row vanished during credit');
+        await client.query('COMMIT');
+      } catch (err) {
+        await client.query('ROLLBACK').catch(() => {});
+        // A concurrent claim of the same tx won the UNIQUE(tx_hash) race.
+        if (err.code === '23505') {
+          return res.status(400).json({
+            ok: false,
+            error: 'tx_already_used',
+            message: 'This transaction has already been credited to an account'
+          });
+        }
+        throw err;
+      } finally {
+        client.release();
+      }
 
       console.log(`[DEPOSIT] Key ${keyHint(key)} deposited $${depositAmount} USDT → ${newTier} (TX: ${tx_hash.slice(0, 10)}...)`);
 
