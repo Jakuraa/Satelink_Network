@@ -12,6 +12,7 @@ import { PostgresFundingSourceRepository } from './postgres-funding-source-repos
 import { PostgresAuthorizationRepository } from './postgres-authorization-repository.js';
 import { runFundingSourceRepositoryContract } from '../funding-source-repository.contract.js';
 import { runAuthorizationRepositoryContract } from '../authorization-repository.contract.js';
+import { truncateForTest } from '../../../../../../libs/testing/src/truncate-for-test.js';
 
 const MIGRATIONS_DIR = resolve(
   import.meta.dirname ?? new URL('.', import.meta.url).pathname,
@@ -61,7 +62,7 @@ runFundingSourceRepositoryContract('Postgres', async () => ({
   repo: new PostgresFundingSourceRepository(pool),
   ensurePrincipal,
   reset: async () => {
-    await pool.query('TRUNCATE principals RESTART IDENTITY CASCADE');
+    await truncateForTest(pool, 'TRUNCATE principals RESTART IDENTITY CASCADE');
   },
   dispose: async () => {},
 }));
@@ -71,7 +72,7 @@ runAuthorizationRepositoryContract('Postgres', async () => ({
   ensurePrincipal,
   ensureFundingSource,
   reset: async () => {
-    await pool.query('TRUNCATE principals RESTART IDENTITY CASCADE');
+    await truncateForTest(pool, 'TRUNCATE principals RESTART IDENTITY CASCADE');
   },
   dispose: async () => {},
 }));

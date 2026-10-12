@@ -12,6 +12,7 @@ import { PostgresPrincipalRepository } from './postgres-principal-repository.js'
 import { PostgresAccountRepository } from './postgres-account-repository.js';
 import { runPrincipalRepositoryContract } from '../principal-repository.contract.js';
 import { runAccountRepositoryContract } from '../account-repository.contract.js';
+import { truncateForTest } from '../../../../../../libs/testing/src/truncate-for-test.js';
 
 const MIGRATIONS_DIR = resolve(
   import.meta.dirname ?? new URL('.', import.meta.url).pathname,
@@ -40,7 +41,7 @@ afterAll(async () => {
 runPrincipalRepositoryContract('Postgres', async () => ({
   repo: new PostgresPrincipalRepository(pool),
   reset: async () => {
-    await pool.query('TRUNCATE principals RESTART IDENTITY CASCADE');
+    await truncateForTest(pool, 'TRUNCATE principals RESTART IDENTITY CASCADE');
   },
   dispose: async () => {},
 }));
@@ -54,7 +55,7 @@ runAccountRepositoryContract('Postgres', async () => ({
     );
   },
   reset: async () => {
-    await pool.query('TRUNCATE accounts, principals RESTART IDENTITY CASCADE');
+    await truncateForTest(pool, 'TRUNCATE accounts, principals RESTART IDENTITY CASCADE');
   },
   dispose: async () => {},
 }));

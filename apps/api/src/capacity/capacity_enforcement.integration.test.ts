@@ -21,6 +21,7 @@ import { applyMigrationsForTest } from '../../../../database/__tests__/apply-mig
 import { __internal, enforcementPath, enforceCapacity } from './capacity_enforcement.js';
 // @ts-expect-error — shipped JS flag reader (no d.ts).
 import { bustCapacityPathCache } from '../lib/flags.js';
+import { truncateForTest } from '../../../../libs/testing/src/truncate-for-test.js';
 
 const MIGRATIONS_DIR = resolve(
   import.meta.dirname ?? new URL('.', import.meta.url).pathname,
@@ -114,7 +115,7 @@ async function seedTied(
 }
 
 beforeEach(async () => {
-  await pool.query('TRUNCATE principals RESTART IDENTITY CASCADE');
+  await truncateForTest(pool, 'TRUNCATE principals RESTART IDENTITY CASCADE');
 });
 
 describe('capacity enforcement — new path (integration)', () => {
@@ -382,7 +383,7 @@ describe('capacity enforcement — new-mode T-23 waterfall (integration)', () =>
     // CASCADE: migration 018 (subscriptions) now FKs api_credits(api_key), so a
     // plain TRUNCATE is refused ("cannot truncate a table referenced in a
     // foreign key constraint"). subscriptions is unused here and stays empty.
-    await pool.query('TRUNCATE api_credits CASCADE');
+    await truncateForTest(pool, 'TRUNCATE api_credits CASCADE');
     await pool.query('TRUNCATE api_usage_daily');
     await pool.query(`UPDATE platform_flags SET value='new' WHERE key='capacity_enforcement_path'`);
     bustCapacityPathCache(); // 10s TTL — force enforceCapacity to observe 'new'

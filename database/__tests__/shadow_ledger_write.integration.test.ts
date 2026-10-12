@@ -22,6 +22,7 @@ import {
   SUSPENSE_ACCOUNT_ID,
   REVENUE_ACCOUNT_ID,
 } from '../../apps/api/src/ledger/shadow_ledger_write.js';
+import { truncateForTest } from '../../libs/testing/src/truncate-for-test.js';
 
 const MIGRATIONS_DIR = resolve(
   import.meta.dirname ?? new URL('.', import.meta.url).pathname,
@@ -51,7 +52,7 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  await pool.query('TRUNCATE ledger_entries RESTART IDENTITY CASCADE');
+  await truncateForTest(pool, 'TRUNCATE ledger_entries RESTART IDENTITY CASCADE');
   delete process.env.LEDGER_SHADOW_WRITE;
 });
 
