@@ -4,17 +4,17 @@
 //
 // The money path is entirely production's (apps/api/app_factory.mjs:369):
 //   x402Middleware → freeTierGateUnlessX402Paid → createRpcGateway
-// We are the CLIENT. Behavior by design:
-//   * Within the free tier            → 200, no payment, no revenue.
-//   * Free tier exhausted, no wallet  → 402 surfaced to the caller verbatim.
-//   * Free tier exhausted, with wallet→ payingFetch signs USDC-on-Base, prod
-//                                        Rail 2 settles + records revenue, 200.
-//   * Bundle already bought (wallet)  → x-payer-address draws down the credit
-//                                        (prod Rail 1.5), no new payment.
+// We are the CLIENT. Behavior by design (no free RPC — every call is paid):
+//   * No key, no wallet               → 402 surfaced to the caller verbatim.
+//   * No key, with wallet             → payingFetch signs USDC-on-Base, prod
+//                                        settles a 1,000-call bundle + returns a
+//                                        one-time X-Satelink-API-Key, 200.
+//   * Bundle already bought           → that session key is sent as X-API-Key
+//                                        and draws down the bundle, no new payment.
 //
-// Sending x-payer-address on every call is what lets a purchased 1,000-call
-// bundle be consumed without re-signing each time — it mirrors exactly how the
-// production credited-identity rail resolves the account.
+// The session key lives in memory for this process only. After a restart, the
+// next paid call issues a fresh key (or recover one with a wallet signature:
+// POST /v1/x402/key/recover). x-payer-address is no longer a credential (P0-2).
 
 const DEFAULT_RPC_URL =
   process.env.SATELINK_RPC_URL || 'https://rpc.satelink.network/rpc/polygon';
@@ -27,6 +27,11 @@ const DEFAULT_RPC_URL =
  * @param {string}       [deps.apiKey] Optional Satelink API key (higher free limits).
  */
 export function createRpcExecutor({ fetch, wallet, rpcUrl = DEFAULT_RPC_URL, apiKey } = {}) {
+  // Session key issued by the API after an x402 bundle settles (X-Satelink-API-Key,
+  // returned once). Reusing it spends the remaining bundle calls; without it every
+  // call would trigger a NEW $0.10 payment (the header-named wallet "Rail 1.5" was
+  // removed server-side for security, P0-2). Held in memory only, never logged.
+  let sessionKey = null;
   return async function executeRpc({ method, params = [], id }) {
     if (!method || typeof method !== 'string') {
       return { ok: false, error: 'invalid_request', message: '`method` (string) is required' };
@@ -37,10 +42,10 @@ export function createRpcExecutor({ fetch, wallet, rpcUrl = DEFAULT_RPC_URL, api
       'X-Satelink-Partner': 'mcp-server',
       'X-Satelink-Integration': 'agent-tool',
     };
-    // Present the paying wallet as the credited identity so a previously bought
-    // bundle is consumed (prod Rail 1.5) instead of forcing a fresh payment.
-    if (wallet) headers['x-payer-address'] = wallet;
-    if (apiKey) headers['X-API-Key'] = apiKey;
+    // An explicit API key wins; otherwise reuse the x402 session key from the
+    // last paid call. (x-payer-address is NOT a billing credential any more.)
+    const key = apiKey || sessionKey;
+    if (key) headers['X-API-Key'] = key;
 
     const body = JSON.stringify({
       jsonrpc: '2.0',
@@ -61,6 +66,9 @@ export function createRpcExecutor({ fetch, wallet, rpcUrl = DEFAULT_RPC_URL, api
       response.headers.get('x-payment-response') ||
       response.headers.get('payment-response') ||
       null;
+
+    const issued = response.headers.get('x-satelink-api-key');
+    if (issued && /^x402_[0-9a-f]{64}$/.test(issued)) sessionKey = issued;
 
     let data = null;
     const text = await response.text();

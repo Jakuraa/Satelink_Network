@@ -2,8 +2,8 @@
 
 Give any AI agent **pay-per-call Polygon (chain 137) JSON-RPC** through [Satelink](https://satelink.network) — settled automatically over **x402** (USDC on Base). One tool, no account, no subscription.
 
-- **Free tier:** the first calls each day are free — no wallet, no email.
-- **Then micropayments:** configure a Base-funded USDC wallet and the server pays for you the moment the free tier is exhausted. `$0.10` buys a **1,000-call bundle**; subsequent calls draw it down with no new payment.
+- **No free tier:** every call is paid — there is no anonymous allowance.
+- **Micropayments:** configure a Base-funded USDC wallet and the server pays for you on the first call. `$0.10` buys a **1,000-call bundle**; the server keeps the one-time session key it receives (`X-Satelink-API-Key`) and later calls draw the bundle down with no new payment.
 - **Reuses the production rail end-to-end.** This server is an x402 *client* of the already-deployed Satelink RPC endpoint. Payment verification, on-chain settlement, and revenue recording all happen server-side in production — nothing is re-implemented here.
 
 ## What was missing before v2
@@ -30,7 +30,7 @@ export SATELINK_WALLET_PRIVATE_KEY=0xYOUR_BASE_FUNDED_WALLET
 
 > ⚠️ Use a wallet you control that is **not** a Satelink/founder wallet. Founder-funded payers are ledger-flagged `is_test_data` and do not count as external revenue.
 
-Without a wallet the server still runs — it serves the free tier and surfaces the `402` payment requirements when the free tier is exhausted.
+Without a wallet (or API key) the server still runs, but every call returns the `402` payment requirements.
 
 ## Use with an MCP client (Claude Desktop / Cursor / Claude Code)
 
@@ -82,9 +82,9 @@ Other routes: `GET /healthz`, `GET /.well-known/mcp.json`, `POST /mcp` (MCP Stre
 
 | Env var | Default |
 |---------|---------|
-| `SATELINK_WALLET_PRIVATE_KEY` | *(none — free tier only)* |
+| `SATELINK_WALLET_PRIVATE_KEY` | *(none — calls return 402)* |
 | `SATELINK_RPC_URL` | `https://rpc.satelink.network/rpc/polygon` |
-| `SATELINK_API_KEY` | *(optional — higher free-tier limits)* |
+| `SATELINK_API_KEY` | *(optional — prepaid USDT credits instead of x402)* |
 | `PORT` | `8402` (HTTP server) |
 
 ## How to verify the first paid call
