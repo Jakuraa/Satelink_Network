@@ -11,7 +11,7 @@
 // What it does:
 //   1. Reports the paying wallet.
 //   2. Calls polygon_rpc(eth_blockNumber) in a loop until production returns a
-//      402 (free tier exhausted) — at which point @x402/fetch signs a $0.10
+//      402 (no free RPC — normally the first call) — then @x402/fetch signs a $0.10
 //      USDC-on-Base payment and retries. Production settles it, records the
 //      revenue_events_v2 row, and credits the wallet a 1,000-call bundle.
 //   3. Prints the settlement tx hash + remaining bundle calls (proof of a paid
@@ -64,9 +64,8 @@ while (attempt++ < MAX_ATTEMPTS) {
     process.exit(2);
   }
 
-  if (attempt % 50 === 0) console.log(`  ...${attempt} free calls so far (block ${out.result?.result})`);
+  if (attempt % 50 === 0) console.log(`  ...${attempt} calls served without a payment so far (block ${out.result?.result})`);
 }
 
-console.error(`\nReached ${MAX_ATTEMPTS} calls without a 402 — the free tier for this IP is larger than expected.`);
-console.error('Raise DEMO_MAX_ATTEMPTS, or run from an IP/subnet that has already used its daily free calls.');
+console.error(`\nReached ${MAX_ATTEMPTS} calls without a 402 — unexpected: every call should be paid (check SATELINK_API_KEY / server config).`);
 process.exit(3);

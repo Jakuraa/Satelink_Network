@@ -26,6 +26,7 @@ import { MIN_CONFIRMATIONS } from '../billing/deposit_validation.mjs';
 import { apiKeyCreateLimiter } from '../security/middleware/rate_limits.js';
 import { getIntelSummary, recordPricingView } from '../economics/pricing_intelligence/index.js';
 import { railPrices, bundlePriceText } from '../pricing_v2/rails.mjs';
+import { publicProducts, PRODUCT_STATUSES } from '../pricing_v2/products.mjs';
 
 const API_BASE = () => process.env.API_BASE_URL || 'https://rpc.satelink.network';
 const VAULT = () => process.env.REVENUE_VAULT_ADDRESS || '0x577D3716d6Ad5b676d230f5409deF9838FABaCEF';
@@ -122,6 +123,8 @@ function manifestBody() {
     // machine-payable HTTP 402 the endpoint returns (no free allowance — every
     // call is paid; accepts carried in the PAYMENT-REQUIRED header, x402 v2). The USDT vault
     // rail is preserved for existing integrations under alternative_rails.
+    // Product registry (Step 6): public products and their verified status.
+    products: { statuses: PRODUCT_STATUSES, items: publicProducts() },
     payment: {
       rail: 'x402',
       network: 'eip155:8453',
