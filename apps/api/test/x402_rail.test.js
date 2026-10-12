@@ -279,6 +279,7 @@ describe('x402 payment rail', function () {
     const PRICE = 0.00003;
     const BUNDLE = 1000;
     const payerA = '0xAaAA00000000000000000000000000000000AaAa';
+    const payerB = '0xBbBB00000000000000000000000000000000BbBb';
 
     before(async function () {
       if (!process.env.DATABASE_URL) this.skip();
@@ -421,6 +422,30 @@ describe('x402 payment rail', function () {
       const anon = await runChain(makeReq({ ip: '10.15.0.2' }));
       expect(anon.nextCalled).to.equal(true);
       expect(anon.headers).to.deep.equal({});
+    });
+
+    it('t16: payment header alias ("payment") is recognized and screened by abuse guards', async () => {
+      process.env.X402_ENABLED = 'true';
+      const out = await runChain(makeReq({ headers: { 'payment': 'A'.repeat(9000) }, ip: '10.16.0.1' }));
+      expect(out.statusCode).to.equal(400);
+      expect(out.body.error).to.equal('x402_payment_header_too_large');
+    });
+
+    it('t17: settlement issues a random session key (not the public x402_<payer> account id)', async () => {
+      const resFake = makeRes(() => {});
+      const recorded = await recordSettlementOrReject(dbPool, resFake, {
+        txHash: '0xtest_bundle_reuse', payer: payerB,
+        network: 'eip155:8453', amountUsd: '0.10', bundleCalls: BUNDLE,
+      }, silent);
+      expect(recorded.creditedKey).to.equal(`x402_${payerB.toLowerCase()}`); // account id
+      expect(recorded.sessionKey).to.match(/^x402_[0-9a-f]{64}$/);          // credential
+      expect(recorded.callsRemaining).to.equal(BUNDLE);
+    });
+
+    it('t18: the public x402_<payer> account id is NOT a billing credential', async () => {
+      const meter = await authorizeAndMeter(dbPool, { apiKey: `x402_${payerB.toLowerCase()}` });
+      expect(meter.ok).to.equal(false);
+      expect(meter.code).to.equal('account_not_found');
     });
   });
 });
