@@ -11,7 +11,7 @@ import { randomUUID } from 'node:crypto';
 import { csrfGuard, betterAuthSession } from '../console_accounts/router.mjs';
 import { loadPlanCatalog, quote, effectivePlan } from './plans.mjs';
 import { recordIntent } from './ingest.mjs';
-import { minorToDecimal, PaymentError } from './contract.mjs';
+import { minorToDecimal, PaymentError, isAdapterAvailable } from './contract.mjs';
 import { MERCHANT } from './merchant.mjs';
 import { refundPolicyStatus } from './refund_policy.mjs';
 import { verifyInvoiceTransfer } from './onchain_verify.mjs';
@@ -55,7 +55,7 @@ export function createPaymentsCheckoutRouter(pool, {
   // Which payment methods this deployment offers (Razorpay only when its adapter is on).
   router.get('/checkout/methods', (req, res) => res.json({ ok: true, data: {
     testMode: mode !== 'live',
-    methods: Object.entries(METHODS).filter(([, m]) => adapters[m.adapter]).map(([id, m]) => ({ id, adapter: m.adapter, currency: m.currency, network: m.network })),
+    methods: Object.entries(METHODS).filter(([, m]) => isAdapterAvailable(adapters[m.adapter])).map(([id, m]) => ({ id, adapter: m.adapter, currency: m.currency, network: m.network })),
   } }));
 
   const authed = express.Router();
@@ -78,7 +78,7 @@ export function createPaymentsCheckoutRouter(pool, {
     try {
       const { planId, method } = req.body ?? {};
       const m = METHODS[method];
-      if (!m || !adapters[m.adapter]) return res.status(400).json({ ok: false, error: 'unknown_method' });
+      if (!m || !isAdapterAvailable(adapters[m.adapter])) return res.status(400).json({ ok: false, error: 'unknown_method' });
       const prior = await pool.query(`SELECT 1 FROM payment_entitlement_grants WHERE customer_account_id = $1 AND product_id LIKE 'trading_ai_%' LIMIT 1`, [req.account.accountId]);
       const q = quote(catalog, planId, m.currency, { firstPeriod: prior.rowCount === 0, mode });
       return res.json({ ok: true, data: {
@@ -105,6 +105,9 @@ export function createPaymentsCheckoutRouter(pool, {
       if (!m) return res.status(400).json({ ok: false, error: 'unknown_method', methods: Object.keys(METHODS) });
       const adapter = adapters[m.adapter];
       if (!adapter) return res.status(409).json({ ok: false, error: 'method_unavailable', message: `${method} is not enabled` });
+      if (!isAdapterAvailable(adapter)) {
+        return res.status(409).json({ ok: false, error: 'method_unavailable', reason: adapter.capabilities().unavailableReason, message: `${method} is not available` });
+      }
       const prior = await pool.query(
         `SELECT 1 FROM payment_entitlement_grants WHERE customer_account_id = $1 AND product_id LIKE 'trading_ai_%' LIMIT 1`,
         [req.account.accountId]);

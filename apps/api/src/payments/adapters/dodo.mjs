@@ -27,6 +27,8 @@ export function createDodoAdapter({ secret = dodoWebhookSecret, now = () => Date
       oneTime: true, recurring: true, refunds: true,
       currencies: ['USD', 'INR'], networks: [],
       hostedCheckout: true, requiresKyb: true,
+      // 2026-10-12: merchant application submitted, approval not evidenced.
+      available: false, unavailableReason: 'application_pending',
     }),
     createCheckout: unsupported(id, 'createCheckout'), // checkout stays on the existing Dodo surfaces
     getPayment: unsupported(id, 'getPayment'),

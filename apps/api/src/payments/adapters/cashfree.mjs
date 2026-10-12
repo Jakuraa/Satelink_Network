@@ -14,6 +14,8 @@ export function createCashfreeAdapter() {
       oneTime: true, recurring: true, refunds: true,
       currencies: ['INR'], networks: [],
       hostedCheckout: true, requiresKyb: true,
+      // 2026-10-12: merchant application submitted, approval not evidenced.
+      available: false, unavailableReason: 'application_pending',
     }),
     createCheckout: notConfigured('createCheckout'),
     getPayment: notConfigured('getPayment'),

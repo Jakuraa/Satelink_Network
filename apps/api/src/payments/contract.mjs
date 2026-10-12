@@ -9,7 +9,7 @@
 //
 // PaymentAdapter {
 //   id                                   'onchain-native' | 'razorpay' | 'payram' | 'dodo' | 'cashfree'
-//   capabilities()                       → { oneTime, recurring, refunds, currencies[], networks[], hostedCheckout, requiresKyb }
+//   capabilities()                       → { oneTime, recurring, refunds, currencies[], networks[], hostedCheckout, requiresKyb, available?, unavailableReason? }
 //   createCheckout(input) / createIntent(input)
 //                                        → { canonicalRef, providerPaymentId?, checkoutUrl? | invoice? }
 //   getPayment(providerPaymentId)        → CanonicalPaymentEvent-shaped snapshot (no providerEventId)
@@ -135,6 +135,15 @@ export function assertAdapter(adapter) {
   for (const k of ['oneTime', 'recurring', 'refunds', 'hostedCheckout', 'requiresKyb']) {
     if (typeof c[k] !== 'boolean') throw new PaymentError('INVALID', `adapter ${adapter.id} capabilities().${k} must be boolean`);
   }
+  // Optional: available (default true) + unavailableReason when false
+  // (e.g. 'provider_suspended', 'application_pending'). Unavailable adapters
+  // are never offered at checkout; their webhooks still verify and ingest.
+  if (c.available !== undefined && typeof c.available !== 'boolean') {
+    throw new PaymentError('INVALID', `adapter ${adapter.id} capabilities().available must be boolean`);
+  }
+  if (c.available === false && typeof c.unavailableReason !== 'string') {
+    throw new PaymentError('INVALID', `adapter ${adapter.id} capabilities().unavailableReason required when available=false`);
+  }
   if (!Array.isArray(c.currencies) || !Array.isArray(c.networks)) {
     throw new PaymentError('INVALID', `adapter ${adapter.id} capabilities() needs currencies[] and networks[]`);
   }
@@ -152,4 +161,9 @@ export function header(headers, name) {
   const want = name.toLowerCase();
   for (const [k, v] of Object.entries(headers)) if (k.toLowerCase() === want) return Array.isArray(v) ? v[0] : v;
   return undefined;
+}
+
+/** True unless the adapter declares capabilities().available === false. */
+export function isAdapterAvailable(adapter) {
+  return Boolean(adapter) && adapter.capabilities().available !== false;
 }

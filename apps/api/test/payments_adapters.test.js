@@ -7,7 +7,7 @@ import express from 'express';
 import request from 'supertest';
 import { ethers } from 'ethers';
 import {
-  canonicalEvent, assertAdapter, decimalToMinor, minorToDecimal, PaymentError, sha256Hex, PAYMENT_STATUSES,
+  canonicalEvent, assertAdapter, isAdapterAvailable, decimalToMinor, minorToDecimal, PaymentError, sha256Hex, PAYMENT_STATUSES,
 } from '../src/payments/contract.mjs';
 import { createPayramAdapter, PAYRAM_STATUS_MAP } from '../src/payments/adapters/payram.mjs';
 import { createOnchainNativeAdapter, baseUnitsToUsdtString } from '../src/payments/adapters/onchain_native.mjs';
@@ -33,6 +33,14 @@ const payramFixture = (over = {}) => JSON.stringify({
 const sign = (raw, key = PAYRAM_KEY) => `sha256=${createHmac('sha256', key).update(raw).digest('hex')}`;
 
 describe('payments contract', () => {
+  it('available=false requires an unavailableReason; non-boolean available is rejected', () => {
+    const base = { id: 'z', getPayment() {}, verifyWebhook() {}, normalizeEvent() {}, refund() {}, reconcile() {}, createCheckout() {} };
+    const caps = (extra) => ({ ...base, capabilities: () => ({ oneTime: true, recurring: false, refunds: false, hostedCheckout: false, requiresKyb: false, currencies: [], networks: [], ...extra }) });
+    expect(() => assertAdapter(caps({ available: false }))).to.throw(/unavailableReason/);
+    expect(() => assertAdapter(caps({ available: 'no' }))).to.throw(/boolean/);
+    expect(isAdapterAvailable(caps({}))).to.equal(true);
+  });
+
   it('decimalToMinor is exact and refuses excess precision (never rounds money)', () => {
     expect(decimalToMinor('19', 'USDT')).to.equal(19_000_000n);
     expect(decimalToMinor('0.000030', 'USDT')).to.equal(30n);
@@ -169,6 +177,12 @@ describe('razorpay adapter (Stage 27 gateway, test mode only)', () => {
   const a = createRazorpayAdapter({ gateway: gw });
   const body = (event, extra = {}) => JSON.stringify({ event, created_at: 1760227200, payload: { payment: { entity: { id: 'pay_1', amount: 159900, currency: 'INR', status: 'captured', notes: { satelink_ref: 'inv_r1', satelink_principal: 'acct_c' } } }, ...extra } });
 
+  it('is suspended (2026-10-12): available=false, reason provider_suspended, contract-valid', () => {
+    expect(a.capabilities()).to.include({ available: false, unavailableReason: 'provider_suspended' });
+    expect(isAdapterAvailable(a)).to.equal(false);
+    expect(() => assertAdapter(a)).to.not.throw();
+  });
+
   it('live keys are still refused', () => {
     expect(() => createRazorpayAdapter({ keyId: 'rzp_live_abcdef12', keySecret: async () => 's', webhookSecret: async () => 'w', fetch: async () => ({}) })).to.throw(/live/);
   });
@@ -196,6 +210,13 @@ describe('razorpay adapter (Stage 27 gateway, test mode only)', () => {
 });
 
 describe('cashfree adapter is a capability stub', () => {
+  it('cashfree + dodo adapters are unavailable until approval is evidenced (application_pending)', async () => {
+    for (const ad of [createCashfreeAdapter(), createDodoAdapter()]) {
+      expect(ad.capabilities(), ad.id).to.include({ available: false, unavailableReason: 'application_pending' });
+      expect(isAdapterAvailable(ad)).to.equal(false);
+    }
+  });
+
   it('declares capabilities but refuses every operation', async () => {
     const a = createCashfreeAdapter();
     expect(a.capabilities()).to.include({ requiresKyb: true, hostedCheckout: true });
@@ -234,5 +255,23 @@ describe('POST /webhooks/:provider', () => {
       .post('/webhooks/payram').set('Content-Type', 'application/json').send(raw);
     expect(Buffer.isBuffer(seen)).to.equal(true);
     expect(seen.toString('utf8')).to.equal(raw);
+  });
+});
+
+describe('GET /checkout/methods — unavailable providers are never offered (2026-10-12)', () => {
+  it('omits suspended razorpay even when its test keys are configured', async () => {
+    const { createPaymentsCheckoutRouter } = await import('../src/payments/checkout_router.mjs');
+    const gw = new RazorpayGateway({ keyId: 'rzp_test_abcdef12', keySecret: async () => 's', webhookSecret: async () => 'w', fetch: async () => ({}) });
+    const onchain = { id: 'onchain-native', capabilities: () => ({ available: true }) };
+    const app = express();
+    app.use('/v1/payments', createPaymentsCheckoutRouter({ query: async () => ({ rows: [] }) }, {
+      adapters: { 'onchain-native': onchain, razorpay: createRazorpayAdapter({ gateway: gw }) },
+      catalog: { plans: [] }, resolveSession: async () => null,
+    }));
+    const r = await request(app).get('/v1/payments/checkout/methods');
+    expect(r.status).to.equal(200);
+    const ids = r.body.data.methods.map((m) => m.id);
+    expect(ids).to.not.include('razorpay');
+    expect(ids.length).to.be.greaterThan(0);
   });
 });

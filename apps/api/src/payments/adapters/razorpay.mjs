@@ -27,10 +27,15 @@ export function createRazorpayAdapter(o = {}) {
   return {
     id,
     mode: gateway.mode,
+    // 2026-10-12 founder input: Razorpay SUSPENDED the merchant (Jakuraa
+    // Commercial Pvt Ltd, terms of use). Not offered at checkout; code and
+    // webhook verification kept (refunds/disputes on past payments may still
+    // arrive). Flip only with evidence the suspension is lifted.
     capabilities: () => ({
       oneTime: true, recurring: true, refunds: true,
       currencies: ['INR'], networks: [],
       hostedCheckout: true, requiresKyb: true,
+      available: false, unavailableReason: 'provider_suspended',
     }),
 
     /** Recurring plan checkout → a Razorpay subscription; its short_url is the hosted page. */
