@@ -23,6 +23,7 @@ import { isFounderWallet } from '../founder_wallets.js';
 // revenue_events_v2 INSERT below — no other change to settlement logic).
 import { shadowWriteRevenueLedger } from '../../ledger/shadow_ledger_write.js';
 import { shadowWriteDraw } from '../../ledger/shadow_draw_write.js';
+import { ensureX402KeySchema, issueSessionKey } from '../../billing/x402_session_keys.js';
 
 export class DuplicateSettlementError extends Error {
   constructor(txHash) {
@@ -47,6 +48,9 @@ export async function recordX402Settlement(pool, {
   // Founder-funded wallets never count as external revenue, regardless of
   // network; network-derived flagging still covers unknown testnet payers.
   const isTest = isTestNetwork(network) || isFounderWallet(payer);
+  const willCredit = bundleCalls > 0 && WALLET_RE.test(payer || '');
+  // DDL outside the money transaction (idempotent, cached after first call).
+  if (willCredit) await ensureX402KeySchema(pool);
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -54,9 +58,13 @@ export async function recordX402Settlement(pool, {
     // Bundle crediting — find-or-create the payer's account, then credit it
     // with bundleCalls worth of the SAME per-call unit authorizeAndMeter
     // deducts. Done first so payment_sources can reference the credited key.
+    // creditedKey = the api_credits ACCOUNT ID (internal; for x402-created
+    // accounts it is the public `x402_<payer>` and is NOT a credential).
+    // sessionKey = the secret credential issued to the payer (returned once).
     let creditedKey = null;
+    let sessionKey = null;
     let balanceAfter = null;
-    if (bundleCalls > 0 && WALLET_RE.test(payer || '')) {
+    if (willCredit) {
       const creditUsdt = bundleCalls * PRICE_PER_CALL_USDT;
       // Same resolution as credit_service.resolveAccount: oldest row wins.
       const existing = await client.query(
@@ -101,6 +109,11 @@ export async function recordX402Settlement(pool, {
         [creditUsdt, bundleCalls, creditedKey]
       );
       balanceAfter = parseFloat(upd.rows[0].credits_usdt);
+      // Issue the reuse credential in the SAME transaction: a rolled-back
+      // (duplicate) settlement issues no key; a committed one always has one.
+      sessionKey = await issueSessionKey(client, {
+        accountApiKey: creditedKey, payer, via: 'settlement', settlementTx: txHash,
+      });
     }
 
     await client.query(
@@ -127,6 +140,7 @@ export async function recordX402Settlement(pool, {
     await client.query('COMMIT');
     return {
       creditedKey,
+      sessionKey,
       balanceAfter,
       // epsilon before floor: 0.03/0.00003 is 999.9999… in IEEE-754 — a
       // fresh 1000-call bundle must report 1000, not 999.

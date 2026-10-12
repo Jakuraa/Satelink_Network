@@ -431,29 +431,21 @@ describe('x402 payment rail', function () {
       expect(out.body.error).to.equal('x402_payment_header_too_large');
     });
 
-    it('t17: settlement response attaches X-API-Key and X-Satelink-API-Key headers and credited.api_key body', async () => {
-      const mw = createX402Middleware(dbPool, silent);
-      process.env.X402_ENABLED = 'true';
-      const req = makeReq({ headers: { 'x-payment': Buffer.from(JSON.stringify({ x402Version: 2 })).toString('base64') }, ip: '10.17.0.1' });
-      // Verify recordSettlementOrReject returns creditedKey
+    it('t17: settlement issues a random session key (not the public x402_<payer> account id)', async () => {
       const resFake = makeRes(() => {});
       const recorded = await recordSettlementOrReject(dbPool, resFake, {
         txHash: '0xtest_bundle_reuse', payer: payerB,
         network: 'eip155:8453', amountUsd: '0.10', bundleCalls: BUNDLE,
       }, silent);
-      expect(recorded.creditedKey).to.equal(`x402_${payerB.toLowerCase()}`);
+      expect(recorded.creditedKey).to.equal(`x402_${payerB.toLowerCase()}`); // account id
+      expect(recorded.sessionKey).to.match(/^x402_[0-9a-f]{64}$/);          // credential
       expect(recorded.callsRemaining).to.equal(BUNDLE);
     });
 
-    it('t18: subsequent request presenting the credited key via X-API-Key bypasses free-tier gate', async () => {
-      const mw = createX402Middleware(dbPool, silent);
-      process.env.X402_ENABLED = 'true';
-      const req = makeReq({ headers: { 'x-api-key': `x402_${payerB.toLowerCase()}` }, ip: '10.18.0.1' });
-      const out = await new Promise((resolve) => {
-        const res = makeRes(resolve);
-        Promise.resolve(mw(req, res, () => gate(req, res, () => resolve({ nextCalled: true })))).catch((e) => resolve({ error: e }));
-      });
-      expect(out.nextCalled).to.equal(true);
+    it('t18: the public x402_<payer> account id is NOT a billing credential', async () => {
+      const meter = await authorizeAndMeter(dbPool, { apiKey: `x402_${payerB.toLowerCase()}` });
+      expect(meter.ok).to.equal(false);
+      expect(meter.code).to.equal('account_not_found');
     });
   });
 });

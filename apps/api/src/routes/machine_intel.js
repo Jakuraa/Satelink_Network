@@ -102,7 +102,7 @@ export function createMachineIntelRouter(pool, redis) {
             mode: 'x402',
             headers: ['PAYMENT-SIGNATURE', 'X-PAYMENT', 'PAYMENT'],
             header: 'PAYMENT-SIGNATURE',
-            note: `$${x402.bundlePriceUsd} USDC on Base buys ${x402.bundleCalls.toLocaleString('en-US')} calls; subsequent calls reuse the returned X-API-Key`,
+            note: `$${x402.bundlePriceUsd} USDC on Base buys ${x402.bundleCalls.toLocaleString('en-US')} calls; subsequent calls reuse the one-time X-Satelink-API-Key as X-API-Key (lost key: POST /v1/x402/key/recover with a wallet signature)`,
           }] : []),
           { mode: 'anonymous', note: 'All /rpc requests require an X-API-Key or an x402 payment challenge response.' },
         ],

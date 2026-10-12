@@ -229,9 +229,12 @@ export function compactAlternativePayment(body) {
   return compact;
 }
 
-export function createX402Middleware(pool, logger) {
+// opts.httpServer: test seam — a fake x402 resource server (processHTTPRequest /
+// processSettlement / initialize) so the settle → serve → reuse path can be
+// exercised without the CDP facilitator. Production never passes it.
+export function createX402Middleware(pool, logger, opts = {}) {
   const log = logger || console;
-  let httpServer = null;
+  let httpServer = opts.httpServer || null;
   let initPromise = null;
 
   function getServer(cfg) {
@@ -343,9 +346,13 @@ export function createX402Middleware(pool, logger) {
       bumpFunnelDaily(pool, 'x402_settled');
 
       for (const [key, value] of Object.entries(settle.headers || {})) res.setHeader(key, value);
-      if (recorded.creditedKey) {
-        res.set('X-API-Key', recorded.creditedKey);
-        res.set('X-Satelink-API-Key', recorded.creditedKey);
+      // The reuse credential (random, stored hashed — x402_session_keys.js) is
+      // returned exactly once, here. Never the account id `x402_<payer>`:
+      // that is public on Base and is not a credential.
+      if (recorded.sessionKey) {
+        res.setHeader('X-Satelink-API-Key', recorded.sessionKey);
+        res.setHeader('X-API-Key', recorded.sessionKey);
+        res.setHeader('Cache-Control', 'no-store');
       }
       // The billing wallet is the facilitator-verified payer (signature-
       // recovered), carried on a trusted request-scoped field. Downstream
@@ -361,18 +368,18 @@ export function createX402Middleware(pool, logger) {
       // Tell the machine how to continue: credited identity + remaining calls
       // appended to the JSON response body of this (served) request.
       const credited = {
-        api_key: recorded.creditedKey,
+        api_key: recorded.sessionKey || undefined,
         wallet: (settle.payer || '').toLowerCase(),
         calls_remaining: recorded.callsRemaining,
-        how_to_reuse: recorded.creditedKey
-          ? `Send X-API-Key: ${recorded.creditedKey} on subsequent requests to use remaining calls without paying again.`
+        how_to_reuse: recorded.sessionKey
+          ? 'Send the api_key above as the X-API-Key header on subsequent requests to use the remaining calls without paying again. It is shown ONCE — store it. Lost it? POST /v1/x402/key/recover with a signature from the paying wallet.'
           : undefined,
       };
       const settleJson = res.json.bind(res);
       res.json = (body) =>
         settleJson(body && typeof body === 'object' && !Array.isArray(body) ? { ...body, credited } : body);
 
-      log.info(`${LOG_PREFIX} settled $${cfg.bundlePriceUsd} USDC tx=${settle.transaction} payer=${settle.payer} credited=${recorded.creditedKey} calls=${recorded.callsRemaining}`);
+      log.info(`${LOG_PREFIX} settled $${cfg.bundlePriceUsd} USDC tx=${settle.transaction} payer=${settle.payer} account=${String(recorded.creditedKey || '').slice(0, 8)}… key_issued=${Boolean(recorded.sessionKey)} calls=${recorded.callsRemaining}`);
       return next();
     }
 

@@ -21,6 +21,7 @@
  * Pure-ish: every function takes `pool` so it is unit-testable with a mock.
  */
 
+import { isX402SessionKey, resolveSessionKey } from './x402_session_keys.js';
 import { isFounderWallet } from '../payments/founder_wallets.js';
 import { consumePlanBucket, returnPlanBucketCall, isLegacySubBucketEnabled } from './legacy_sub_entitlement.mjs';
 import { isConsoleAccountsEnabled } from '../console_accounts/flag.mjs';
@@ -40,7 +41,7 @@ export const TIER_DAILY_LIMIT = {
 const WALLET_RE = /^0x[0-9a-fA-F]{40}$/;
 
 function isApiKey(s) {
-  return typeof s === 'string' && (s.startsWith('sk_') || s.startsWith('x402_'));
+  return typeof s === 'string' && s.startsWith('sk_');
 }
 
 // payment_hold is a newer column (migration 033 / ensureBillingTables). Read it
@@ -65,6 +66,18 @@ export function isOnPaymentHold(account) {
  */
 export async function resolveAccount(pool, { apiKey, wallet } = {}) {
   if (!pool || !pool.query) return null;
+  // x402 session key (random, stored hashed) → the account it was issued on.
+  // The public `x402_<payer>` account id fails isX402SessionKey and resolves
+  // to nothing here — it is never a credential (x402_session_keys.js).
+  if (isX402SessionKey(apiKey)) {
+    const bound = await resolveSessionKey(pool, apiKey);
+    if (!bound) return null;
+    const r = await pool.query(
+      `SELECT ${ACCOUNT_COLS} FROM api_credits WHERE api_key = $1`,
+      [bound.account_api_key]
+    );
+    return r.rows[0] || null;
+  }
   if (isApiKey(apiKey)) {
     const r = await pool.query(
       `SELECT ${ACCOUNT_COLS} FROM api_credits WHERE api_key = $1`,

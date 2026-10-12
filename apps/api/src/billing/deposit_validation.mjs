@@ -11,7 +11,7 @@
 // Requirement: 20–30 minimum.
 export const MIN_CONFIRMATIONS = 25;
 
-const KEY_PREFIXES = ['sk_free', 'sk_basic', 'sk_pro', 'sk_ent', 'sk_live', 'x402_'];
+const KEY_PREFIXES = ['sk_free', 'sk_basic', 'sk_pro', 'sk_ent', 'sk_live'];
 
 /**
  * Read the API key from a secure transport (X-API-Key header, or request body)

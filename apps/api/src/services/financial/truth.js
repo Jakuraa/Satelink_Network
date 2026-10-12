@@ -12,6 +12,16 @@
 
 import { Router } from 'express';
 import { getUsdtBalance } from '../../autonomous/treasury_monitor.js';
+import { FOUNDER_WALLETS } from '../../payments/founder_wallets.js';
+
+// Internal = founder-controlled (canonical list, includes treasury 0x966e…):
+// either the event's client_id IS a founder wallet (x402 rows carry the payer
+// address) or it is an api key bound to a founder wallet. Everything else that
+// is not is_test_data is external.
+export const INTERNAL_PREDICATE =
+  `COALESCE(lower(e.client_id) = ANY($1::text[]) OR lower(t.wallet_address) = ANY($1::text[]), false)`;
+// COALESCE: an x402 payer with no api_credits row has t.wallet_address NULL;
+// without it `false OR NULL` is NULL and the row drops out of BOTH buckets.
 
 export function createFinancialTruthRouter(pool) {
   const router = Router();
@@ -21,30 +31,31 @@ export function createFinancialTruthRouter(pool) {
 
     try {
       // 1. Metered value = SUM(revenue_events_v2.amount_usdt) excluding test data
-      // Distinguish external customer usage from internal treasury usage (0x966e...)
+      // Distinguish external customer usage from internal founder/treasury usage.
       const treasuryAddress = process.env.TREASURY_ADDRESS || '0x966E1Ae22996545015b1414B35234b10719d7Ad4';
       const meteredResult = await pool.query(`
         SELECT
-          COALESCE(SUM(amount_usdt), 0) as total,
-          COALESCE(SUM(amount_usdt) FILTER (WHERE t.api_key IS NULL), 0) as external_total,
-          COALESCE(SUM(amount_usdt) FILTER (WHERE t.api_key IS NOT NULL), 0) as internal_total
+          COALESCE(SUM(e.amount_usdt), 0) as total,
+          COALESCE(SUM(e.amount_usdt) FILTER (WHERE NOT ${INTERNAL_PREDICATE}), 0) as external_total,
+          COALESCE(SUM(e.amount_usdt) FILTER (WHERE ${INTERNAL_PREDICATE}), 0) as internal_total
         FROM revenue_events_v2 e
-        LEFT JOIN api_credits t
-          ON t.api_key = e.client_id AND lower(t.wallet_address) = lower($1)
+        LEFT JOIN api_credits t ON t.api_key = e.client_id
         WHERE e.is_test_data = false OR e.is_test_data IS NULL
-      `, [treasuryAddress]);
+      `, [FOUNDER_WALLETS]);
       const metered_value_usdt = parseFloat(meteredResult.rows[0]?.total || 0);
       const external_metered_usdt = parseFloat(meteredResult.rows[0]?.external_total || 0);
       const internal_metered_usdt = parseFloat(meteredResult.rows[0]?.internal_total || 0);
 
-      // Deposits tracking (gross funds deposited)
-      let total_deposited_usdt = 0;
+      // Deposits tracking (gross external funds deposited). null = unavailable
+      // (table missing / query failed) — never reported as 0.
+      let total_deposited_usdt = null;
       try {
         const depResult = await pool.query(`
-          SELECT COALESCE(SUM(amount_usdt), 0) as total FROM credit_deposits WHERE status = 'confirmed'
-        `);
+          SELECT COALESCE(SUM(amount_usdt), 0) as total FROM credit_deposits
+           WHERE status = 'confirmed' AND NOT (lower(wallet_address) = ANY($1::text[]))
+        `, [FOUNDER_WALLETS]);
         total_deposited_usdt = parseFloat(depResult.rows[0]?.total || 0);
-      } catch (e) { /* table may not exist */ }
+      } catch (e) { /* table may not exist → unavailable */ }
 
       // 2. Allocated value = SUM of epoch total_revenue from closed epochs
       const allocatedResult = await pool.query(`
@@ -157,7 +168,7 @@ export function createFinancialTruthRouter(pool) {
         metered_value_usdt: parseFloat(metered_value_usdt.toFixed(6)),
         external_revenue_usdt: parseFloat(external_metered_usdt.toFixed(6)),
         internal_revenue_usdt: parseFloat(internal_metered_usdt.toFixed(6)),
-        total_deposited_usdt: parseFloat(total_deposited_usdt.toFixed(6)),
+        total_deposited_usdt: total_deposited_usdt == null ? null : parseFloat(total_deposited_usdt.toFixed(6)),
         allocated_value_usdt: parseFloat(allocated_value_usdt.toFixed(6)),
         unpaid_value_usdt: parseFloat(unpaid_value_usdt.toFixed(6)),
         treasury_real_usdt: parseFloat(treasury_real_usdt.toFixed(6)),
@@ -224,20 +235,18 @@ async function tracePipeline(pool, treasuryAddress) {
 
   try {
     // revenue_events_v2 with external vs internal split
-    const addr = treasuryAddress || process.env.TREASURY_ADDRESS || '0x966E1Ae22996545015b1414B35234b10719d7Ad4';
     const eventsResult = await pool.query(`
       SELECT
         COUNT(*)::int as count,
         COALESCE(SUM(e.amount_usdt), 0)::float as sum,
-        COUNT(*) FILTER (WHERE t.api_key IS NULL)::int AS ext_count,
-        COALESCE(SUM(e.amount_usdt) FILTER (WHERE t.api_key IS NULL), 0)::float AS ext_sum,
-        COUNT(*) FILTER (WHERE t.api_key IS NOT NULL)::int AS int_count,
-        COALESCE(SUM(e.amount_usdt) FILTER (WHERE t.api_key IS NOT NULL), 0)::float AS int_sum
+        COUNT(*) FILTER (WHERE NOT ${INTERNAL_PREDICATE})::int AS ext_count,
+        COALESCE(SUM(e.amount_usdt) FILTER (WHERE NOT ${INTERNAL_PREDICATE}), 0)::float AS ext_sum,
+        COUNT(*) FILTER (WHERE ${INTERNAL_PREDICATE})::int AS int_count,
+        COALESCE(SUM(e.amount_usdt) FILTER (WHERE ${INTERNAL_PREDICATE}), 0)::float AS int_sum
       FROM revenue_events_v2 e
-      LEFT JOIN api_credits t
-        ON t.api_key = e.client_id AND lower(t.wallet_address) = lower($1)
+      LEFT JOIN api_credits t ON t.api_key = e.client_id
       WHERE e.is_test_data = false OR e.is_test_data IS NULL
-    `, [addr]);
+    `, [FOUNDER_WALLETS]);
     trace.revenue_events_v2.count = parseInt(eventsResult.rows[0]?.count || 0);
     trace.revenue_events_v2.sum_usdt = parseFloat(eventsResult.rows[0]?.sum || 0);
     trace.revenue_events_v2.external_count = parseInt(eventsResult.rows[0]?.ext_count || 0);
