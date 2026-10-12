@@ -189,6 +189,28 @@ describe('x402 session keys (secure reuse credential)', function () {
     expect((await raw.query(`SELECT credits_usdt FROM api_credits WHERE api_key=$1`, [id])).rows[0].credits_usdt).to.equal(bal);
   });
 
+  it('k7: a settlement that fails mid-transaction leaves no key and no credit', async () => {
+    const { recordX402Settlement } = await import('../src/payments/x402/settlement.js');
+    const p2 = ethers.Wallet.createRandom().address;
+    const failing = {
+      query: db.query,
+      connect: async () => {
+        const c = await db.connect();
+        return { ...c, query(sql, params) {
+          if (/INSERT INTO payment_sources/.test(sql)) return Promise.reject(new Error('boom'));
+          return c.query(sql, params);
+        } };
+      },
+    };
+    let threw = false;
+    try { await recordX402Settlement(failing, { txHash: '0xsk_fail', payer: p2, network: 'eip155:8453', amountUsd: '0.10', bundleCalls: BUNDLE }); } catch { threw = true; }
+    expect(threw).to.equal(true);
+    const k = await raw.query(`SELECT count(*)::int n FROM x402_api_keys WHERE payer_address=$1`, [p2.toLowerCase()]);
+    const a = await raw.query(`SELECT count(*)::int n FROM api_credits WHERE lower(wallet_address)=$1`, [p2.toLowerCase()]);
+    expect(k.rows[0].n).to.equal(0);
+    expect(a.rows[0].n).to.equal(0);
+  });
+
   describe('k5: POST /v1/x402/key/recover', () => {
     let app;
     before(() => {
@@ -217,6 +239,17 @@ describe('x402 session keys (secure reuse credential)', function () {
       expect(r.status).to.equal(401);
       const none = await challenge(stranger.address);
       expect(none.status).to.equal(404);
+    });
+
+    it('rejects malformed input (400) and an expired challenge (401)', async () => {
+      const bad = await request(app).post('/v1/x402/key/recover').send({ address: 'nope', nonce: 'x', signature: '0x' });
+      expect(bad.status).to.equal(400);
+      const c = await challenge(payer.address);
+      await raw.query(`UPDATE x402_key_recovery_nonces SET expires_at = NOW() - INTERVAL '1 second' WHERE nonce = $1`, [c.body.nonce]);
+      const signature = await payer.signMessage(c.body.message);
+      const r = await request(app).post('/v1/x402/key/recover').send({ address: payer.address, nonce: c.body.nonce, signature });
+      expect(r.status).to.equal(401);
+      expect(r.body.api_key).to.equal(undefined);
     });
 
     it('a valid payer signature issues a new working key once and revokes the old one; nonce is single-use', async () => {
