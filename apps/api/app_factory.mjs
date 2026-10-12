@@ -322,10 +322,8 @@ app.get("/api/mode", (req, res) => {
         chain: "Polygon",
         contract: process.env.REVENUE_VAULT_ADDRESS || "0x577D3716d6Ad5b676d230f5409deF9838FABaCEF"
       },
-      freeTier: {
-        requestsPerDay: 500,
-        apiKeyRequired: false
-      },
+      freeTier: null,
+      authRequired: true,
       status: "https://rpc.satelink.network/api/status",
       pricing: "https://rpc.satelink.network/api/pricing"
     });

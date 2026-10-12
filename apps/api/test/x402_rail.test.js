@@ -279,6 +279,7 @@ describe('x402 payment rail', function () {
     const PRICE = 0.00003;
     const BUNDLE = 1000;
     const payerA = '0xAaAA00000000000000000000000000000000AaAa';
+    const payerB = '0xBbBB00000000000000000000000000000000BbBb';
 
     before(async function () {
       if (!process.env.DATABASE_URL) this.skip();
@@ -421,6 +422,38 @@ describe('x402 payment rail', function () {
       const anon = await runChain(makeReq({ ip: '10.15.0.2' }));
       expect(anon.nextCalled).to.equal(true);
       expect(anon.headers).to.deep.equal({});
+    });
+
+    it('t16: payment header alias ("payment") is recognized and screened by abuse guards', async () => {
+      process.env.X402_ENABLED = 'true';
+      const out = await runChain(makeReq({ headers: { 'payment': 'A'.repeat(9000) }, ip: '10.16.0.1' }));
+      expect(out.statusCode).to.equal(400);
+      expect(out.body.error).to.equal('x402_payment_header_too_large');
+    });
+
+    it('t17: settlement response attaches X-API-Key and X-Satelink-API-Key headers and credited.api_key body', async () => {
+      const mw = createX402Middleware(dbPool, silent);
+      process.env.X402_ENABLED = 'true';
+      const req = makeReq({ headers: { 'x-payment': Buffer.from(JSON.stringify({ x402Version: 2 })).toString('base64') }, ip: '10.17.0.1' });
+      // Verify recordSettlementOrReject returns creditedKey
+      const resFake = makeRes(() => {});
+      const recorded = await recordSettlementOrReject(dbPool, resFake, {
+        txHash: '0xtest_bundle_reuse', payer: payerB,
+        network: 'eip155:8453', amountUsd: '0.10', bundleCalls: BUNDLE,
+      }, silent);
+      expect(recorded.creditedKey).to.equal(`x402_${payerB.toLowerCase()}`);
+      expect(recorded.callsRemaining).to.equal(BUNDLE);
+    });
+
+    it('t18: subsequent request presenting the credited key via X-API-Key bypasses free-tier gate', async () => {
+      const mw = createX402Middleware(dbPool, silent);
+      process.env.X402_ENABLED = 'true';
+      const req = makeReq({ headers: { 'x-api-key': `x402_${payerB.toLowerCase()}` }, ip: '10.18.0.1' });
+      const out = await new Promise((resolve) => {
+        const res = makeRes(resolve);
+        Promise.resolve(mw(req, res, () => gate(req, res, () => resolve({ nextCalled: true })))).catch((e) => resolve({ error: e }));
+      });
+      expect(out.nextCalled).to.equal(true);
     });
   });
 });

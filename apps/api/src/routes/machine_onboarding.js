@@ -162,6 +162,7 @@ function manifestBody() {
         rpc: `${base}/rpc/{chain}`,
         auth_header: 'X-API-Key',
         example: `curl -X POST ${base}/rpc/polygon -H "X-API-Key: sk_..." -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'`,
+        x402_reuse: 'After an x402 bundle payment, reuse the returned X-API-Key header on subsequent requests to spend remaining bundle calls without paying again.',
       },
       observe: {
         balance: `${base}/api/keys/usage (X-API-Key header)`,
