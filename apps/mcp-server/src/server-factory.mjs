@@ -18,9 +18,9 @@ export const POLYGON_RPC_TOOL = {
   name: 'polygon_rpc',
   description:
     'Call any Polygon PoS (chain 137) JSON-RPC method through Satelink — pay-per-call, ' +
-    'no account, no subscription. Free for the first calls each day; after that, if a ' +
-    'Base-funded USDC wallet is configured (SATELINK_WALLET_PRIVATE_KEY) the call is paid ' +
-    'automatically via x402 ($0.10 = 1,000 calls). Supports every standard method: ' +
+    'no account, no subscription. Every call is paid: with a Base-funded USDC wallet ' +
+    'configured (SATELINK_WALLET_PRIVATE_KEY) the first call buys a 1,000-call bundle via ' +
+    'x402 ($0.10) and later calls draw it down automatically. Supports every standard method: ' +
     'eth_call, eth_getBalance, eth_blockNumber, eth_getLogs, eth_getTransactionReceipt, ' +
     'eth_sendRawTransaction, eth_estimateGas, eth_getCode, and the rest.',
   inputSchema: {
@@ -83,19 +83,37 @@ const CHECK_BALANCE_PROMPT = 'check_wallet_balance';
  * @param {string|null} deps.wallet
  * @param {boolean} deps.canPay
  */
-export function createSatelinkMcpServer({ executeRpc, executeIntelligence, rpcUrl, wallet, canPay }) {
+// tool name → registry product id (apps/api/config/plan_catalog.v2.json `products`).
+export const TOOL_PRODUCTS = Object.freeze({
+  polygon_rpc: 'polygon_rpc',
+  ...Object.fromEntries(INTELLIGENCE_TOOL_DEFS.map((t) => [t.name, 'trading_intelligence'])),
+});
+
+/** The tool list a server advertises; internal products only on explicit opt-in. */
+export function advertisedTools({ includeInternal = process.env.SATELINK_MCP_INTERNAL_TOOLS === '1' } = {}) {
+  return [POLYGON_RPC_TOOL, ...(includeInternal ? INTELLIGENCE_TOOL_DEFS : [])];
+}
+
+export function createSatelinkMcpServer({ executeRpc, executeIntelligence, rpcUrl, wallet, canPay, includeInternal }) {
   const server = new Server(
     { name: 'satelink-mcp', version: '2.0.0' },
     { capabilities: { tools: {}, resources: {}, prompts: {} } },
   );
 
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: [POLYGON_RPC_TOOL, ...INTELLIGENCE_TOOL_DEFS],
-  }));
+  // Advertised tools follow the product registry (apps/api/config/plan_catalog.v2.json
+  // `products`; enforced by apps/api/test/product_registry.test.js). Trading
+  // Intelligence is INTERNAL since its delisting (#515) — its tools are listed
+  // only when the operator opts in with SATELINK_MCP_INTERNAL_TOOLS=1.
+  const tools = advertisedTools({ includeInternal });
+
+  server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools }));
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
 
+    if (INTELLIGENCE_TOOL_NAMES.has(name) && !tools.some((t) => t.name === name)) {
+      throw new Error(`Unknown tool: ${name}`);
+    }
     if (INTELLIGENCE_TOOL_NAMES.has(name)) {
       if (!executeIntelligence) {
         return { content: [{ type: 'text', text: 'Intelligence tools are not configured on this server.' }], isError: true };
@@ -142,7 +160,7 @@ export function createSatelinkMcpServer({ executeRpc, executeIntelligence, rpcUr
       rpc_url: rpcUrl,
       price: '$0.10 USDC per 1,000-call bundle (≈ $0.0001/call)',
       payment_rail: 'x402 — USDC on Base (eip155:8453)',
-      free_tier: 'first calls each day are free, no account',
+      free_tier: null, // no free RPC: every call is paid (x402 bundle or USDT credits)
       wallet_configured: canPay,
       paying_wallet: wallet || null,
       how_to_pay:

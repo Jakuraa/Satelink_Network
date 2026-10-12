@@ -56,6 +56,14 @@ const SCHEMA_DDL = `
     consumed_at   TIMESTAMPTZ,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
   );
+  CREATE TABLE IF NOT EXISTS x402_key_denials (
+    id                     BIGSERIAL PRIMARY KEY,
+    account_api_key        TEXT NOT NULL,
+    code                   TEXT NOT NULL,
+    credits_usdt_at_denial NUMERIC(18,6),
+    created_at             TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  );
+  CREATE INDEX IF NOT EXISTS x402_key_denials_created_idx ON x402_key_denials (created_at);
 `;
 
 // No process-level "already created" cache: a cached flag can outlive the
@@ -64,7 +72,8 @@ const SCHEMA_DDL = `
 // catalog lookup per call is cheap; the DDL runs only when a table is missing.
 export async function ensureX402KeySchema(db) {
   const r = await db.query(
-    `SELECT to_regclass('x402_api_keys') IS NOT NULL AND to_regclass('x402_key_recovery_nonces') IS NOT NULL AS ok`
+    `SELECT to_regclass('x402_api_keys') IS NOT NULL AND to_regclass('x402_key_recovery_nonces') IS NOT NULL
+            AND to_regclass('x402_key_denials') IS NOT NULL AS ok`
   );
   if (!r.rows[0]?.ok) await db.query(SCHEMA_DDL);
 }
@@ -104,4 +113,25 @@ export async function resolveSessionKey(db, key) {
     if (err.code === '42P01') return null; // table not created yet → no keys exist
     throw err;
   }
+}
+
+/**
+ * 402-loop instrumentation (admin alert x402_402_loop): a request carrying an
+ * issued session key — proof of a past payment — was refused with a 402.
+ * Records the account's balance at that moment so the alert can tell a real
+ * loop (credit left, still 402) from normal bundle exhaustion. Fire-and-forget:
+ * never throws, never blocks the response, never stores the key.
+ */
+export async function recordSessionKeyDenial(db, key, code) {
+  try {
+    if (!isX402SessionKey(key)) return;
+    const bound = await resolveSessionKey(db, key);
+    if (!bound) return;
+    await ensureX402KeySchema(db);
+    await db.query(
+      `INSERT INTO x402_key_denials (account_api_key, code, credits_usdt_at_denial)
+       SELECT $1, $2, credits_usdt FROM api_credits WHERE api_key = $1`,
+      [bound.account_api_key, String(code || 'unknown').slice(0, 64)]
+    );
+  } catch { /* instrumentation only */ }
 }

@@ -126,7 +126,13 @@ export function createMachineIntelRouter(pool, redis) {
             spec: 'https://www.x402.org',
           }] : []),
         ],
-        tiers: Object.entries(TIER_DAILY_LIMIT).map(([tier, daily_limit]) => ({ tier, daily_limit })),
+        // No free RPC (Phase 2, 2026-09): every tier — including the starter
+        // "free" account, which must deposit first — is charged per call.
+        free_calls: 0,
+        tiers: Object.entries(TIER_DAILY_LIMIT).map(([tier, daily_limit]) => ({
+          tier, daily_limit, cost_per_call_usd: PRICE_PER_CALL_USDT,
+          ...(tier === 'free' ? { note: 'starter account: must deposit before it can serve; every call is charged' } : {}),
+        })),
         performance: intel?.performance ?? null,
         machine_preference_score: intel?.machine_preference_score?.score ?? null,
         discovery: {

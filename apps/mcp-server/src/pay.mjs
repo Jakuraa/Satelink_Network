@@ -16,7 +16,7 @@
 //
 // Reuse, not redesign: the wallet key lives ONLY in the operator's process and
 // is used ONLY to sign x402 payments. When no key is configured the server
-// degrades to plain fetch (free tier / manual-payment surfacing), byte-identical
+// degrades to plain fetch (402 surfaced for manual payment), byte-identical
 // to the pre-existing behavior.
 
 import { wrapFetchWithPayment, x402Client } from '@x402/fetch';

@@ -13,9 +13,29 @@
   },
   "rails": {
     "note": "Per-rail prices shown by discovery (/v1/pricing, /.well-known/satelink.json, /.well-known/x402). Enforcement reads credit_service.PRICE_PER_CALL_USDT and x402/config.js; test/catalog_consistency.test.js fails CI if these drift.",
-    "rpc_credits": { "product": "rpc", "unit": "call", "price_usd_per_call": 0.00003, "asset": "USDT", "network": "eip155:137", "status": "LIVE" },
-    "rpc_x402_bundle": { "product": "rpc", "unit": "bundle", "price_usd": 0.10, "calls": 1000, "asset": "USDC", "network": "eip155:8453", "status": "LIVE" },
-    "intelligence_credits": { "product": "intelligence", "unit": "request", "asset": "USDT credits (funded by USDT deposit or the x402 bundle)", "status": "LIVE" }
+    "rpc_credits": {
+      "product": "rpc",
+      "unit": "call",
+      "price_usd_per_call": 3e-05,
+      "asset": "USDT",
+      "network": "eip155:137",
+      "status": "LIVE"
+    },
+    "rpc_x402_bundle": {
+      "product": "rpc",
+      "unit": "bundle",
+      "price_usd": 0.1,
+      "calls": 1000,
+      "asset": "USDC",
+      "network": "eip155:8453",
+      "status": "LIVE"
+    },
+    "intelligence_credits": {
+      "product": "intelligence",
+      "unit": "request",
+      "asset": "USDT credits (funded by USDT deposit or the x402 bundle)",
+      "status": "LIVE"
+    }
   },
   "boundary": "Dodo-funded value (plan allowance, packs) is spendable on Trading Intelligence only. RPC / x402 stay on the crypto rail (USDT credits).",
   "windows": {
@@ -213,5 +233,69 @@
     "marginal_cost_source": "docs/web/PRICING_MODEL.md — Trading Intelligence is served from cached derived snapshots; per-call marginal cost ≈ $0. Sensitivity (break-even cost per UU) is reported alongside.",
     "weeks_per_month_worst": 4.43,
     "weeks_per_year_worst": 53
-  }
+  },
+  "product_statuses": [
+    "planned",
+    "in development",
+    "implemented-unverified",
+    "staging-verified",
+    "production-verified",
+    "degraded",
+    "deprecated"
+  ],
+  "products": [
+    {
+      "id": "polygon_rpc",
+      "label": "Polygon RPC",
+      "audience": "public",
+      "status": "production-verified",
+      "evidence": "2026-10-12: x402 settlements on Base + USDT vault credits live; guessed-key 402 verified in prod after #522",
+      "surfaces": [
+        "satelink.network",
+        "console",
+        "developer_portal",
+        "mcp",
+        "well_known"
+      ],
+      "mcp_tools": [
+        "polygon_rpc"
+      ]
+    },
+    {
+      "id": "trading_ai_agent",
+      "label": "Trading AI Agent",
+      "audience": "beta",
+      "status": "implemented-unverified",
+      "mode": "paper/beta",
+      "evidence": "code on trading-agent/integration (#492, draft); not deployed — Gate 0 + REAL MONEY GATE 1 unmet; beta waitlist live",
+      "surfaces": [
+        "satelink.network",
+        "console"
+      ],
+      "mcp_tools": []
+    },
+    {
+      "id": "trading_intelligence",
+      "label": "Trading Intelligence",
+      "audience": "internal",
+      "status": "deprecated",
+      "evidence": "delisted as a standalone product (#515/#518); /v1/intelligence keeps serving existing keys; internal only",
+      "surfaces": [],
+      "mcp_tools": [
+        "funding_rate_heatmap",
+        "open_interest_shifts",
+        "liquidation_clusters",
+        "market_microstructure"
+      ]
+    },
+    {
+      "id": "personal_ai_agent",
+      "label": "Personal AI Agent",
+      "audience": "internal",
+      "status": "planned",
+      "evidence": "no implementation exists in any branch (inventory 2026-10-13); not being built this round",
+      "surfaces": [],
+      "mcp_tools": []
+    }
+  ]
 }
