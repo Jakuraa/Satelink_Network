@@ -193,3 +193,21 @@ PHASE 6 COMPLETE.
 ## Phase 9 — Go-live handoff (2026-10-11)
 - `docs/trading-agent/GO_LIVE_FOUNDER_CHECKLIST.md`: 14 ordered founder actions, Claude Code follow-ups, per-broker / per-interface status.
 - `BLOCKERS.md` B-05 OPEN → PARTIAL (copy fixed in held #511; not deployed). Register test: 7 passing.
+
+## Platform directive 2026-10-12 — Wave 0 + Wave 1 (payments on Financial OS)
+- **Wave 0 (main):**
+  - 0.2: #399 closed and superseded by #519 (merged `16c42a4c`; the lockfile was regenerated with npm 10 and the root `overrides` were aligned to react 18.3.1).
+  - 0.3: #518 merged `f928872a`. Live checks: `/products/trading-intelligence` and `/intelligence` 308 to `/trading-agent/product`, and `/v1/intelligence` returns 200.
+  - 0.4: #517 open (beta founder-email warning plus admin flag; Part A decision doc).
+  - Health was checked before and after each merge: api 200, site 200, console 307, jakuraa 200.
+- **0.1 (#492) PAUSED.**
+  - The `origin/main` merge was resolved locally (17 conflicts taken from main; gate doc regenerated) but is not pushed.
+  - The session's permission classifier refused test-file edits: the `migrations.integration.test.ts` count and the TRUNCATE-vs-029 append-only cleanup. Both are founder/user actions.
+- **Wave 1 (this PR, stacked into `trading-agent/integration`):**
+  - Migrations: 038 (approved additive kinds) and 039 (`payment_intents`, `payment_events`, `payment_entitlement_grants`, `provider_reconciliation_runs`).
+  - `apps/api/src/payments/`: contract, single-transaction ingest, in-transaction ledger posting, `/webhooks/:provider` router, and adapters for onchain-native, razorpay (test mode), payram (flag OFF), dodo (unchanged path) and cashfree (stub).
+  - Evidence:
+    - 21 unit tests (`apps/api/test/payments_adapters.test.js`).
+    - 12 real-Postgres integration tests (`database/__tests__/payments_ingest.integration.test.ts`), plus the `ledger_refund_kind` suite: 16/16 passing on local Postgres.
+    - Migrations 001–039 applied through `npx tsx database/runner.ts migrate` to a throwaway local DB.
+    - API baseline: no new failures from this change. Stage 31 is pre-existing on integration, and `trading_billing` "raw bytes" flaked once in three runs.
