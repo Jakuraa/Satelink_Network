@@ -8,7 +8,7 @@
 // Dodo stays on its existing routes and is NOT registered here.
 import { createPaymentWebhookRouter } from './webhook_router.mjs';
 import { createPaymentsCheckoutRouter } from './checkout_router.mjs';
-import { createOnchainNativeAdapter } from './adapters/onchain_native.mjs';
+import { createOnchainNativeAdapter, validateInvoiceConfig } from './adapters/onchain_native.mjs';
 import { createRazorpayAdapter } from './adapters/razorpay.mjs';
 import { createPayramAdapter, payramEnabled } from './adapters/payram.mjs';
 
@@ -42,6 +42,10 @@ function lazyProvider(p) {
 export function mountPayments(app, pool, { env = process.env, logger = console } = {}) {
   if (!isPaymentsV1Enabled(env)) return false;
   const adapters = buildAdapters(pool, env);
+  // Startup validator (Step 4.2): on-chain invoices stay refused — and are not
+  // offered at checkout — until a dedicated, non-listener-credited address is set.
+  const invoice = validateInvoiceConfig(env);
+  if (!invoice.ok) logger.warn(`[payments] on-chain invoices DISABLED (${invoice.reason}): ${invoice.message}`);
   const webhookAdapters = Object.values(adapters).filter((a) => a.id !== 'onchain-native');
   app.use('/webhooks', createPaymentWebhookRouter(pool, { adapters: webhookAdapters, logger }));
   const rpc = { polygon: env.PAYMENTS_RPC_POLYGON, base: env.PAYMENTS_RPC_BASE };

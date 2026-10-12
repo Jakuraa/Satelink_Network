@@ -53,10 +53,50 @@ export function eip681Transfer({ token, chainId, to, amountMinor }) {
   return `ethereum:${token}@${chainId}/transfer?address=${to}&uint256=${BigInt(amountMinor)}`;
 }
 
-export function assertSafeInvoiceAddress(c) {
+// Every address an EXISTING path auto-credits to api_credits (RPC balances).
+// A checkout invoice paid to any of these could be credited twice (RPC balance
+// + plan period), so the invoice address must be none of them:
+//   - RevenueVault V2 (DepositListener, VAULT_ADDRESS / REVENUE_VAULT_ADDRESS) and
+//     its deployed default; RevenueVault V1 (legacy); REVENUE_VAULT_CONTRACT
+//   - POST /api/keys/deposit claims USDT transfers to REVENUE_VAULT_ADDRESS
+//   - treasury / x402 payTo 0x966E… (TREASURY_ADDRESS, X402_PAY_TO)
+export const LISTENER_CREDITED_DEFAULTS = Object.freeze([
+  '0x577D3716d6Ad5b676d230f5409deF9838FABaCEF', // RevenueVaultV2
+  '0x80AFEaC3B77CbeC1f7B9f24a50319DC72785DdA3', // RevenueVault V1 (legacy)
+  '0x966E1Ae22996545015b1414B35234b10719d7Ad4', // treasury / x402 payTo
+]);
+
+export function listenerCreditedAddresses(env = process.env) {
+  const all = [
+    ...LISTENER_CREDITED_DEFAULTS,
+    env.VAULT_ADDRESS, env.REVENUE_VAULT_ADDRESS, env.REVENUE_VAULT_CONTRACT,
+    env.TREASURY_ADDRESS, env.X402_PAY_TO,
+  ];
+  return [...new Set(all.filter((a) => /^0x[0-9a-fA-F]{40}$/.test(a ?? '')).map((a) => a.toLowerCase()))];
+}
+
+/**
+ * Startup validator: invoice payments are refused unless
+ * PAYMENTS_ONCHAIN_INVOICE_ADDRESS is a dedicated address (founder-provided —
+ * recommended: a Safe multisig on Polygon; address only, never a key).
+ * @returns {{ ok: true } | { ok: false, reason: 'invoice_address_unset' | 'invoice_address_unsafe', message: string }}
+ */
+export function validateInvoiceConfig(env = process.env) {
+  const raw = env.PAYMENTS_ONCHAIN_INVOICE_ADDRESS;
+  if (!/^0x[0-9a-fA-F]{40}$/.test(raw ?? '')) {
+    return { ok: false, reason: 'invoice_address_unset', message: 'PAYMENTS_ONCHAIN_INVOICE_ADDRESS is not set to a 0x address (founder action)' };
+  }
+  if (listenerCreditedAddresses(env).includes(raw.toLowerCase())) {
+    return { ok: false, reason: 'invoice_address_unsafe', message: 'the invoice address is one an existing deposit path auto-credits (vault / treasury / x402 payTo)' };
+  }
+  return { ok: true };
+}
+
+/** Per-invoice guard (kept alongside the startup validator — defence in depth). */
+export function assertSafeInvoiceAddress(c, env = process.env) {
   if (!c.invoiceAddress) throw new PaymentError('NOT_CONFIGURED', 'PAYMENTS_ONCHAIN_INVOICE_ADDRESS is not set (founder action)');
-  const forbidden = [c.vaultAddress, c.x402PayTo, '0x966E1Ae22996545015b1414B35234b10719d7Ad4'].filter(Boolean).map((x) => x.toLowerCase());
-  if (forbidden.includes(c.invoiceAddress.toLowerCase())) {
+  const forbidden = new Set([...listenerCreditedAddresses(env), c.vaultAddress, c.x402PayTo].filter(Boolean).map((x) => x.toLowerCase()));
+  if (forbidden.has(c.invoiceAddress.toLowerCase())) {
     throw new PaymentError('NOT_CONFIGURED', 'the invoice address must not be the vault or the treasury (existing paths auto-credit them)');
   }
 }
@@ -78,6 +118,9 @@ export function createOnchainNativeAdapter({ env = process.env, lookupIntentAmou
       oneTime: true, recurring: false, refunds: false,
       currencies: ['USDT', 'USDC'], networks: ['polygon', 'base'],
       hostedCheckout: false, requiresKyb: false,
+      // Invoice payments are refused (never offered at checkout) until a
+      // dedicated, non-listener-credited invoice address is configured.
+      ...(() => { const v = validateInvoiceConfig(env); return v.ok ? { available: true } : { available: false, unavailableReason: v.reason }; })(),
     }),
 
     /**
@@ -89,7 +132,7 @@ export function createOnchainNativeAdapter({ env = process.env, lookupIntentAmou
       const c = cfg();
       const rail = INVOICE_RAILS[network];
       if (rail && rail.currency === currency) {
-        assertSafeInvoiceAddress(c);
+        assertSafeInvoiceAddress(c, env);
         return {
           canonicalRef, providerPaymentId: null,
           invoice: {
