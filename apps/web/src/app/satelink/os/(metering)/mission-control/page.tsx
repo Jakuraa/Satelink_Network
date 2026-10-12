@@ -248,16 +248,16 @@ export default function MissionControlPage() {
           <div className="flex items-start justify-between mb-3">
             <div>
               <span className="text-xs font-medium uppercase tracking-wider text-zinc-500 block">External Customer Revenue</span>
-              <span className="text-[10px] text-zinc-600 block">Verified non-treasury metered</span>
+              <span className="text-[10px] text-zinc-600 block">Metered, excl. founder/treasury & test data — not reconciled on-chain</span>
             </div>
             <DollarSign className="h-4 w-4 text-zinc-600" />
           </div>
           <div className="font-mono text-2xl font-bold text-white tabular-nums mb-1">
-            {fin ? usd5(fin.external_revenue_usdt ?? fin.metered_value_usdt) : "—"}
+            {fin && fin.external_revenue_usdt != null ? usd5(fin.external_revenue_usdt) : "unavailable"}
           </div>
           <div className="flex items-center gap-1.5 flex-wrap">
-            {(fin?.external_revenue_usdt ?? fin?.metered_value_usdt ?? 0) > 0 ? (
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-green-500/15 text-green-400">▲ Verified</span>
+            {(fin?.external_revenue_usdt ?? 0) > 0 ? (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/15 text-amber-400">Unreconciled</span>
             ) : (
               <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-zinc-500/15 text-zinc-400">—</span>
             )}
@@ -472,7 +472,7 @@ export default function MissionControlPage() {
             <div className="rounded-sm bg-zinc-950/40 p-3">
               <div className="text-xs text-zinc-500 mb-1">Blocked (Unfunded)</div>
               <div className="text-2xl font-mono text-amber-400 tabular-nums">
-                {fin ? (fin.settlement?.batches_blocked_unfunded ?? 0).toLocaleString() : "—"}
+                {fin?.settlement?.batches_blocked_unfunded != null ? fin.settlement.batches_blocked_unfunded.toLocaleString() : "unavailable"}
               </div>
               <div className="text-[10px] text-amber-500/70 mt-1">Signer gas starved</div>
             </div>

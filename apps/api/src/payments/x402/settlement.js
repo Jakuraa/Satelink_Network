@@ -49,7 +49,7 @@ export async function recordX402Settlement(pool, {
   // network; network-derived flagging still covers unknown testnet payers.
   const isTest = isTestNetwork(network) || isFounderWallet(payer);
   const willCredit = bundleCalls > 0 && WALLET_RE.test(payer || '');
-  // DDL outside the money transaction (idempotent, cached after first call).
+  // DDL outside the money transaction (idempotent; a catalog check per call).
   if (willCredit) await ensureX402KeySchema(pool);
   const client = await pool.connect();
   try {
