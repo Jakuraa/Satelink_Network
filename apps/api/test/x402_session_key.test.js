@@ -237,8 +237,9 @@ describe('x402 session keys (secure reuse credential)', function () {
       const signature = await payer.signMessage('anything');
       const r = await request(app).post('/v1/x402/key/recover').send({ address: payer.address, nonce: 'a'.repeat(32), signature });
       expect(r.status).to.equal(401);
+      // No enumeration: a wallet with no account gets a challenge like any other.
       const none = await challenge(stranger.address);
-      expect(none.status).to.equal(404);
+      expect(none.status).to.equal(200);
     });
 
     it('rejects malformed input (400) and an expired challenge (401)', async () => {
