@@ -67,6 +67,14 @@ interface FinancialTruth {
   warnings?: { code: string; message: string; severity: "critical" | "warning" }[];
 }
 
+// GET /api/public/stats — sanitized network facts (no revenue/treasury fields).
+interface PublicStats {
+  ok: boolean;
+  nodes_online: number | null;
+  uptime_pct_24h: number | null;
+  requests_24h: number | null;
+}
+
 interface EconomicsSummary {
   ok: boolean;
   totalRevenueUsdt: number;
@@ -153,7 +161,10 @@ const compact = (n: number | null | undefined) => {
 const RPC_URL = "https://rpc.satelink.network";
 
 export default function MissionControlPage() {
+  // Financial panels: /api/financial/truth is admin-only (401 without an
+  // admin token). Public panels read /api/public/stats.
   const financial = useEndpoint<FinancialTruth>(["/api/financial/truth"]);
+  const publicStats = useEndpoint<PublicStats>(["/api/public/stats"]);
   const economics = useEndpoint<EconomicsSummary>(["/api/economics/summary"]);
   const [execSummary, setExecSummary] = useState<ExecutiveSummary | null>(null);
   const [execLoading, setExecLoading] = useState(true);
@@ -207,6 +218,8 @@ export default function MissionControlPage() {
   }, []);
 
   const fin = financial.data;
+  const finMissing = financial.error === "HTTP 401" || financial.error === "HTTP 403" ? "admin only" : "—";
+  const requests24h = publicStats.data?.requests_24h ?? null;
   const eco = economics.data;
   const pipeline = fin?.pipeline;
   const warnings = fin?.warnings ?? [];
@@ -253,7 +266,7 @@ export default function MissionControlPage() {
             <DollarSign className="h-4 w-4 text-zinc-600" />
           </div>
           <div className="font-mono text-2xl font-bold text-white tabular-nums mb-1">
-            {fin && fin.external_revenue_usdt != null ? usd5(fin.external_revenue_usdt) : "unavailable"}
+            {fin && fin.external_revenue_usdt != null ? usd5(fin.external_revenue_usdt) : finMissing === "—" ? "unavailable" : finMissing}
           </div>
           <div className="flex items-center gap-1.5 flex-wrap">
             {(fin?.external_revenue_usdt ?? 0) > 0 ? (
@@ -274,9 +287,9 @@ export default function MissionControlPage() {
             <span className="text-xs font-medium uppercase tracking-wider text-zinc-500">API Requests</span>
             <Activity className="h-4 w-4 text-zinc-600" />
           </div>
-          <div className="font-mono text-2xl font-bold text-white tabular-nums mb-1">{execSummary ? compact(execSummary.total_requests_24h) : "—"}</div>
+          <div className="font-mono text-2xl font-bold text-white tabular-nums mb-1">{requests24h != null ? compact(requests24h) : "—"}</div>
           <div className="flex items-center gap-1.5">
-            <span className="text-xs text-zinc-500">{(execSummary as any)?.requests_window || "24h window"}</span>
+            <span className="text-xs text-zinc-500">24h window</span>
           </div>
         </div>
 
@@ -300,7 +313,7 @@ export default function MissionControlPage() {
             <span className="text-xs font-medium uppercase tracking-wider text-zinc-500">Settlement Batches</span>
             <Server className="h-4 w-4 text-zinc-600" />
           </div>
-          <div className="font-mono text-2xl font-bold text-white tabular-nums mb-1">{fin ? confirmedBatches : "—"}</div>
+          <div className="font-mono text-2xl font-bold text-white tabular-nums mb-1">{fin ? confirmedBatches : finMissing}</div>
           <div className="flex items-center gap-1.5">
             <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-zinc-500/15 text-zinc-400">—</span>
             <span className="text-xs text-zinc-500">Confirmed on-chain</span>
@@ -387,6 +400,9 @@ export default function MissionControlPage() {
         {/* Left — Revenue Pipeline */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-sm p-5">
           <div className="text-sm font-semibold uppercase tracking-wider text-zinc-400 mb-3">Revenue Pipeline</div>
+          {!fin ? (
+            <p className="text-sm text-zinc-500">{finMissing === "admin only" ? "Admin only." : "Unavailable."}</p>
+          ) : (
           <div className="space-y-3">
             <PipelineRow label="Metered Events" value={pipeline?.revenue_events_v2.count ?? 0} />
             <PipelineRow label="Open Epochs" value={pipeline?.epoch_ledger.open ?? 0} />
@@ -406,6 +422,7 @@ export default function MissionControlPage() {
               </div>
             ) : null}
           </div>
+          )}
         </div>
 
         {/* Right — Quick Start */}
@@ -459,12 +476,12 @@ export default function MissionControlPage() {
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
             <div className="rounded-sm bg-zinc-950/40 p-3">
               <div className="text-xs text-zinc-500 mb-1">Open Epochs</div>
-              <div className="text-2xl font-mono text-white tabular-nums">{fin ? openEpochs.toLocaleString() : "—"}</div>
+              <div className="text-2xl font-mono text-white tabular-nums">{fin ? openEpochs.toLocaleString() : finMissing}</div>
               <div className="text-[10px] text-zinc-600 mt-1">Pending aggregation</div>
             </div>
             <div className="rounded-sm bg-zinc-950/40 p-3">
               <div className="text-xs text-zinc-500 mb-1">Simulated Batches</div>
-              <div className="text-2xl font-mono text-white tabular-nums">{fin ? confirmedBatches.toLocaleString() : "—"}</div>
+              <div className="text-2xl font-mono text-white tabular-nums">{fin ? confirmedBatches.toLocaleString() : finMissing}</div>
               <div className="text-[10px] text-zinc-600 mt-1">
                 {fin?.settlement?.confirmed_batches_usdt ? `${usd5(fin.settlement.confirmed_batches_usdt)} internal` : "Simulated/internal"}
               </div>
@@ -472,13 +489,13 @@ export default function MissionControlPage() {
             <div className="rounded-sm bg-zinc-950/40 p-3">
               <div className="text-xs text-zinc-500 mb-1">Blocked (Unfunded)</div>
               <div className="text-2xl font-mono text-amber-400 tabular-nums">
-                {fin?.settlement?.batches_blocked_unfunded != null ? fin.settlement.batches_blocked_unfunded.toLocaleString() : "unavailable"}
+                {fin?.settlement?.batches_blocked_unfunded != null ? fin.settlement.batches_blocked_unfunded.toLocaleString() : finMissing === "—" ? "unavailable" : finMissing}
               </div>
               <div className="text-[10px] text-amber-500/70 mt-1">Signer gas starved</div>
             </div>
             <div className="rounded-sm bg-zinc-950/40 p-3">
               <div className="text-xs text-zinc-500 mb-1">Total Metered Usage</div>
-              <div className="text-2xl font-mono text-white tabular-nums">{fin ? usd5(pendingRevenue) : "—"}</div>
+              <div className="text-2xl font-mono text-white tabular-nums">{fin ? usd5(pendingRevenue) : finMissing}</div>
               <div className="text-[10px] text-zinc-600 mt-1">All billable events</div>
             </div>
           </div>

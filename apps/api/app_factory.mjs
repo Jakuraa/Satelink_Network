@@ -20,6 +20,7 @@ import { createOsEventsRouter } from "./src/realtime/os-events-route.js";
 import { createMachineAccessRouter } from "./src/machine-access/index.js";
 import { createAdminMalRouter } from "./src/routes/admin_mal_route.mjs";
 import { createFinancialTruthRouter } from "./src/services/financial/truth.js";
+import { createPublicStatsRouter } from "./src/routes/public_stats.js";
 import { createLedgerParityRouter } from "./src/internal/ledger_parity.js";
 import { createDrawParityRouter } from "./src/ledger/draw_parity.js";
 import { createCapacityParityRouter } from "./src/internal/capacity_parity.js";
@@ -504,8 +505,13 @@ app.get("/api/mode", (req, res) => {
   // Admin MAL - Founder Mode diagnostics (MASTER_ADMIN_TOKEN protected)
   app.use("/api/admin", createAdminMalRouter(pool));
 
-  // Financial Truth - canonical source for all financial metrics
-  app.use("/api/financial", createFinancialTruthRouter(pool));
+  // Financial Truth - canonical source for all financial metrics. Admin-only
+  // (decision 2026-10-13): it carries revenue, treasury and settlement
+  // figures. Public pages read /api/public/stats instead.
+  app.use("/api/financial", requireAdminAuth, createFinancialTruthRouter(pool));
+
+  // Sanitized public network facts (node count, uptime, request volume only).
+  app.use("/api/public", createPublicStatsRouter(pool, { getFreeTierStats }));
 
   // M3 — ledger shadow: read-only parity measurement (nothing reads the ledger
   // for a decision). GET /internal/ledger-parity.

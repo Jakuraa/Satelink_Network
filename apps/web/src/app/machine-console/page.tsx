@@ -85,7 +85,7 @@ async function adminProxyGet(path: string): Promise<Json | null> {
 
 function useEconomyData(windowQS: string) {
   const [economics, setEconomics] = useState<Json | null>(null);
-  const [truth, setTruth] = useState<Json | null>(null);
+  const [publicStats, setPublicStats] = useState<Json | null>(null);
   const [exec, setExec] = useState<Json | null>(null);
   const [execLoading, setExecLoading] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -95,11 +95,12 @@ function useEconomyData(windowQS: string) {
     (async () => {
       const [e, t] = await Promise.all([
         getJson('/api/economics/summary'),
-        getJson('/api/financial/truth'),
+        // Public, sanitized network facts. /api/financial/truth is admin-only.
+        getJson('/api/public/stats'),
       ]);
       if (!alive) return;
       setEconomics(e);
-      setTruth(t);
+      setPublicStats(t);
       setLoading(false);
     })();
     return () => {
@@ -122,7 +123,7 @@ function useEconomyData(windowQS: string) {
     };
   }, [windowQS]);
 
-  return { economics, truth, exec, execLoading, loading };
+  return { economics, publicStats, exec, execLoading, loading };
 }
 
 const usd5 = (n: unknown) =>
@@ -238,20 +239,19 @@ function MachinePortal() {
   }, []);
   const spendMin = spend === 'all' ? 0 : Number(spend);
 
-  const { economics, truth, exec, execLoading, loading } = useEconomyData(windowQS);
+  const { economics, publicStats, exec, execLoading, loading } = useEconomyData(windowQS);
   const windowRevenue = exec?.revenue_window_usdt as number | undefined;
   const windowEvents = exec?.revenue_window_events as number | undefined;
 
-  // Revenue displayed on the machine dashboard must be REAL metered revenue —
-  // SUM(revenue_events_v2.amount_usdt) with test data excluded — sourced from
-  // /api/financial/truth (metered_value_usdt). The epochs-table aggregate
-  // (economics/summary.totalRevenueUsdt) cannot exclude test rows and overstates
-  // the real figure ($0.00036 vs verified real $0.00033), so it is NOT used here.
-  const metered = truth?.metered_value_usdt as number | undefined;
+  // Revenue, treasury and settlement figures come only from the admin-only
+  // /api/financial/truth (decision 2026-10-13), so this public page shows them
+  // as unavailable. The epochs-table aggregate (economics/summary) cannot
+  // exclude test rows, so it is NOT used as a substitute.
+  const metered: number | undefined = undefined;
   const totalRevenue = metered;
-  const withdrawable = truth?.withdrawable_now_usdt as number | undefined;
-  const confirmedBatches = truth?.settlement?.batches_confirmed as number | undefined;
-  const eventCount = truth?.pipeline?.revenue_events_v2?.count as number | undefined;
+  const withdrawable: number | undefined = undefined;
+  const confirmedBatches: number | undefined = undefined;
+  const eventCount = (publicStats?.requests_24h ?? undefined) as number | undefined;
   const epochId = economics?.lastEpochId as number | undefined;
   const epochRevenue = economics?.lastEpochRevenueUsdt as number | undefined;
   const epochClosedAt = economics?.lastEpochClosedAt as string | null | undefined;
@@ -440,7 +440,7 @@ function MachinePortal() {
       { label: 'RPC Calls', value: DASH, icon: Network },
       { label: 'AI Calls', value: DASH, icon: Bot },
       { label: 'Automation Jobs', value: DASH, icon: RefreshCcw },
-      { label: 'Total Requests', value: eventCount != null ? eventCount.toLocaleString() : DASH, icon: BarChart3 },
+      { label: 'Requests (24h)', value: eventCount != null ? eventCount.toLocaleString() : DASH, icon: BarChart3 },
     ];
     return (
       <div className="flex flex-col gap-6">
@@ -717,7 +717,7 @@ function MachinePortal() {
       autonomous: Autonomous,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [loading, economics, truth, exec, spend, windowQS]
+    [loading, economics, publicStats, exec, spend, windowQS]
   );
 
   const Active = views[view] ?? MissionControl;
