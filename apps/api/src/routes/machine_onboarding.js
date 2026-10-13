@@ -289,11 +289,11 @@ export function createMachineV1Router(pool, redis = null) {
           daily_limit: INSTANT_TRIAL_DAILY_LIMIT(),
           wallet_address: null,
           message:
-            `Trial machine key: ${INSTANT_TRIAL_DAILY_LIMIT()} calls/day on your own quota (no IP/subnet contention), no wallet, no email. ` +
-            'Send it as the X-API-Key header. Attach a wallet later to add prepaid credits when your workload grows.',
+            `Machine key issued (${result.api_key}). Every call is paid — deposit USDT (min $0.50) or pay per bundle via x402 ($0.10 for 1,000 calls). ` +
+            'Send it as the X-API-Key header once funded.',
           next_steps: [
-            `Use now: curl -X POST ${base}/rpc/polygon -H "X-API-Key: ${result.api_key}" -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'`,
-            `Grow past ${INSTANT_TRIAL_DAILY_LIMIT()}/day: deposit USDT (calldata: GET ${base}/credits/deposit/initiate?amount=<usdt>) or pay per bundle with x402 — details: ${base}/v1/pricing`,
+            `Deposit USDT on Polygon: GET ${base}/credits/deposit/initiate?amount=1.00 then claim for key ${result.api_key} via POST ${base}/api/keys/deposit`,
+            `Or pay per bundle with x402: send requests to ${base}/rpc/polygon with an x402-enabled client`,
           ],
           pricing_url: `${base}/v1/pricing`,
           manifest_url: `${base}/.well-known/satelink.json`,

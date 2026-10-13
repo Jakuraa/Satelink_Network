@@ -379,6 +379,13 @@ export async function enforceCapacity(db, { apiKey, wallet, requestId = null, pr
     const verdict = await enforceNew(db, { apiKey, wallet, cost: callCostMinor(), requestId });
     if (verdict.ok) return verdict;
 
+    // If the caller explicitly supplied an apiKey and has an account that simply ran out
+    // of credits, return the prepaid denial so they get the clear "Insufficient credits" message
+    // and payment instructions, instead of confusing them with enterprise "EIP-3009 authorization".
+    if (apiKey && prepaid.code === 'insufficient_credits') {
+      return prepaid;
+    }
+
     // 3. HARD STOP. Both layers denied — surface the authorization-layer
     //    verdict: capacity_enforcement.js is the primary gate under 'new'
     //    mode, and its denial codes/messages point at the specific fix
@@ -434,6 +441,7 @@ export async function precheckCapacity(db, { apiKey, wallet, product = 'rpc' } =
   if (pre.ok || path !== 'new') return pre;
   const neu = await evaluateNewReadOnly(db, { apiKey, wallet, cost: callCostMinor() });
   if (neu.decision === 'allow') return { ok: true, creditSource: 'authorization' };
+  if (apiKey && pre.code === 'insufficient_credits') return pre;
   const reason = neu.reason || 'no_authorization';
   return { ok: false, code: reason, http: DENY_HTTP[reason] || 402, message: DENY_MSG[reason] || pre.message };
 }

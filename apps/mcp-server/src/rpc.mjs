@@ -80,7 +80,12 @@ export function createRpcExecutor({ fetch, wallet, rpcUrl = DEFAULT_RPC_URL, api
 
     if (response.status === 402) {
       // Reached only when payment is required but could not be made (no wallet,
-      // or a spending guard declined). Surface the requirements verbatim.
+      // or a spending guard declined), or when a previously issued session key
+      // has been exhausted or invalidated.
+      // S5 fix: clear sessionKey so subsequent calls do not keep presenting the dead key.
+      if (!apiKey && sessionKey) {
+        sessionKey = null;
+      }
       return {
         ok: false,
         error: 'payment_required',

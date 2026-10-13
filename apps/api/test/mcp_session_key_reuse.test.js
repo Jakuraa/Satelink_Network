@@ -30,4 +30,37 @@ describe('MCP rpc executor reuses the x402 session key', () => {
     await exec({ method: 'eth_chainId' }); await exec({ method: 'eth_chainId' });
     expect(seen.every((h) => h['X-API-Key'].startsWith('sk_basic_'))).to.equal(true);
   });
+
+  it('clears sessionKey on 402 so subsequent requests can re-trigger payment', async () => {
+    const key = 'x402_' + 'cd'.repeat(32);
+    const seen = [];
+    let n = 0;
+    const fetch = async (url, init) => {
+      seen.push({ ...init.headers });
+      n++;
+      if (n === 1) {
+        const headers = new Map([['x-satelink-api-key', key], ['payment-response', 'tx1']]);
+        return { ok: true, status: 200, headers: { get: (h) => headers.get(h.toLowerCase()) ?? null }, text: async () => '{"jsonrpc":"2.0","id":1,"result":"0x1"}' };
+      }
+      if (n === 2) {
+        // Second call reuses key, but bundle is now exhausted -> 402
+        return { ok: false, status: 402, headers: { get: () => null }, text: async () => '{"error":"insufficient_credits"}' };
+      }
+      // Third call should NOT send the dead session key!
+      return { ok: true, status: 200, headers: { get: () => null }, text: async () => '{"jsonrpc":"2.0","id":1,"result":"0x2"}' };
+    };
+
+    const exec = createRpcExecutor({ fetch, wallet: '0x' + '2'.repeat(40), rpcUrl: 'https://rpc.example.test/rpc/polygon' });
+    const r1 = await exec({ method: 'eth_blockNumber' });
+    expect(r1.ok).to.equal(true);
+    expect(seen[0]['X-API-Key']).to.equal(undefined);
+
+    const r2 = await exec({ method: 'eth_blockNumber' });
+    expect(r2.status).to.equal(402);
+    expect(seen[1]['X-API-Key']).to.equal(key);
+
+    await exec({ method: 'eth_blockNumber' });
+    expect(seen[2]['X-API-Key']).to.equal(undefined); // dead key was cleared!
+  });
 });
+
