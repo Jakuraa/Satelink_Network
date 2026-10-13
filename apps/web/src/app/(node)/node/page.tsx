@@ -72,7 +72,7 @@ async function getJson(path: string): Promise<Json | null> {
 function useNetworkData() {
   const [status, setStatus] = useState<Json | null>(null);
   const [economics, setEconomics] = useState<Json | null>(null);
-  const [truth, setTruth] = useState<Json | null>(null);
+  const [publicStats, setPublicStats] = useState<Json | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -81,12 +81,13 @@ function useNetworkData() {
       const [s, e, t] = await Promise.all([
         getJson("/api/status"),
         getJson("/api/economics/summary"),
-        getJson("/api/financial/truth"),
+        // Public, sanitized network facts. /api/financial/truth is admin-only.
+        getJson("/api/public/stats"),
       ]);
       if (!alive) return;
       setStatus(s);
       setEconomics(e);
-      setTruth(t);
+      setPublicStats(t);
       setLoading(false);
     })();
     return () => {
@@ -94,7 +95,7 @@ function useNetworkData() {
     };
   }, []);
 
-  return { status, economics, truth, loading };
+  return { status, economics, publicStats, loading };
 }
 
 const usd = (n: unknown) =>
@@ -221,7 +222,7 @@ const selectCls =
 function NodePortal() {
   const params = useSearchParams();
   const view = params.get("view") || "overview";
-  const { status, economics, truth, loading } = useNetworkData();
+  const { status, economics, publicStats, loading } = useNetworkData();
 
   // Local-only form state for capacity / config (no API writes yet).
   const [savedFlash, setSavedFlash] = useState<string | null>(null);
@@ -230,8 +231,10 @@ function NodePortal() {
     setTimeout(() => setSavedFlash(null), 2000);
   };
 
-  const withdrawable = truth?.withdrawable_now_usdt as number | undefined;
-  const canWithdraw = typeof withdrawable === "number" && withdrawable >= 1;
+  // Per-node balances arrive after registration; the network treasury figure
+  // previously shown here was not this operator's money and is admin-only now.
+  const withdrawable: number | undefined = undefined;
+  const canWithdraw = false;
 
   const registerCta = (
     <Button asChild variant="outline">
@@ -300,7 +303,7 @@ function NodePortal() {
     const epochRevenue = economics?.lastEpochRevenueUsdt as number | undefined;
     const sharePct = economics?.splitRatio?.nodeOperators as number | undefined;
     const closedAt = economics?.lastEpochClosedAt as string | null | undefined;
-    const confirmedBatches = truth?.settlement?.batches_confirmed as number | undefined;
+    const nodesOnline = publicStats?.nodes_online as number | null | undefined;
 
     const kpis = [
       { label: "Today", value: DASH, icon: DollarSign },
@@ -351,7 +354,7 @@ function NodePortal() {
         <Panel title="Settlement History" description="On-chain settlement batches">
           {emptyTable(
             "No per-node settlements yet",
-            `${confirmedBatches ?? 0} batches confirmed network-wide. Your settlement rows appear after registration.`
+            `${typeof nodesOnline === "number" ? `${nodesOnline} nodes online network-wide. ` : ""}Your settlement rows appear after registration.`
           )}
         </Panel>
       </div>
@@ -508,7 +511,7 @@ function NodePortal() {
 
   // ------------------------------- VIEW 6 ----------------------------------
   function Withdrawals() {
-    const lifetime = truth?.claimed_total_usdt as number | undefined;
+    const lifetime: number | undefined = undefined;
     const kpis = [
       { label: "Available", value: usd(withdrawable), icon: Wallet },
       { label: "Pending", value: DASH, icon: Timer },
@@ -717,7 +720,7 @@ function NodePortal() {
       alerts: Alerts,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [loading, status, economics, truth, savedFlash]
+    [loading, status, economics, publicStats, savedFlash]
   );
 
   const Active = views[view] ?? Overview;
