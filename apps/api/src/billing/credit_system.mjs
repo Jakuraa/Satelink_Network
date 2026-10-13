@@ -5,6 +5,7 @@
 
 import crypto from 'crypto';
 import { keyHint } from '../security/key_mask.mjs';
+import { ensureWalletChallengeSchema } from './wallet_challenge.mjs';
 
 const PRICE_PER_CALL_USDT = 0.000030;
 
@@ -96,6 +97,8 @@ export async function ensureCreditTables(pool) {
     // Fast lookup of outreach-eligible contacts (opted-in, non-null email).
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_api_credits_outreach ON api_credits(email_consent) WHERE email IS NOT NULL`);
 
+    await ensureWalletChallengeSchema(pool);
+
     console.log('[CreditSystem] Tables ensured');
   } catch (err) {
     console.error('[CreditSystem] Table creation failed:', err.message);
@@ -109,6 +112,7 @@ export async function createApiKeyWithCredits(pool, tier = 'free', walletAddress
 
   const apiKey = generateApiKey(tier);
   const { daily_limit } = TIERS[tier];
+  const normalizedWallet = walletAddress ? String(walletAddress).trim().toLowerCase() : null;
 
   // Email is optional and pre-validated by the caller (normaliseEmail).
   const email = opts.email || null;
@@ -119,7 +123,7 @@ export async function createApiKeyWithCredits(pool, tier = 'free', walletAddress
     await pool.query(`
       INSERT INTO api_credits (api_key, tier, daily_limit, wallet_address, status, email, email_consent, email_captured_at)
       VALUES ($1, $2, $3, $4, 'active', $5, $6, $7)
-    `, [apiKey, tier, daily_limit, walletAddress, email, emailConsent, capturedAt]);
+    `, [apiKey, tier, daily_limit, normalizedWallet, email, emailConsent, capturedAt]);
 
     console.log(`[CreditSystem] Created key: ${keyHint(apiKey)} tier=${tier}${email ? ` email=yes consent=${emailConsent}` : ''}`);
 

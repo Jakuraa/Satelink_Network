@@ -38,6 +38,12 @@ import {
   confirmationCount,
   MIN_CONFIRMATIONS
 } from './deposit_validation.mjs';
+import {
+  normalizeWalletAddress,
+  issueWalletChallenge,
+  verifyAndConsumeWalletChallenge,
+  ensureWalletChallengeSchema,
+} from './wallet_challenge.mjs';
 
 const TREASURY = process.env.REVENUE_VAULT_ADDRESS || '0x577D3716d6Ad5b676d230f5409deF9838FABaCEF';
 const USDT_POLYGON = '0xc2132D05D31c914a87C6611C10748AEb04B58e8F';
@@ -64,9 +70,46 @@ export function createSimpleApiKeysRouter(pool) {
   const router = Router();
 
   ensureCreditTables(pool);
+  ensureWalletChallengeSchema(pool);
 
+  // POST /api/keys/challenge — Server-issue a single-use EIP-191 challenge
+  // for wallet ownership proof before associating a wallet with an API key.
+  // Answers every well-formed address identically (no account-enumeration oracle).
+  router.post('/challenge', apiKeyCreateLimiter, async (req, res) => {
+    const wallet = req.body?.wallet_address || req.body?.address;
+    const normalized = normalizeWalletAddress(wallet);
+    if (!normalized) {
+      return res.status(400).json({
+        ok: false,
+        error: 'invalid_wallet_address',
+        message: 'wallet_address must be a valid 0x-prefixed 20-byte EVM address',
+      });
+    }
+
+    try {
+      const host = req.get('host') || 'rpc.satelink.network';
+      const challenge = await issueWalletChallenge(pool, { walletAddress: normalized, host });
+      return res.json({
+        ok: true,
+        nonce: challenge.nonce,
+        message: challenge.message,
+        expires_at: challenge.expires_at,
+        sign_with: 'personal_sign (EIP-191) with the wallet, then submit { wallet_address, nonce, signature } to POST /api/keys',
+      });
+    } catch (err) {
+      console.error('[ApiKeys] Challenge issue failed:', err.message);
+      return res.status(500).json({ ok: false, error: 'challenge_unavailable' });
+    }
+  });
+
+  // POST /api/keys — Create free tier key (no auth required, rate-limited).
+  // WALLET BINDING HARDENING (Security fix S1):
+  // When wallet_address is supplied, proof of ownership via single-use challenge
+  // and EIP-191 signature is MANDATORY. Missing, invalid, expired, or mismatched
+  // signatures fail closed without creating any key or associating the wallet.
+  // Omitting wallet_address creates a standard anonymous key (wallet_address = null).
   router.post('/', apiKeyCreateLimiter, async (req, res) => {
-    const { tier = 'free', wallet_address, email, email_consent } = req.body || {};
+    const { tier = 'free', wallet_address, signature, nonce, email, email_consent } = req.body || {};
 
     if (!TIERS[tier]) {
       return res.status(400).json({
@@ -94,25 +137,200 @@ export function createSimpleApiKeysRouter(pool) {
       }
     }
 
+    const hasWallet = wallet_address !== undefined && wallet_address !== null && wallet_address !== '';
+    let validatedWallet = null;
+
+    if (hasWallet) {
+      validatedWallet = normalizeWalletAddress(wallet_address);
+      if (!validatedWallet) {
+        return res.status(400).json({
+          ok: false,
+          error: 'invalid_wallet_address',
+          message: 'wallet_address must be a valid 0x-prefixed 20-byte EVM address',
+        });
+      }
+
+      if (!signature || typeof signature !== 'string' || !nonce || typeof nonce !== 'string') {
+        return res.status(400).json({
+          ok: false,
+          error: 'wallet_signature_required',
+          message: 'Binding a wallet requires cryptographic proof of ownership. Request a challenge at POST /api/keys/challenge, sign it with your wallet (EIP-191 personal_sign), and submit wallet_address, nonce, and signature.',
+          challenge_url: '/api/keys/challenge',
+        });
+      }
+    }
+
+    const client = typeof pool.connect === 'function' ? await pool.connect() : pool;
     try {
-      const result = await createApiKeyWithCredits(pool, tier, wallet_address || null, {
+      if (client !== pool) await client.query('BEGIN');
+
+      if (hasWallet) {
+        // 1. Verify challenge and signature, and atomically consume challenge
+        const verifyRes = await verifyAndConsumeWalletChallenge(client, {
+          walletAddress: validatedWallet,
+          nonce,
+          signature,
+        });
+
+        if (!verifyRes.ok) {
+          if (client !== pool) await client.query('ROLLBACK').catch(() => {});
+          return res.status(verifyRes.http || 401).json({
+            ok: false,
+            error: verifyRes.code,
+            message: verifyRes.message,
+          });
+        }
+
+        // 2. Advisory lock on the wallet to serialize concurrent registrations for the same address
+        try {
+          await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`wallet_bind:${validatedWallet}`]);
+        } catch {}
+
+        // 3. Ensure wallet is not already associated with another key
+        const existing = await client.query(
+          `SELECT 1 FROM api_credits WHERE lower(wallet_address) = $1 LIMIT 1`,
+          [validatedWallet]
+        );
+        if (existing.rows?.length > 0) {
+          if (client !== pool) await client.query('ROLLBACK').catch(() => {});
+          return res.status(409).json({
+            ok: false,
+            error: 'wallet_already_registered',
+            message: 'This wallet already has an associated API key.',
+          });
+        }
+      }
+
+      const result = await createApiKeyWithCredits(client, tier, validatedWallet, {
         email: normalisedEmail,
         emailConsent: email_consent === true,
       });
+
+      if (client !== pool) await client.query('COMMIT');
 
       return res.json({
         ok: true,
         api_key: result.api_key,
         tier: result.tier,
         daily_limit: result.daily_limit,
+        wallet_address: validatedWallet,
         email_captured: result.email_captured,
         usage: `Add header: X-API-Key: ${result.api_key}`,
         example: `curl -X POST https://rpc.satelink.network/rpc/polygon -H "X-API-Key: ${result.api_key}" -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'`,
         docs: 'https://docs.satelink.network'
       });
     } catch (err) {
+      if (client !== pool) await client.query('ROLLBACK').catch(() => {});
       console.error('[ApiKeys] Create failed:', err.message);
       return res.status(500).json({ ok: false, error: 'Failed to create API key' });
+    } finally {
+      if (client !== pool && typeof client.release === 'function') {
+        client.release();
+      }
+    }
+  });
+
+  // POST /api/keys/bind — Bind a verified wallet to an existing API key (X-API-Key header).
+  // Requires cryptographic proof of wallet ownership via challenge + signature.
+  router.post('/bind', apiKeyReadLimiter, async (req, res) => {
+    const key = extractApiKey(req);
+    const { wallet_address, signature, nonce } = req.body || {};
+
+    if (!isValidKeyFormat(key)) {
+      return res.status(400).json({ ok: false, error: 'Invalid API key format' });
+    }
+
+    const normalized = normalizeWalletAddress(wallet_address);
+    if (!normalized) {
+      return res.status(400).json({
+        ok: false,
+        error: 'invalid_wallet_address',
+        message: 'wallet_address must be a valid 0x-prefixed 20-byte EVM address',
+      });
+    }
+
+    if (!signature || typeof signature !== 'string' || !nonce || typeof nonce !== 'string') {
+      return res.status(400).json({
+        ok: false,
+        error: 'wallet_signature_required',
+        message: 'Binding a wallet requires cryptographic proof of ownership. Request a challenge at POST /api/keys/challenge, sign it with your wallet (EIP-191 personal_sign), and submit wallet_address, nonce, and signature.',
+      });
+    }
+
+    const client = typeof pool.connect === 'function' ? await pool.connect() : pool;
+    try {
+      if (client !== pool) await client.query('BEGIN');
+
+      const verifyRes = await verifyAndConsumeWalletChallenge(client, {
+        walletAddress: normalized,
+        nonce,
+        signature,
+      });
+
+      if (!verifyRes.ok) {
+        if (client !== pool) await client.query('ROLLBACK').catch(() => {});
+        return res.status(verifyRes.http || 401).json({
+          ok: false,
+          error: verifyRes.code,
+          message: verifyRes.message,
+        });
+      }
+
+      try {
+        await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`wallet_bind:${normalized}`]);
+      } catch {}
+
+      const keyRow = await client.query(
+        'SELECT id, wallet_address, status FROM api_credits WHERE api_key = $1 FOR UPDATE',
+        [key]
+      );
+      if (!keyRow.rows?.[0]) {
+        if (client !== pool) await client.query('ROLLBACK').catch(() => {});
+        return res.status(404).json({ ok: false, error: 'API key not found' });
+      }
+
+      if (keyRow.rows[0].wallet_address) {
+        if (client !== pool) await client.query('ROLLBACK').catch(() => {});
+        return res.status(409).json({
+          ok: false,
+          error: 'key_already_has_wallet',
+          message: 'This API key is already associated with a wallet.',
+        });
+      }
+
+      const walletRow = await client.query(
+        'SELECT 1 FROM api_credits WHERE lower(wallet_address) = $1 LIMIT 1',
+        [normalized]
+      );
+      if (walletRow.rows?.length > 0) {
+        if (client !== pool) await client.query('ROLLBACK').catch(() => {});
+        return res.status(409).json({
+          ok: false,
+          error: 'wallet_already_registered',
+          message: 'This wallet is already associated with an API key.',
+        });
+      }
+
+      await client.query(
+        'UPDATE api_credits SET wallet_address = $1 WHERE api_key = $2',
+        [normalized, key]
+      );
+
+      if (client !== pool) await client.query('COMMIT');
+
+      return res.json({
+        ok: true,
+        wallet_address: normalized,
+        message: 'Wallet successfully verified and bound to API key.',
+      });
+    } catch (err) {
+      if (client !== pool) await client.query('ROLLBACK').catch(() => {});
+      console.error('[ApiKeys] Wallet bind failed:', err.message);
+      return res.status(500).json({ ok: false, error: 'Failed to bind wallet' });
+    } finally {
+      if (client !== pool && typeof client.release === 'function') {
+        client.release();
+      }
     }
   });
 
