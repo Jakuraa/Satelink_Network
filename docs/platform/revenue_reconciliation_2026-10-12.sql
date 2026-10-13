@@ -45,3 +45,19 @@ SELECT p.source, p.tx_hash, p.amount_usd
   LEFT JOIN api_deposits d ON d.tx_hash = p.tx_hash
  WHERE p.is_test_data = false AND d.tx_hash IS NULL
    AND NOT (lower(coalesce(p.payer, '')) = ANY (:'founders'::text[]));
+
+-- Q7  (added 2026-10-13) x402 payer attribution — full payer address + tx hash per settlement,
+--     ALL rows (founder and test included), so each payer can be matched to Base chain data.
+SELECT p.created_at, p.network, lower(p.payer) AS payer, p.tx_hash, p.amount_usd, p.is_test_data,
+       left(p.credited_api_key, 8) AS key_prefix
+  FROM payment_sources p
+ WHERE p.source = 'x402'
+ ORDER BY p.created_at;
+
+-- Q8  (added 2026-10-13) card provider of record — which provider wrote each non-crypto row.
+--     The code writes card rows only as source = 'dodo'; any other source value is a finding.
+SELECT p.source, p.created_at, p.amount_usd, p.token, p.network, p.is_test_data,
+       left(coalesce(p.tx_hash, ''), 14) AS ref_prefix, left(p.credited_api_key, 8) AS key_prefix
+  FROM payment_sources p
+ WHERE p.source NOT IN ('x402', 'polygon_usdt_vault')
+ ORDER BY p.created_at;
