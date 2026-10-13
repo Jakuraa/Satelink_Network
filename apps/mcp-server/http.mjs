@@ -68,9 +68,9 @@ app.get('/healthz', (_req, res) => {
   res.json({
     ok: true,
     service: 'satelink-mcp',
-    version: '2.0.0',
+    version: '2.1.0',
     rpc_url: RPC_URL,
-    payment: canPay ? 'x402-enabled' : 'free-tier-only',
+    payment: canPay ? 'x402-enabled' : 'no-wallet',
     paying_wallet: wallet || null,
   });
 });
@@ -79,7 +79,7 @@ app.get('/healthz', (_req, res) => {
 app.get('/.well-known/mcp.json', (_req, res) => {
   res.json({
     name: 'satelink-mcp',
-    version: '2.0.0',
+    version: '2.1.0',
     description: 'Pay-per-call Polygon (chain 137) JSON-RPC over MCP, settled via x402 (USDC on Base).',
     transport: { streamable_http: '/mcp', rest_execute: '/execute' },
     pricing: { unit: '$0.10 USDC per 1,000 calls', rail: 'x402', network: 'eip155:8453 (Base)' },
@@ -114,6 +114,6 @@ app.post('/mcp', async (req, res) => {
 app.listen(PORT, () => {
   console.error(
     `Satelink MCP HTTP server on :${PORT} — POST /execute, POST /mcp — ` +
-      `payment=${canPay ? `x402 wallet ${wallet}` : 'free-tier only'}`,
+      `payment=${canPay ? `x402 wallet ${wallet}` : 'none (no wallet — every call returns 402)'}`,
   );
 });

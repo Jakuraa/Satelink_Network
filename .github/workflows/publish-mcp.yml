@@ -1,0 +1,45 @@
+# Publishes apps/mcp-server (npm package `satelink-mcp`) with npm trusted
+# publishing (OIDC). No npm token is stored anywhere: npm trusts this workflow
+# file in this repository once the package's "Trusted Publisher" is configured
+# on npmjs.com. Until then a run fails at `npm publish` and publishes nothing.
+#
+# Trigger: push a tag `satelink-mcp-v<version>` matching apps/mcp-server/
+# package.json, or run manually (workflow_dispatch) from main.
+name: Publish satelink-mcp
+
+on:
+  push:
+    tags: ['satelink-mcp-v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # OIDC for npm trusted publishing (and provenance)
+
+jobs:
+  publish:
+    # Only main (manual run) or a release tag may publish.
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/satelink-mcp-v')
+    runs-on: ubuntu-latest
+    # Create this environment with the founder as required reviewer, and name it
+    # in the npm Trusted Publisher config, so every publish needs an approval.
+    environment: npm-publish
+    defaults:
+      run:
+        working-directory: apps/mcp-server
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      # Trusted publishing needs npm >= 11.5.1.
+      - run: npm install -g npm@latest
+      - name: Tag matches package version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          want="satelink-mcp-v$(node -p "require('./package.json').version")"
+          [ "${GITHUB_REF_NAME}" = "$want" ] || { echo "tag ${GITHUB_REF_NAME} != $want"; exit 1; }
+      - run: npm install --no-package-lock --no-audit --no-fund
+      - run: npm test
+      - run: npm publish --access public

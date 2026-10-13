@@ -38,7 +38,7 @@ async function main() {
   await server.connect(transport);
   console.error(
     `Satelink MCP server (stdio) running — RPC=${RPC_URL} ` +
-      `payment=${canPay ? `x402 wallet ${wallet}` : 'free-tier only (no wallet)'}`,
+      `payment=${canPay ? `x402 wallet ${wallet}` : 'none (no wallet — every call returns 402)'}`,
   );
 }
 

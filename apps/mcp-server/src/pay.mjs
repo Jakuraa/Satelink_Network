@@ -38,7 +38,7 @@ function normalizePk(pk) {
  *
  * @param {object} opts
  * @param {string} [opts.privateKey]  0x EVM private key of a Base-funded USDC
- *   wallet. Omit to run free-tier / non-paying.
+ *   wallet. Omit to run without paying (every call then returns 402; there is no free tier).
  * @param {string} [opts.network]     CAIP-2 network (default Base mainnet).
  * @returns {{ fetch: typeof fetch, wallet: string|null, canPay: boolean }}
  */
