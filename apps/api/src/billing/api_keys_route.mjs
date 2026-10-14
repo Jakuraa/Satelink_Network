@@ -685,10 +685,10 @@ export function createSimpleApiKeysRouter(pool) {
           enterprise: { price: TIER_PRICES.enterprise, limit: TIER_LIMITS.enterprise },
         },
         instructions: [
-          `1. Send USDT to ${TREASURY} on Polygon network from your registered wallet`,
-          '2. Copy your transaction hash after confirmation',
-          '3. POST /api/keys/deposit with header X-API-Key: <your key> and body {"tx_hash":"0x...","tier":"pro"}',
-          '4. Your API key will be upgraded once the deposit reaches the required confirmation depth'
+          `1. Approve USDT to RevenueVault (${TREASURY}) and call RevenueVault.deposit(amount) on Polygon from your registered wallet (ready-to-sign calldata: GET https://rpc.satelink.network/credits/deposit/initiate?amount=1.00)`,
+          '2. Deposits from your registered wallet auto-credit automatically after 25 confirmations.',
+          '3. Alternatively, claim immediately via POST /api/keys/deposit with header X-API-Key: <your key> and body {"tx_hash":"0x..."}',
+          '4. Prepaid rate: $0.00003 USDT/call (minimum deposit $0.50 USDT). Unused credits never expire.'
         ]
       });
     } catch (err) {

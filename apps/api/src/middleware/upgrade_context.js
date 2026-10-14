@@ -183,12 +183,12 @@ export function createUpgradeContext({ pool = null, redis = null, log = console 
       free_first_step: {
         cost_usd: 0,
         message:
-          'Your workload hit the public limit. Create a free machine key — no wallet, no email, 10-second setup. ' +
-          'Pay only when your workload grows.',
+          'Your workload hit the public limit. Create a machine key — no wallet, no email, 10-second setup. ' +
+          'Every call is paid ($0.10 USDC / 1k calls via x402 on Base, or deposit USDT on Polygon).',
         curl: `curl -X POST ${API_BASE()}/v1/machine/register -H "Content-Type: application/json" -d '{"mode":"instant"}'`,
-        returns: 'an API key (send as X-API-Key header) with its own daily quota, independent of this IP/subnet limit',
+        returns: 'an API key (send as X-API-Key header once funded)',
         wallet_option:
-          `prefer a permanent identity? POST the same endpoint with a wallet signature instead — deposits from that wallet auto-credit (${TIER_DAILY_LIMIT.free} calls/day free, then prepaid).`,
+          'prefer a permanent identity? POST the same endpoint with a wallet signature instead — deposits from that wallet auto-credit to your account.',
       },
       ...offer,
     };
@@ -197,7 +197,7 @@ export function createUpgradeContext({ pool = null, redis = null, log = console 
     // the shared subnet budget is being split — rotation buys nothing.
     if ((sub?.active_ips ?? 0) > 1) {
       ctx.migration = {
-        detected: `${sub.active_ips} IPs from your /24 hit this gateway in the last 24h; the whole /24 shares one ${FREE_LIMIT()}-call daily budget, so rotating IPs does not increase free capacity.`,
+        detected: `${sub.active_ips} IPs from your /24 hit this gateway in the last 24h; rotating IPs does not bypass payment requirements.`,
         message:
           'Replace multiple free endpoints with one paid authenticated endpoint: a single X-API-Key has no ' +
           `per-IP limit — your estimated ${offer.estimated_monthly_calls.toLocaleString('en-US')} calls/month costs ` +

@@ -192,9 +192,9 @@ export function createCreditsRouter(db, logger) {
         }
       ],
       integration: {
-        header: 'X-Wallet-Address',
-        usage: 'Add this header with your wallet address to all RPC calls after deposit',
-        balance_endpoint: 'https://rpc.satelink.network/credits/balance?wallet=YOUR_WALLET',
+        header: 'X-API-Key',
+        usage: 'Add this header with your API key (issued at POST /v1/machine/register) to all RPC calls after deposit',
+        balance_endpoint: 'https://rpc.satelink.network/api/keys/usage',
         rpc_endpoint: 'https://rpc.satelink.network/rpc/polygon'
       },
       instructions: [
@@ -352,7 +352,7 @@ export function createCreditsRouter(db, logger) {
       instructions: [
         { step: 1, action: 'approve', to: USDT_ADDRESS, data: approveCalldata, description: 'Approve USDT to RevenueVault' },
         { step: 2, action: 'deposit', to: REVENUE_VAULT_ADDRESS, data: depositCalldata, description: 'Deposit USDT into RevenueVault' },
-        { step: 3, action: 'header', description: 'Add X-Wallet-Address: <your-wallet> to RPC calls' }
+        { step: 3, action: 'header', description: 'Add X-API-Key: <your-api-key> to RPC calls' }
       ],
       network: 'Polygon Mainnet (chainId: 137)',
       polygonscan: `https://polygonscan.com/address/${REVENUE_VAULT_ADDRESS}`
