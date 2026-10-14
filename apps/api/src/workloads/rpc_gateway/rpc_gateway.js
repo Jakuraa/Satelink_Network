@@ -261,8 +261,29 @@ export function createRpcGateway(db) {
 
         const body = req.body;
 
+        // JSON-RPC batch request handling: protocol-compatible response
+        if (Array.isArray(body)) {
+            return res.status(400).json({
+                jsonrpc: '2.0',
+                id: null,
+                error: {
+                    code: -32600,
+                    message: 'Batch requests are not supported. Send individual JSON-RPC requests.'
+                }
+            });
+        }
+
         if (!body || body.jsonrpc !== '2.0' || !body.method) {
-            return res.status(400).json({ ok: false, error: 'Invalid JSON-RPC 2.0 payload: requires jsonrpc="2.0" and method' });
+            return res.status(400).json({
+                ok: false,
+                error: 'Invalid JSON-RPC 2.0 payload: requires jsonrpc="2.0" and method',
+                jsonrpc: '2.0',
+                id: body?.id ?? null,
+                rpc_error: {
+                    code: -32600,
+                    message: 'Invalid JSON-RPC 2.0 payload: requires jsonrpc="2.0" and method'
+                }
+            });
         }
 
         if (typeof body.method !== 'string' || body.method.length === 0) {
@@ -301,7 +322,18 @@ export function createRpcGateway(db) {
                 return res.status(402).json(paymentRequiredBody(
                     'The API key or wallet you sent matches no account. Register the wallet (see "register") or check the X-API-Key value.'));
             }
-            const payload = { ok: false, error: verdict.code, message: verdict.message };
+            const payload = {
+                jsonrpc: '2.0',
+                id: req.body?.id ?? null,
+                ok: false,
+                error: verdict.code,
+                message: verdict.message,
+                rpc_error: {
+                    code: -32005,
+                    message: verdict.message,
+                    data: { error_code: verdict.code }
+                }
+            };
             // Payment path on BOTH money moments: balance exhausted (402)
             // AND the keyed daily limit (429). The 429 was previously a
             // dead end — the exact moment a key's workload has formed

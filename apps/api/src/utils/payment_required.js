@@ -28,7 +28,7 @@ export function paymentRequiredFields() {
         ok: false,
         error: 'payment_required',
         code: 402,
-        message: 'Free tier limit reached. Deposit USDT to continue.',
+        message: 'Payment required. Deposit USDT on Polygon or pay via x402 on Base to continue.',
         deposit: {
             vault_address:
                 process.env.REVENUE_VAULT_ADDRESS ||
@@ -52,8 +52,8 @@ export function paymentRequiredFields() {
             // payloads from its registered wallet, and broadcasts them.
             calldata_url: `${apiBase}/credits/deposit/initiate?amount=<usdt>`,
             calldata_example: calldataExampleUrl,
-            free_tier_limit: 500,
-            free_tier_resets_at: new Date(new Date().setUTCHours(24, 0, 0, 0)).toISOString()
+            free_tier_limit: 0,
+            free_tier_resets_at: null
         },
         // docs.satelink.network/deposit never existed (404) — /docs is the
         // real developer-docs page.
