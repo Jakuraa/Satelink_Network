@@ -17,9 +17,9 @@
 
 import { Router } from 'express';
 import { ethers } from 'ethers';
+import { PRICE_PER_CALL_USDT } from '../billing/credit_service.mjs';
 
 const WALLET_RE = /^0x[0-9a-fA-F]{40}$/;
-const METERING_RATE_USDT = 0.00003; // confirmed production rate: $0.00003 / RPC call
 
 export function createDepositEconomicsRouter(pool, logger = console) {
   const router = Router();
@@ -59,7 +59,7 @@ export function createDepositEconomicsRouter(pool, logger = console) {
         // total_spent is the authoritative per-wallet consumption (credit_gate.js deducts
         // into it on each billed call) — billing_events does not exist in this schema.
         consumedUsdt: parseFloat(row.total_spent) || 0,
-        estimatedRemainingCalls: Math.floor(creditsUsdt / METERING_RATE_USDT),
+        estimatedRemainingCalls: Math.floor(creditsUsdt / PRICE_PER_CALL_USDT),
         lastDepositAt: row.last_deposit_at,
         // No pending-deposit state exists in the schema (deposits are written only once
         // confirmed on-chain), so this is always 0 rather than a fabricated count.

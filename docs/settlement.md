@@ -35,7 +35,7 @@ USDT in node operator's wallet
 **ClaimsContract:** `0x6987921e2453f360e314e4424F6c2789F10a1CC9`
 
 - Deployed on Polygon PoS (mainnet, chain ID 137)
-- Open-source: [GitHub](https://github.com/Satelink-Protocol/Satelink_Network/tree/main/contracts)
+- Open-source: [GitHub](https://github.com/Jakuraa/Satelink_Network/tree/main/contracts)
 - Verified on Polygonscan
 
 **Key functions:**

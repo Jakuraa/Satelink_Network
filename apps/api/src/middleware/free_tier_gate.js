@@ -307,7 +307,7 @@ export function createFreeTierGate(logger, redis, pool = null) {
             // client library throws it into logs/exception trackers). 11,202
             // impressions proved the rest of the 402 body is write-only — this
             // string must carry the whole ask (2026-07-11).
-            message: 'Satelink: shared /24 rate limit reached. /rpc requires payment ($0.10 USDC / 1k calls via x402 on Base, or deposit USDT on Polygon). Register key: curl -X POST https://rpc.satelink.network/v1/machine/register -H \'Content-Type: application/json\' -d \'{"mode":"instant"}\' — then send as X-API-Key.',
+            message: 'Satelink: shared /24 rate limit reached. /rpc requires payment ($0.10 USDC / 1k calls via x402 on Base, or deposit USDT on Polygon). Register key: curl -X POST https://rpc.satelink.network/v1/machine/register -H \'Content-Type: application/json\' -d \'{"mode":"instant"}\' — then send as X-API-Key. Or see the satelink-mcp package (npmjs.com/package/satelink-mcp) to automate payment.',
           },
           calls_subnet_today: subnetCount,
           limit: SUBNET_FREE_LIMIT,
@@ -453,7 +453,7 @@ export function createFreeTierGate(logger, redis, pool = null) {
           // error_code stays FREE_TIER_LIMIT_REACHED for backward-compat (RPC
           // clients + x402 middleware match on it); the free tier is removed, so
           // effectiveLimit is 0 and this fires on the first unauthenticated call.
-            message: 'Satelink: /rpc requires payment. Pay $0.10 USDC per 1,000 calls via x402 on Base, or register and deposit USDT on Polygon: curl -X POST https://rpc.satelink.network/v1/machine/register -H \'Content-Type: application/json\' -d \'{"mode":"instant"}\' — then send as X-API-Key.',
+            message: 'Satelink: /rpc requires payment. Pay $0.10 USDC per 1,000 calls via x402 on Base, or register and deposit USDT on Polygon: curl -X POST https://rpc.satelink.network/v1/machine/register -H \'Content-Type: application/json\' -d \'{"mode":"instant"}\' — then send as X-API-Key. Or see the satelink-mcp package (npmjs.com/package/satelink-mcp) to automate payment.',
           data: {
             error_code: 'FREE_TIER_LIMIT_REACHED',
             limit: effectiveLimit,

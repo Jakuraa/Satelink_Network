@@ -1,7 +1,7 @@
 # Satelink Execution Board — 2026-10-12 escalation round
 
 Single source of state for this round. Evidence columns hold only verifiable references
-(commit, PR, test output, curl result). Last updated: 2026-10-14 ~00:45 IST (round 2026-10-13, see below).
+(commit, PR, test output, curl result). Last updated: 2026-10-15 ~12:10 IST (round 2026-10-15, see below).
 
 Status values: NOT STARTED / IN PROGRESS / BLOCKED / READY FOR REVIEW / MERGED / DEPLOYED / PRODUCTION VERIFIED
 
@@ -83,19 +83,77 @@ Step 8 ██████████ 100%
 | P6 MCP | 2.1.0 prep + trusted-publishing workflow + steps | MERGED | **#531** `5d790023` | Version 2.1.0 unified; awaiting founder npm publish |
 | S1 Security | Require signature for wallet-key binding | MERGED & DEPLOYED | **#533** `50c5a52e` | 491/491 tests green; live unsigned POST /api/keys returns 400 |
 
+## Round 2026-10-15: results
+
+Session scope note: repo at `github.com/Jakuraa/Satelink_Network` (earlier rounds still say
+`Satelink-Protocol` in places — this round's item 1 below fixes the hardcoded references).
+Standing rules unchanged (PRs only, no DB access, `SETTLEMENT_DRY_RUN=1` untouched, one merger).
+
+| priority | deliverable | status | evidence |
+|---|---|---|---|
+| 1 Repo-move audit | 38 files: GitHub URLs `Satelink-Protocol`→`Jakuraa` (docs, package.json repo/bugs fields, Dockerfile, planning docs); `satelink-mcp` 2.1.0→2.1.1 (fixes OIDC provenance mismatch) | DONE (PR, this round) | version test green; `npm pack --dry-run` 11 files; `gh api` confirmed branch protection (5 required checks) + `npm-publish` environment exist on the new repo; `.github/CODEOWNERS` left untouched by design — `gh api .../collaborators` confirmed `Satelink-Protocol` (the personal account) is still a `Jakuraa` collaborator with admin, so the file's enforcement is live, not broken; see findings below for what's missing |
+| 2 Revenue reconciliation Q5 fix | Q5 summed deposits (`subscription_payment`, `pack_purchase`) and `refund_reversal` as "metered usage" | DONE (PR, this round) | fixed query excludes the 3 op_types; invariant `collected = liability + consumed + refunded` documented; **not re-run** (no DB access, per instruction) — founder reruns |
+| 3 Pricing consistency | Found + fixed 3 real divergences beyond the existing `catalog_consistency.test.js` coverage: root `README.md` claimed a "free tier... 500 RPC requests/day/IP" (false — no free tier since Phase 2 2026-09); `GET /rpc/chains` + `GET /rpc/:chain` showed a stale hardcoded per-chain price table (ethereum $0.00005, arbitrum/base $0.00004) that nothing actually charges (billing is flat $0.00003 regardless of chain); `apps/api/src/routes/deposit_economics.js` had its own duplicate hardcoded `0.00003` instead of importing the canonical constant. Widened the test's doc-scan to 6 more files (README.md, docs/faq.md, docs/NODE_OPERATOR_QUICKSTART.md, apps/mcp-server/README.md, packages/sdk/README.md) and added 2 tests asserting the dead per-chain table can't come back | DONE (PR, this round) | `catalog_consistency.test.js`: 11/11 green (was 9/9); `rpc_billing_phase6.test.js` 4/4 green (no regression from removing the dead table) |
+| 4 Unpaid traffic analysis | `/rpc/polygon` breakdown by UA family, distinct (hashed) IPs, available Railway HTTP-log fields; 31 instant-key machine provenance check | DONE (PARTIAL — 15-min sample, not 7 days) | `docs/growth/UNPAID_TRAFFIC_ANALYSIS.md`. 7-day pull not possible: Railway's `--http --json` log query ignores `--since`/`--until` depth and only returns recent entries (`--since 30m/2h/12h/24h` all returned the identical most-recent 500 rows; a 2–3-day-old window returned 0). Max usable `--lines` is ~5,000 before the API errors, which bought ~15 min (2,246 rows, 05:57–06:12 UTC 2026-10-15). 100% of billed calls returned 402 (no free-tier leak). No Referer/Origin or JSON-RPC method in this log schema — can't be filled in without app-level logging or a log drain (none configured). 31 instant-key machines: 0 hits on `railway logs --filter "instant"` / `"machine/register"` — needs DB access to resolve. |
+| 5 402 conversion messaging | Added `satelink-mcp` link to the canonical 402 body (`payment_required.js`) and to the 2 live anonymous-402 message strings (`free_tier_gate.js` — the ones whose comments say "this string must carry the whole ask") and the keyed-401→402 `how_to_pay` list (`rpc_gateway.js`); verified the MCP field survives the x402-upgrade body compaction (`compactAlternativePayment`) that anonymous callers actually hit — it was stripping everything except `error`/`deposit`/`register_url`/`docs`. **Self-corrected same round:** the first pass embedded a literal, copy-pasteable `npx -y satelink-mcp` command in these bodies — a push-time security scan correctly flagged this as a supply-chain risk (S3's unpublished-npm-name exposure, but now amplified: served to ~100k+/day automated callers whose whole point is to act on 402 bodies without human review). Fixed to a package-name + npm-URL reference only (no embedded run command) in the second commit. | DONE (PR, this round) | `free_tier_gate.test.js` 9/9, `funnel_onboarding_consistency.test.js` 7/7, `x402_challenge_shrink.test.js` 5/5, `catalog_consistency.test.js` 11/11 — all green after both commits, no message-text assertions broken |
+| 6 Board update | this section | DONE | — |
+
+`engineering:code-review` ran on items 1 and 3 per instruction; 4 findings, 3 real (SDK README MEV
+price floor still wrong after the first fix, un-anchored regex in the 2 new tests, a stale draft
+doc's org-identity instructions) — all fixed and re-verified green; the 4th (CODEOWNERS) was
+already checked and found correct, see item 1's evidence column.
+
+### New findings this round
+
+| finding | severity | state |
+|---|---|---|
+| S6 (see Security blockers) — `/api/financial/truth` likely has the same unfiltered-sum bug Q5 had | medium (reporting) | founder decision — not fixed, out of scope (live money-adjacent endpoint) |
+| GitHub Actions secret `NEXT_PUBLIC_WALLETCONNECT_ID` referenced by `ci.yml` does not exist on `Jakuraa/Satelink_Network` | low (CI, resolves to empty string, not a hard failure) | founder action |
+| GitHub environment `trading-testnet` does not exist on the new repo | informational | expected — it's part of the unmerged `trading-agent/integration` branch (Gate 0 not passed); not urgent |
+| `packages/sdk/README.md` advertised "AI inference: $0.000001 per input token" — no backing code anywhere (`ai_api.js`/`ai_gateway` routes are unmounted, the SDK's inference client is a comment with no implementation) | low (doc accuracy) | fixed this round — line removed, MEV relay pricing corrected to its real $0.00005–$0.005 range (code-review caught the first fix still misstating the floor) |
+
 ## Security blockers (open)
 
 | id | finding | severity | evidence | proposed fix | owner |
 |---|---|---|---|---|---|
 | S1 | `POST /api/keys` binds **any** `wallet_address` without a signature | **high** | `billing/api_keys_route.mjs` | **RESOLVED & DEPLOYED** in #533 (`50c5a52e`) | Done |
 | S2 | recover challenge was an account-enumeration oracle (404 vs 200) | medium | `key_recovery_router.js` on main | **RESOLVED & DEPLOYED** in #530 (`c64e1f18`) | Done |
-| S3 | `satelink-mcp` npm name unclaimed while docs say `npx -y satelink-mcp` | medium (supply chain) | npm 404 | publish 2.1.0 (#531, `MCP_PUBLISH.md`) | founder action |
+| S3 | `satelink-mcp` npm name unclaimed while docs say `npx -y satelink-mcp` | medium (supply chain) | npm 404 | publish **2.1.1** (bumped this round, repo-move fix — see below; `MCP_PUBLISH.md`) | founder action |
+| S6 | `/api/financial/truth` (`src/services/financial/truth.js`) sums `revenue_events_v2.amount_usdt` with no `op_type` filter — same bug Q5 had in the reconciliation SQL (counts Dodo `subscription_payment`/`pack_purchase` deposits and `refund_reversal` rows as "metered usage") | medium (reporting, live endpoint) | source read, 2026-10-15; not reproduced against prod (no DB access this round) | exclude the same 3 op_types Q5 now excludes; needs its own review since it's money-adjacent, deployed code | founder decision |
 | S4 | `/api/economics/summary` is public and returns `totalRevenueUsdt` | medium (reporting) | live endpoint | gate with admin token or drop revenue fields | founder decision |
 | S5 | an unrecognised/exhausted x402 key causes client deadlock | medium (repeat usage) | `rpc.mjs` | **RESOLVED** in branch `fix/funnel-repeat-x402-and-messaging` (MCP client resets dead sessionKey on 402) | In PR |
 
 ## Founder actions (in priority order)
 
-1. Merge and deploy PR for `fix/funnel-repeat-x402-and-messaging` (repeat x402 fix + phantom free trial removal).
-2. Publish `satelink-mcp@2.1.0` to npm per `MCP_PUBLISH.md` (claims npm package name, enables `npx -y satelink-mcp`).
+1. ~~Merge and deploy PR for `fix/funnel-repeat-x402-and-messaging`~~ — **DONE**, merged as #534/#535 (`e7d307d1`, `7d77e01b`).
+2. Publish `satelink-mcp@2.1.1` to npm per `MCP_PUBLISH.md` (bumped from 2.1.0 this round — the
+   `package.json` `repository`/`bugs` fields pointed at the old `Satelink-Protocol/Satelink_Network`
+   location, which would have made npm's OIDC trusted-publisher provenance check fail against the
+   actual repo; fixed, version test green, `npm pack --dry-run` verified 11 files).
 3. Confirm or deny that `0xa41e…c61a` and `0x9cca…95d4` are founder wallets (forensic analysis shows founder links).
 4. Send #525 questions L1–L10 to the CA; provide the invoice Safe address.
+5. **New this round:** re-run `revenue_reconciliation_2026-10-12.sql` — Q5 was fixed (it summed
+   deposits and refund reversals as "metered usage"; see Round 2026-10-15 below). Prior UNVERIFIED
+   figures for R5 are now additionally stale because of that bug, not just unread.
+6. **New this round:** review S6 (`/api/financial/truth` likely has the same Q5 bug, live in prod).
+7. **New this round:** on the new repo (`Jakuraa/Satelink_Network`) — create the
+   `NEXT_PUBLIC_WALLETCONNECT_ID` Actions secret (`ci.yml` reads it; currently unset → empty at
+   build time) and decide whether/when to create the `trading-testnet` environment (only needed
+   once `trading-agent/integration` merges — Gate 0 not passed, so not urgent).
+8. **New this round — top 3 unpaid-traffic sources worth converting** (from the 15-minute sample
+   in `docs/growth/UNPAID_TRAFFIC_ANALYSIS.md`; UNVERIFIED at 7-day scale, see that doc's
+   limitations):
+   - **`PolymarketCleanChain/1.0 verified public`** — self-identified, Polymarket-branded client
+     (Polymarket is a major Polygon prediction-market dApp — worth direct outreach if a contact
+     can be found).
+   - **`erpc` clients** (two UA variants, 14 reqs combined) — eRPC is a real open-source RPC
+     proxy/load-balancer; someone has pointed a production eRPC instance at Satelink.
+   - **A dedicated client app** (`RPCHub/1.0` on macOS/iOS, 149 reqs from one IP) plus
+     `polygon-one/0.1` (has a GitHub link in its UA) and a Supabase Edge Function caller — three
+     separate purpose-built integrations, not generic scripts.
+   - Lowest priority / scanners: ~480 requests with no UA at all, including one IP sending 302
+     identical requests with zero UA and no reaction to the 402 — not worth chasing.
+   - Unresolved: ~47% of sampled traffic has a generic browser-shaped UA on POST JSON-RPC calls
+     (not page loads) — could be real dApp front-ends calling Satelink client-side, or UA-spoofing
+     scrapers. This log schema can't tell them apart (no Referer/Origin captured); would need
+     app-level capture to resolve, which doesn't exist today.

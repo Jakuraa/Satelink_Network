@@ -7,7 +7,7 @@ Run `bash scripts/check-zone3-exposure.sh` before any public sync.
 
 ## Zone 1 — Fully Open Source (MIT)
 
-Published to: `satelink-protocol/contracts`, `satelink-protocol/node-agent`
+Published to: `jakuraa/contracts`, `jakuraa/node-agent`
 
 ### Contracts (MIT License)
 - `contracts/NodeRegistryV2.sol`
@@ -26,7 +26,7 @@ See `contracts/LICENSE` (MIT) and `contracts/README.md`.
 
 ## Zone 2 — Source-Available (BSL 1.1)
 
-Published to: `satelink-protocol/platform`
+Published to: `jakuraa/platform`
 Readable but not commercially forkable until 2030.
 
 ### Files
@@ -40,7 +40,7 @@ Readable but not commercially forkable until 2030.
 - `apps/web/src/app/` — node operator and builder dashboards (excluding admin/)
 
 ### Publication checklist for Zone 2 repo
-Before syncing to satelink-protocol/platform:
+Before syncing to jakuraa/platform:
 1. Run: `bash scripts/check-zone3-exposure.sh`
 2. Verify LICENSE.BSL file is present
 3. Confirm no ADMIN routes present
@@ -147,7 +147,7 @@ See `.gitignore` for the complete list. Rotate quarterly.
 
 | Zone | License | Published To | File Count |
 |------|---------|--------------|------------|
-| Zone 1 | MIT | satelink-protocol/contracts | 9 contracts |
-| Zone 2 | BSL 1.1 | satelink-protocol/platform | ~30 files |
+| Zone 1 | MIT | jakuraa/contracts | 9 contracts |
+| Zone 2 | BSL 1.1 | jakuraa/platform | ~30 files |
 | Zone 3 | Private | Never | 35+ files |
 | Zone 4 | N/A | Never (secrets) | N/A |

@@ -46,6 +46,6 @@ fast rather than hang.
 ## Still stuck?
 
 - [Status page](https://satelink.network/status)
-- [GitHub issues](https://github.com/Satelink-Protocol/Satelink_Network/issues)
+- [GitHub issues](https://github.com/Jakuraa/Satelink_Network/issues)
   (never for security reports — see [Security](/docs/security))
 - Email: satelinknetwork@gmail.com

@@ -40,7 +40,7 @@ export const POSTS: ResourcePost[] = [
       "The repository is public on GitHub. It is the same handshake Satelink's own endpoints use, so anything you build against it works against the live rail.",
     ],
     links: [
-      { label: "x402-kit on GitHub", href: "https://github.com/Satelink-Protocol/x402-kit" },
+      { label: "x402-kit on GitHub", href: "https://github.com/Jakuraa/x402-kit" },
       { label: "About x402", href: "/products/x402" },
     ],
   },

@@ -180,7 +180,7 @@ Reputation decreases with:
 
 - **Discord**: [discord.gg/satelink](https://discord.gg/satelink)
 - **Docs**: [docs.satelink.network](https://docs.satelink.network)
-- **GitHub**: [github.com/Satelink-Protocol](https://github.com/Satelink-Protocol)
+- **GitHub**: [github.com/Jakuraa](https://github.com/Jakuraa)
 
 ---
 

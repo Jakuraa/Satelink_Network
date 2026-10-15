@@ -11,7 +11,7 @@ RUN mkdir -p /app/storage
 RUN apk add --no-cache git
 # Claude Code refuses --dangerously-skip-permissions as root unless sandboxed
 ENV IS_SANDBOX=1
-RUN git clone --depth 1 https://github.com/Satelink-Protocol/Satelink_Network.git /app/satelink
+RUN git clone --depth 1 https://github.com/Jakuraa/Satelink_Network.git /app/satelink
 RUN mkdir -p /app/satelink/agent/memory
 COPY agent/ ./agent/
 EXPOSE 3100

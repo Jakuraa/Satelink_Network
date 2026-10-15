@@ -195,7 +195,7 @@ export const PRODUCTS: Record<ProductSlug, ProductFacts> = {
     tagline: "HTTP-native, keyless payments in USDC on Base.",
     endpoint: `${SITES.api.origin}/rpc/polygon`,
     discovery: DISCOVERY.wellKnown,
-    docs: "https://github.com/Satelink-Protocol/x402-kit",
+    docs: "https://github.com/Jakuraa/x402-kit",
     auth: ["x402"],
     rails: [RAIL.x402],
     priceLine: `USDC on Base (eip155:8453) · $${X402_BUNDLE.priceUsd} = ${X402_BUNDLE.calls.toLocaleString()} calls`,

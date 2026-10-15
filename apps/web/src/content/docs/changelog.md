@@ -1,5 +1,5 @@
 Notable platform changes, newest first. Full detail lives in the
-[commit history](https://github.com/Satelink-Protocol/Satelink_Network/commits/main).
+[commit history](https://github.com/Jakuraa/Satelink_Network/commits/main).
 
 ## 2026-07 — Data truth & public platform overhaul
 

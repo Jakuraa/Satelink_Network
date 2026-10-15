@@ -19,7 +19,7 @@ export default function Page() {
     <ProductPageView
       product={P}
       related={relatedFor(P.slug)}
-      primaryCta={{ label: "Get x402-kit", href: "https://github.com/Satelink-Protocol/x402-kit" }}
+      primaryCta={{ label: "Get x402-kit", href: "https://github.com/Jakuraa/x402-kit" }}
     />
   );
 }

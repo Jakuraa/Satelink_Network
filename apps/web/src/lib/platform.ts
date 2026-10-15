@@ -81,7 +81,7 @@ export const PLATFORM: Record<PlatformSlug, PlatformFacts> = {
       "Bundle pricing lets you pre-buy calls at a fixed cost.",
     ],
     resources: [
-      { label: "x402-kit (GitHub)", href: "https://github.com/Satelink-Protocol/x402-kit" },
+      { label: "x402-kit (GitHub)", href: "https://github.com/Jakuraa/x402-kit" },
       { label: "x402 product", href: "/products/x402" },
       { label: "Docs", href: DOCS },
     ],
@@ -196,7 +196,7 @@ export const PLATFORM: Record<PlatformSlug, PlatformFacts> = {
       "Every path bills through the same metered balance.",
     ],
     resources: [
-      { label: "x402-kit (GitHub)", href: "https://github.com/Satelink-Protocol/x402-kit" },
+      { label: "x402-kit (GitHub)", href: "https://github.com/Jakuraa/x402-kit" },
       { label: "API", href: "/platform/api" },
       { label: "Docs", href: DOCS },
     ],

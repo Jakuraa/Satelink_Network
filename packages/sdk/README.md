@@ -33,7 +33,7 @@ const provider = getEthersProvider('polygon');
 const balance = await provider.getBalance('0x...');
 
 // MEV relay (API key required)
-const mev = new SatelinkMEV({ apiKey: 'sk_live_...' });
+const mev = new SatelinkMEV({ apiKey: 'sk_your_api_key' });
 const simulation = await mev.simulateBundle([signedTx1, signedTx2]);
 if (simulation.profitable) {
   const result = await mev.submitBundle([signedTx1, signedTx2]);
@@ -46,7 +46,7 @@ if (simulation.profitable) {
 import { SatelinkRPC } from '@satelink/sdk';
 
 const rpc = new SatelinkRPC({
-  apiKey: 'sk_live_...', // optional for higher rate limits
+  apiKey: 'sk_your_api_key', // optional for higher rate limits
   chain: 'ethereum' // ethereum, polygon, arbitrum, base, polygon-amoy
 });
 
@@ -80,7 +80,7 @@ Private mempool for MEV searchers. Transactions bypass public mempool.
 ```typescript
 import { createMevClient } from '@satelink/sdk';
 
-const mev = createMevClient({ apiKey: 'sk_live_...' });
+const mev = createMevClient({ apiKey: 'sk_your_api_key' });
 
 // 1. Simulate bundle first (cheap - $0.0001)
 const simulation = await mev.simulateBundle([
@@ -178,7 +178,7 @@ const balance = await rpc('eth_getBalance', ['0x...', 'latest'], 'ethereum');
 ```typescript
 import { SatelinkAI } from '@satelink/sdk';
 
-const ai = new SatelinkAI({ apiKey: 'sk_live_...' });
+const ai = new SatelinkAI({ apiKey: 'sk_your_api_key' });
 
 // Chat completion (OpenAI-compatible)
 const chatResponse = await ai.chat([
@@ -201,7 +201,7 @@ import { SatelinkProvider } from '@satelink/sdk';
 
 const provider = new SatelinkProvider({
   chainId: 137, // Polygon
-  apiKey: 'sk_live_...'
+  apiKey: 'sk_your_api_key'
 });
 
 // Standard EIP-1193 request
@@ -231,15 +231,16 @@ await provider.request({
 
 ## Pricing
 
-- **RPC calls**: $0.00003 USDT per call
-- **MEV relay**: $0.001-$0.005 per tx/bundle
-- **AI inference**: $0.000001 per input token
+- **RPC calls**: x402 bundle $0.10 USDC = 1,000 calls (Base), or prepaid USDT
+  deposit $0.00003/call, min $0.50 (Polygon) — no free tier
+- **MEV relay**: $0.00005-$0.005 per tx/bundle, flat per method (not metered
+  per token/byte)
 
 ## Links
 
 - Website: https://satelink.network
 - RPC Endpoint: https://rpc.satelink.network
-- GitHub: https://github.com/Satelink-Protocol/Satelink_Network
+- GitHub: https://github.com/Jakuraa/Satelink_Network
 
 ## License
 

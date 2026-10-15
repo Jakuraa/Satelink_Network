@@ -145,7 +145,7 @@ export function createCreditGate(db, logger) {
             deposit_url: `${API_BASE}/credits/initiate?amount=10`,
             docs: 'https://satelink.network/docs'
           },
-          message: 'Deposit USDT to RevenueVault to continue. Low-balance auto-refill recommended.'
+          message: 'Deposit USDT to RevenueVault to continue (or pay via x402 on Base). Low-balance auto-refill recommended. Agents: the satelink-mcp package (npmjs.com/package/satelink-mcp) automates payment.'
         }));
       }
 

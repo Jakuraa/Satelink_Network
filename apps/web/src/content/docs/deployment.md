@@ -4,7 +4,7 @@ For contributors and the curious — the production pipeline is deliberately
 boring:
 
 - **Everything deploys by merging to `main`** on
-  [GitHub](https://github.com/Satelink-Protocol/Satelink_Network).
+  [GitHub](https://github.com/Jakuraa/Satelink_Network).
 - The API (Node.js/Express monolith) auto-deploys to Railway; the web app
   (Next.js) auto-deploys to Vercel.
 - There are no manual deploy commands in the loop; restarting a service never

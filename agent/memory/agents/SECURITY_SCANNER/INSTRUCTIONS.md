@@ -9,7 +9,7 @@ You run security scans and report findings. You do NOT fix vulnerabilities.
 TURN 1: Check Dependabot alerts via GitHub API (token from .mcp.json env)
   curl -s -H "Authorization: Bearer $GITHUB_PERSONAL_ACCESS_TOKEN" \
     -H "Accept: application/vnd.github+json" \
-    "https://api.github.com/repos/Satelink-Protocol/Satelink_Network/dependabot/alerts?state=open&per_page=100" \
+    "https://api.github.com/repos/Jakuraa/Satelink_Network/dependabot/alerts?state=open&per_page=100" \
     | grep -c '"state": "open"'
   Record the open-alert count and the highest severity present.
 
@@ -18,7 +18,7 @@ TURN 2: Check treasury balance matches expectations
 
 TURN 3: Check recent commits for secrets
   git log --oneline -5
-  git diff HEAD~3 | grep -iE "private_key|secret|password" | grep "^\+" | grep -v ".md"
+  git diff HEAD~3 | grep -iE "private.key|secret|password" | grep "^\+" | grep -v ".md"
 
 TURN 4: npm audit critical only
   npm audit --audit-level=critical 2>/dev/null | grep -E "critical|high" | head -10

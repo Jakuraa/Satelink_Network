@@ -101,7 +101,7 @@ export const jakuraaFooterConfig: FooterConfig = {
     { href: '/contact', label: 'Contact' },
   ],
   socialLinks: [
-    { href: 'https://github.com/Satelink-Protocol', label: 'GitHub', icon: 'github' },
+    { href: 'https://github.com/Jakuraa', label: 'GitHub', icon: 'github' },
     { href: 'mailto:contact@jakuraa.com', label: 'Email', icon: 'mail' },
   ],
   copyrightText: `${company?.legalName || 'Jakuraa Commercial Private Limited'}. All rights reserved.`,

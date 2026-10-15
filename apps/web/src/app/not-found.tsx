@@ -23,7 +23,7 @@ export default function NotFound() {
       <p style={{ maxWidth: 420, opacity: 0.7, lineHeight: 1.6, margin: 0 }}>
         The page you&apos;re looking for doesn&apos;t exist or has moved. If a
         link on our site brought you here, please{" "}
-        <a href="https://github.com/Satelink-Protocol/Satelink_Network/issues" style={{ color: "#2DD4BF" }}>
+        <a href="https://github.com/Jakuraa/Satelink_Network/issues" style={{ color: "#2DD4BF" }}>
           report it
         </a>
         .

@@ -104,7 +104,7 @@ TreasurySettlementJob monitors balance every 5 minutes. If low → Discord alert
 
 **Q: Are the smart contracts audited?**
 
-Internal audit complete. External audit planned. Contracts are open-source: [GitHub](https://github.com/Satelink-Protocol/Satelink_Network/tree/main/contracts).
+Internal audit complete. External audit planned. Contracts are open-source: [GitHub](https://github.com/Jakuraa/Satelink_Network/tree/main/contracts).
 
 **Q: What if there's a bug in ClaimsContract?**
 
@@ -175,10 +175,10 @@ No token planned. USDT is the settlement currency. No need for a platform token.
 
 **Q: Can I contribute code?**
 
-Yes! Repo: [github.com/Satelink-Protocol/Satelink_Network](https://github.com/Satelink-Protocol/Satelink_Network)
+Yes! Repo: [github.com/Jakuraa/Satelink_Network](https://github.com/Jakuraa/Satelink_Network)
 
-See [CONTRIBUTING.md](https://github.com/Satelink-Protocol/Satelink_Network/blob/main/CONTRIBUTING.md).
+See [CONTRIBUTING.md](https://github.com/Jakuraa/Satelink_Network/blob/main/CONTRIBUTING.md).
 
 **Q: How do I report a security bug?**
 
-Email security@satelink.network for critical bugs. Regular bugs → [GitHub Issues](https://github.com/Satelink-Protocol/Satelink_Network/issues).
+Email security@satelink.network for critical bugs. Regular bugs → [GitHub Issues](https://github.com/Jakuraa/Satelink_Network/issues).

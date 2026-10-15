@@ -1,7 +1,7 @@
 The official JavaScript/TypeScript SDK is published on npm as
 [`@satelink/sdk`](https://www.npmjs.com/package/@satelink/sdk) (currently
 v0.2.x) and developed in the open in the
-[monorepo](https://github.com/Satelink-Protocol/Satelink_Network) under
+[monorepo](https://github.com/Jakuraa/Satelink_Network) under
 `packages/sdk`.
 
 ## Install

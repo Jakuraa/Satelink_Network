@@ -225,6 +225,10 @@ export function compactAlternativePayment(body) {
     },
     register_url: body.register_url,
     docs: body.docs,
+    // satelink-mcp pays this challenge automatically — keep it in the
+    // compacted body so anonymous (the highest-volume) 402s still link it,
+    // not just the keyed/wallet 402 paths that skip this compaction.
+    mcp: body.mcp,
   };
   return compact;
 }
