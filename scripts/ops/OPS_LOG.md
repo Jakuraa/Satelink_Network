@@ -102,7 +102,7 @@ Deployed the M7 reconciler as a new Railway service (`satelink-reconciler`) in t
 Service details:
 - **Service name**: `satelink-reconciler`
 - **Public domain**: `https://satelink-reconciler-production.up.railway.app`
-- **Source**: `Satelink-Protocol/Satelink_Network`, branch `main`, build from monorepo root
+- **Source**: `Jakuraa/Satelink_Network`, branch `main`, build from monorepo root
 - **Railway config**: `workers/reconciler/railway.json` (start command, healthcheck, restart policy)
 - **Postgres reference**: `${{Postgres-iQeW.DATABASE_URL}}` (the `Postgres-iQeW` service)
 

@@ -55,7 +55,7 @@ It NEVER reads or changes `SETTLEMENT_DRY_RUN` or any settlement flag.
 ### Deploy (Railway)
 
 New service in the existing project (`Satelink-api`, production environment):
-1. `railway add` a service; connect this repo (`Satelink-Protocol/Satelink_Network`), branch `main`.
+1. `railway add` a service; connect this repo (`Jakuraa/Satelink_Network`), branch `main`.
    - Leave root directory empty (builds from monorepo root so workspace deps resolve).
    - Set `railwayConfigFile: "workers/reconciler/railway.json"` or set start command explicitly.
 2. Set the four required env vars (see below).
@@ -69,7 +69,7 @@ New service in the existing project (`Satelink-api`, production environment):
 | Railway service name | `satelink-reconciler` |
 | Railway project | `Satelink-api` (production) |
 | Public domain | `https://satelink-reconciler-production.up.railway.app` |
-| Source repo | `Satelink-Protocol/Satelink_Network`, branch `main` |
+| Source repo | `Jakuraa/Satelink_Network`, branch `main` |
 | Build root | monorepo root (no rootDirectory restriction) |
 
 #### Required environment variables (set on reconciler service only)

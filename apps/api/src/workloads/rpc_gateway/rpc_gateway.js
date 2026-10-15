@@ -10,6 +10,7 @@ import { recordRpcRevenue } from './rpc_billing.js';
 import { createCreditGate } from '../../middleware/credit_gate.js';
 import { enforceCapacity, precheckCapacity } from '../../capacity/capacity_enforcement.js';
 import { paymentRequiredResponse } from '../../utils/payment_required.js';
+import { PRICE_PER_CALL_USDT } from '../../billing/credit_service.mjs';
 
 // Customer Zero P0 recovery: when CREDIT_CANONICAL=true, authenticated callers
 // (X-API-Key or x-wallet-address) are authorized + metered + deducted against
@@ -19,19 +20,9 @@ const CREDIT_CANONICAL = () => process.env.CREDIT_CANONICAL === 'true';
 
 const SUPPORTED_CHAINS = new Set([...getSupportedChains(), ...Object.keys(CHAIN_ALIASES)]);
 
-const CHAIN_PRICING_USDT = {
-    'ethereum': 0.00005,
-    'eth': 0.00005,
-    'polygon': 0.00003,
-    'matic': 0.00003,
-    'polygon-amoy': 0.00003,
-    'amoy': 0.00003,
-    'arbitrum': 0.00004,
-    'arb': 0.00004,
-    'base': 0.00004
-};
-
-const DEFAULT_RPC_REWARD_USDT = 0.00003;
+// Billing is flat per call regardless of chain (credit_service.PRICE_PER_CALL_USDT,
+// the same number /api/pricing, /v1/pricing and the catalog advertise) — a per-chain
+// price table here would show a number nothing actually charges.
 
 // 402 contract for any request that never resolves to a billable account
 // (credentials that match no account, or anonymous traffic while the free
@@ -45,6 +36,7 @@ const paymentRequiredBody = (message) => paymentRequiredResponse({
     how_to_pay: [
         `Fastest (x402 SDKs): retry this call with an x402 payment header — one $0.10 USDC payment on Base buys a 1,000-call bundle. The 402 you received carries the exact requirements in "accepts".`,
         'Prepaid (any HTTP client): register your wallet (see "register"), fetch deposit calldata (see "deposit.calldata_url"), send the USDT, retry with the X-API-Key you were issued.',
+        'No code to write: `npx -y satelink-mcp` pays and retries for you (see "mcp").',
         'Full machine-readable service manifest: see "manifest_url"; live pricing and market comparison: see "pricing_url".',
     ],
 });
@@ -118,7 +110,7 @@ export function createRpcGateway(db) {
                 chainId: config.chainId,
                 name: config.name,
                 providers: config.providers.length,
-                priceUsdt: CHAIN_PRICING_USDT[chainKey] || DEFAULT_RPC_REWARD_USDT,
+                priceUsdt: PRICE_PER_CALL_USDT,
                 aliases: Object.entries(CHAIN_ALIASES)
                     .filter(([_, v]) => v === chainKey)
                     .map(([k]) => k)
@@ -176,7 +168,6 @@ export function createRpcGateway(db) {
         }
 
         const config = getChainConfig(normalizedChain);
-        const pricing = CHAIN_PRICING_USDT[normalizedChain] || CHAIN_PRICING_USDT[chain] || DEFAULT_RPC_REWARD_USDT;
 
         res.setHeader('Cache-Control', 'public, max-age=60');
         res.json({
@@ -189,7 +180,7 @@ export function createRpcGateway(db) {
             endpoint: `https://rpc.satelink.network/rpc/${chain}`,
             pricing: {
                 model: 'pay_per_use',
-                base_cost_usdt: pricing,
+                base_cost_usdt: PRICE_PER_CALL_USDT,
                 settlement: 'USDT on Polygon'
             },
             providers: config?.providers?.length || 0,

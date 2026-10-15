@@ -2,15 +2,17 @@
 
 Not wired up by this PR (a profile README needs its own repo, and creating
 GitHub repos is outside this branch's scope — see the checklist in the PR
-description). Two ways to use this:
+description). Written when `Satelink-Protocol` was the personal account
+holding the main repo (see STATUS.md / the merchant-readiness audit); the
+repo has since moved to the **`Jakuraa` org** (2026-10-14 transfer — see
+`docs/platform/EXECUTION_BOARD.md` / memory). Use the org path now:
 
-- **If `Satelink-Protocol` stays a personal account** (it currently is, not
-  an org — see STATUS.md / the merchant-readiness audit): create a repo
-  named exactly `Satelink-Protocol/Satelink-Protocol` (public, matching the
-  username) with this content as its root `README.md`. GitHub shows it on
-  the profile page automatically.
-- **If it's converted to an org later:** the same content goes in a
-  `.github` repo at `profile/README.md`.
+- **Current (org):** create a `Jakuraa/.github` repo with this content at
+  `profile/README.md`. GitHub shows it on the org's profile page automatically.
+- **If `Satelink-Protocol` (the personal account, still a `Jakuraa` collaborator)
+  ever wants its own profile page separately:** create a repo named exactly
+  `Satelink-Protocol/Satelink-Protocol` (public, matching the username) with
+  this content as its root `README.md` — same trick, personal-account variant.
 
 Paste everything between the lines below as that file's content.
 
@@ -28,12 +30,12 @@ humans, metered per call, settled on-chain.
 - ⚡ **[RPC Gateway](https://rpc.satelink.network)** — pay-per-call Polygon
   JSON-RPC, $0.00003/call, no account required to start.
 - 💳 **Pricing:** one-time USD credit packs (no subscription), or
-  pay-per-call via [x402](https://github.com/Satelink-Protocol/x402-kit)
+  pay-per-call via [x402](https://github.com/Jakuraa/x402-kit)
   (USDC on Base) — see [satelink.network/pricing](https://satelink.network/pricing).
 
 ## Open source
 
-- **[x402-kit](https://github.com/Satelink-Protocol/x402-kit)** —
+- **[x402-kit](https://github.com/Jakuraa/x402-kit)** —
   MIT-licensed Express middleware that puts an x402 USDC paywall in front of
   any route. Extracted from Satelink's own gateway, mainnet-proven.
 

@@ -28,7 +28,7 @@ export function paymentRequiredFields() {
         ok: false,
         error: 'payment_required',
         code: 402,
-        message: 'Payment required. Deposit USDT on Polygon or pay via x402 on Base to continue.',
+        message: 'Payment required. Deposit USDT on Polygon or pay via x402 on Base to continue. Or run `npx -y satelink-mcp` to pay automatically.',
         deposit: {
             vault_address:
                 process.env.REVENUE_VAULT_ADDRESS ||
@@ -63,6 +63,13 @@ export function paymentRequiredFields() {
         // fetch these to learn pricing, deposit flow, and registration.
         manifest_url: `${apiBase}/.well-known/satelink.json`,
         pricing_url: `${apiBase}/v1/pricing`,
+        // MCP package — an agent can pay and retry automatically without
+        // implementing the register/deposit/x402 flow by hand.
+        mcp: {
+            package: 'satelink-mcp',
+            install: 'npx -y satelink-mcp',
+            npm_url: 'https://www.npmjs.com/package/satelink-mcp',
+        },
         // Anonymous self-onboarding — no prior key or account needed. Without
         // this, an over-limit anonymous machine has a deposit address but no
         // way to obtain the API key its deposit would credit.

@@ -171,7 +171,7 @@ export const footerFallback: Footer = {
       { label: "RPC Infrastructure", href: "/products/rpc" },
       { label: "x402 Machine Payments", href: "/products/x402" },
       { label: "MCP server", href: "/trading-agent/docs" },
-      { label: "x402-kit (GitHub)", href: "https://github.com/Satelink-Protocol" },
+      { label: "x402-kit (GitHub)", href: "https://github.com/Jakuraa/x402-kit" },
     ] },
     { title: "Resources", links: [
       { label: "Blog", href: "/blog" },

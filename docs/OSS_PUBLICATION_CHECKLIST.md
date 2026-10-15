@@ -1,6 +1,6 @@
 # Zone 1 Open Source Publication Checklist
 
-Complete all items before publishing to satelink-protocol/contracts
+Complete all items before publishing to jakuraa/contracts
 
 ## Pre-publication (contracts)
 
@@ -29,13 +29,13 @@ Complete all items before publishing to satelink-protocol/contracts
 
 ## Publication steps
 
-1. Create org: github.com/satelink-protocol
-2. Create repo: satelink-protocol/contracts (public, MIT)
+1. Create org: github.com/jakuraa
+2. Create repo: jakuraa/contracts (public, MIT)
 3. Copy: `contracts/` `test/` `script/` `foundry.toml` `remappings.txt`
 4. Enable GitHub secret scanning
 5. Enable Dependabot security alerts
 6. Add branch protection: require PR reviews for main
-7. Add CODEOWNERS: `* @satelink-protocol/core-team`
+7. Add CODEOWNERS: `* @jakuraa/core-team`
 8. Verify contracts on Polygonscan
 9. Create GitHub Release with changelog
 10. Announce in Polygon Discord + Twitter

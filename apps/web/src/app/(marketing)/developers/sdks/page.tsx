@@ -18,7 +18,7 @@ export const metadata: Metadata = buildMetadata({
 });
 
 const KITS = [
-  { title: "x402-kit (MIT)", status: null, body: "Drop-in middleware and client for the HTTP 402 handshake, with proven mainnet settlements.", href: "https://github.com/Satelink-Protocol/x402-kit", cta: "View on GitHub" },
+  { title: "x402-kit (MIT)", status: null, body: "Drop-in middleware and client for the HTTP 402 handshake, with proven mainnet settlements.", href: "https://github.com/Jakuraa/x402-kit", cta: "View on GitHub" },
   { title: "Typed SDK", status: "Planned", body: "A typed client library over the REST API.", href: SITES.docs.origin, cta: "Follow the docs" },
   { title: "MCP / agent server", status: "Planned", body: "An MCP server so agents can discover and pay for Satelink tools.", href: SITES.docs.origin, cta: "Follow the docs" },
 ];

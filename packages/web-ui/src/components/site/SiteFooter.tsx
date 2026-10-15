@@ -33,7 +33,7 @@ export const satelinkFooterConfig: FooterConfig = {
       links: [
         { href: 'https://docs.satelink.network', label: 'Documentation', external: true },
         { href: '/status', label: 'Status' },
-        { href: 'https://github.com/Satelink-Protocol/x402-kit', label: 'x402-kit (GitHub)', external: true },
+        { href: 'https://github.com/Jakuraa/x402-kit', label: 'x402-kit (GitHub)', external: true },
       ],
     },
     {
@@ -54,7 +54,7 @@ export const satelinkFooterConfig: FooterConfig = {
     { href: '/contact', label: 'Contact' },
   ],
   socialLinks: [
-    { href: 'https://github.com/Satelink-Protocol/x402-kit', label: 'GitHub', icon: 'github' },
+    { href: 'https://github.com/Jakuraa/x402-kit', label: 'GitHub', icon: 'github' },
     { href: 'mailto:satelinknetwork@gmail.com', label: 'Email', icon: 'mail' },
   ],
   copyrightText: 'Jakuraa Commercial Pvt Ltd. All rights reserved.',

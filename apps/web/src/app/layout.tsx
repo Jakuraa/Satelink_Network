@@ -81,7 +81,7 @@ const ORG_JSON_LD = {
   url: "https://satelink.network",
   email: "satelinknetwork@gmail.com",
   foundingDate: "2025",
-  sameAs: ["https://github.com/Satelink-Protocol/x402-kit"],
+  sameAs: ["https://github.com/Jakuraa/x402-kit"],
 };
 
 // Primary product for this merchant account.

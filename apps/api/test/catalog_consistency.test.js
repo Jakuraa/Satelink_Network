@@ -96,8 +96,30 @@ describe('Catalog consistency (C8): one price, every surface', () => {
     assert.doesNotMatch(block, /usdt_per_call:\s*0\.\d/, 'no hard-coded per-method price literals');
   });
 
+  it('GET /rpc/chains and /rpc/:chain show the flat catalog price, not a per-chain table (2026-10-15)', () => {
+    const src = fs.readFileSync(path.join(here, '..', 'src', 'workloads', 'rpc_gateway', 'rpc_gateway.js'), 'utf8');
+    assert.ok(src.includes("import { PRICE_PER_CALL_USDT } from '../../billing/credit_service.mjs'"), 'rpc_gateway.js must import the canonical per-call price');
+    assert.doesNotMatch(src, /CHAIN_PRICING_USDT/, 'no revived per-chain price table — billing is flat regardless of chain');
+    // Anchored on the trailing comma: PRICE_PER_CALL_USDT followed by anything
+    // other than a comma (e.g. a revived `* someMultiplier`) must fail this.
+    const chainsBlock = src.slice(src.indexOf("router.get('/chains'"), src.indexOf("router.get('/usage'"));
+    assert.match(chainsBlock, /priceUsdt:\s*PRICE_PER_CALL_USDT\s*,/, '/rpc/chains must show the catalog price, unmodified');
+    const chainInfoBlock = src.slice(src.indexOf("router.get('/:chain'"), src.indexOf("router.post('/:chain'"));
+    assert.match(chainInfoBlock, /base_cost_usdt:\s*PRICE_PER_CALL_USDT\s*,/, '/rpc/:chain must show the catalog price, unmodified');
+  });
+
+  it('rpc_billing.js records the actual deducted amount, not a hard-coded per-chain price table', () => {
+    const src = fs.readFileSync(path.join(here, '..', 'src', 'workloads', 'rpc_gateway', 'rpc_billing.js'), 'utf8');
+    assert.doesNotMatch(src, /CHAIN_PRICING_USDT/, 'a dead per-chain price table is a trap for the next person who wires it up');
+  });
+
   // ── Copy on web, console and docs ──────────────────────────────────────────
-  const SURFACES = ['apps/web/src', 'apps/console/src', 'docs/quick-start.md', 'docs/pricing.md', 'docs/api-reference.md', 'docs/sdk-guide.md'];
+  const SURFACES = [
+    'apps/web/src', 'apps/console/src', 'docs/quick-start.md', 'docs/pricing.md',
+    'docs/api-reference.md', 'docs/sdk-guide.md', 'README.md', 'docs/faq.md',
+    'docs/settlement.md', 'docs/NODE_OPERATOR_QUICKSTART.md',
+    'apps/mcp-server/README.md', 'packages/sdk/README.md',
+  ];
   // Lines that legitimately show other numbers: operator share, samples, UI kits, admin internals.
   const EXEMPT_FILE = /(\/design\/|\/styleguide\/|\/admin\/|\.bak$|\.test\.|EarningsEstimator|node-operators\.md|revenue-model\.md)/;
   const EXEMPT_LINE = /operator|share|sample|illustrative|example|competitor|median|vs\.? /i;

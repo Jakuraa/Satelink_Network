@@ -106,7 +106,7 @@ export default function MachinePage() {
           />
           <div className="mt-8 flex flex-wrap gap-3">
             <Button asChild size="lg"><a href="https://docs.satelink.network">Read the docs <ArrowRight className="size-4" /></a></Button>
-            <Button asChild variant="secondary" size="lg"><a href="https://github.com/Satelink-Protocol/x402-kit">x402-kit on GitHub</a></Button>
+            <Button asChild variant="secondary" size="lg"><a href="https://github.com/Jakuraa/x402-kit">x402-kit on GitHub</a></Button>
           </div>
         </div>
       </section>

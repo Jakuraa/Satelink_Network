@@ -11,9 +11,9 @@ This repository is licensed under the [Business Source License 1.1](../LICENSE.B
 - In 2030, this automatically converts to AGPL-3.0 (fully open source)
 
 ## What's Public (Zone 1 — MIT)
-- Smart contracts: github.com/satelink-protocol/contracts
-- Node edge agent: github.com/satelink-protocol/node-agent
-- Developer SDK: github.com/satelink-protocol/sdk
+- Smart contracts: github.com/jakuraa/contracts
+- Node edge agent: github.com/jakuraa/node-agent
+- Developer SDK: github.com/jakuraa/sdk
 
 ## What's Source-Available (Zone 2 — BSL 1.1, this repo)
 - Platform backend (public and builder API routes)

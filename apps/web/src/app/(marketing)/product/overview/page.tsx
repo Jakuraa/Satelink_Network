@@ -85,7 +85,7 @@ const AUDIENCES = [
 const PROOF = [
   { icon: ShieldCheck, title: "RevenueVaultV2", body: "Settlement vault on Polygon (chain 137).", href: "https://polygonscan.com/address/0x577D3716d6Ad5b676d230f5409deF9838FABaCEF", cta: "View on Polygonscan" },
   { icon: Boxes, title: "First on-chain claim", body: "A settled claim transaction, verifiable on-chain.", href: "https://polygonscan.com/tx/0x814d348d3f6cb4164d2aadf99b574d4ca65221d2155a76b0e99a4e8641a1726b", cta: "View transaction" },
-  { icon: FileCode2, title: "x402-kit", body: "Open-source x402 payment toolkit (MIT).", href: "https://github.com/Satelink-Protocol/x402-kit", cta: "View on GitHub" },
+  { icon: FileCode2, title: "x402-kit", body: "Open-source x402 payment toolkit (MIT).", href: "https://github.com/Jakuraa/x402-kit", cta: "View on GitHub" },
 ];
 
 const ROLES: SelectorRole[] = [

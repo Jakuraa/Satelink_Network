@@ -59,11 +59,15 @@ SELECT COUNT(*) AS accounts, SUM(credits_usdt) AS liability_usdt
  WHERE COALESCE(credits_usdt, 0) > 0
    AND NOT (lower(coalesce(wallet_address, '')) = ANY (:'founders'::text[]));
 
--- Q5  R5 metered usage (consumed), external only — same predicate as truth.js INTERNAL_PREDICATE
+-- Q5  R5 metered usage (consumed), external only — same predicate as truth.js INTERNAL_PREDICATE.
+--     FIXED 2026-10-15: excludes Dodo deposit rows ('subscription_payment', 'pack_purchase' —
+--     money coming in, already in Q1/collected) and 'refund_reversal' (belongs in "refunded",
+--     not "consumed"); the unfiltered SUM used to count all three as usage.
 SELECT COUNT(*) AS events, SUM(e.amount_usdt) AS metered_usdt
   FROM revenue_events_v2 e
   LEFT JOIN api_credits t ON t.api_key = e.client_id
  WHERE (e.is_test_data = false OR e.is_test_data IS NULL)
+   AND e.op_type NOT IN ('subscription_payment', 'pack_purchase', 'refund_reversal')
    AND NOT COALESCE(lower(e.client_id) = ANY (:'founders'::text[])
                  OR lower(t.wallet_address) = ANY (:'founders'::text[]), false);
 
@@ -81,9 +85,21 @@ SELECT p.source, p.tx_hash, p.amount_usd
 
 ## Reconciliation identities (to check once results exist)
 
+- **Invariant: collected = liability + consumed + refunded** (within rounding).
+  Q1 (collected) should equal Q4 (liability, unconsumed prepaid) + Q5 (consumed, fixed
+  2026-10-15 to exclude deposit/refund op_types) + a refunded-amount query (not yet in
+  this file — `SUM(amount_usdt) FROM revenue_events_v2 WHERE op_type = 'refund_reversal'`,
+  external only, same predicate as Q5). Before the Q5 fix this invariant could not hold:
+  Q5 double-counted deposits that Q1 already counted, and never subtracted refunds.
 - Q1 = Σ Q2 (by construction).
 - Q3 ≤ Q1; Q3 settlements should equal the number of x402 `api_deposits` rows (C1 empty).
 - External funds collected (Q1) ≥ consumed (Q5 portion billed from prepaid) + liability (Q4),
   modulo bundle margin (an x402 $0.10 bundle credits $0.03 of spend capacity — `credited_usdt`
   vs `amount_usdt`, settlement.js T-17b).
 - Q6 is never added to Q1–Q5.
+- **Open finding (not fixed by this round, flagged for founder review):** `/api/financial/truth`
+  (`src/services/financial/truth.js`, live, `#529`/`#532` PRODUCTION VERIFIED) computes
+  `metered_value_usdt` the same unfiltered way Q5 had — `SUM(revenue_events_v2.amount_usdt)`
+  with no `op_type` exclusion — so it likely has the same deposit/refund double-count in
+  production today. Out of scope for this round (money-path code, needs its own review/PR);
+  this doc only fixes the read-only reconciliation query.

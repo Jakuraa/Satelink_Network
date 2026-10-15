@@ -13,20 +13,6 @@ import { broadcaster } from '../../realtime/broadcaster-instance.js';
 import { isFounderApiKey } from '../../payments/founder_wallets.js';
 import { shadowWriteRevenueLedger } from '../../ledger/shadow_ledger_write.js';
 
-const CHAIN_PRICING_USDT = {
-  'ethereum': 0.00005,
-  'eth': 0.00005,
-  'polygon': 0.00003,
-  'matic': 0.00003,
-  'polygon-amoy': 0.00003,
-  'amoy': 0.00003,
-  'arbitrum': 0.00004,
-  'arb': 0.00004,
-  'base': 0.00004
-};
-
-const DEFAULT_RPC_COST_USDT = 0.00003;
-
 // Use shared Redis client to avoid connection pool exhaustion
 function getRedis() {
   return getSharedRedis();
@@ -111,8 +97,4 @@ export async function recordRpcRevenue({ pool, chain, method, apiKey, source, re
   } catch (err) {
     console.error('[Billing] INSERT failed:', err.message);
   }
-}
-
-export function getDefaultCost(chain) {
-  return CHAIN_PRICING_USDT[chain] || DEFAULT_RPC_COST_USDT;
 }

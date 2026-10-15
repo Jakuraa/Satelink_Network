@@ -27,11 +27,18 @@ SELECT COUNT(*) AS accounts, SUM(credits_usdt) AS liability_usdt
  WHERE COALESCE(credits_usdt, 0) > 0
    AND NOT (lower(coalesce(wallet_address, '')) = ANY (:'founders'::text[]));
 
--- Q5  R5 metered usage (consumed), external only — same predicate as truth.js INTERNAL_PREDICATE
+-- Q5  R5 metered usage (consumed), external only — same predicate as truth.js INTERNAL_PREDICATE.
+--     FIXED 2026-10-15: this used to SUM every revenue_events_v2 row with no op_type filter,
+--     which pulled in Dodo deposits (internal_dodo.js 'subscription_payment', webhooks.mjs
+--     'pack_purchase' — money COMING IN, already counted in Q1/collected) and refund reversals
+--     ('refund_reversal' — belongs in a 'refunded' bucket, not 'consumed'). Both inflated
+--     "consumed" with rows that were never a metered debit, breaking the Q1/Q4/Q5 invariant
+--     below. Usage debits only: every row EXCEPT those three op_types.
 SELECT COUNT(*) AS events, SUM(e.amount_usdt) AS metered_usdt
   FROM revenue_events_v2 e
   LEFT JOIN api_credits t ON t.api_key = e.client_id
  WHERE (e.is_test_data = false OR e.is_test_data IS NULL)
+   AND e.op_type NOT IN ('subscription_payment', 'pack_purchase', 'refund_reversal')
    AND NOT COALESCE(lower(e.client_id) = ANY (:'founders'::text[])
                  OR lower(t.wallet_address) = ANY (:'founders'::text[]), false);
 

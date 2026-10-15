@@ -1,6 +1,6 @@
 {
   "name": "satelink-mcp",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "Satelink MCP server \u2014 give AI agents pay-per-call Polygon (chain 137) JSON-RPC access. Every call paid via automatic x402 micropayments (USDC on Base).",
   "type": "module",
   "main": "index.js",
@@ -43,11 +43,11 @@
   "homepage": "https://satelink.network",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Satelink-Protocol/Satelink_Network.git",
+    "url": "git+https://github.com/Jakuraa/Satelink_Network.git",
     "directory": "apps/mcp-server"
   },
   "bugs": {
-    "url": "https://github.com/Satelink-Protocol/Satelink_Network/issues"
+    "url": "https://github.com/Jakuraa/Satelink_Network/issues"
   },
   "license": "MIT",
   "publishConfig": {

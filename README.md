@@ -46,7 +46,7 @@ flowchart LR
 ```
 
 Full map with file paths, status per subsystem and the 27-question architecture test:
-[`docs/trading-agent/ARCHITECTURE.md`](https://github.com/Satelink-Protocol/Satelink_Network/blob/trading-agent/integration/docs/trading-agent/ARCHITECTURE.md) (on the `trading-agent/integration` branch).
+[`docs/trading-agent/ARCHITECTURE.md`](https://github.com/Jakuraa/Satelink_Network/blob/trading-agent/integration/docs/trading-agent/ARCHITECTURE.md) (on the `trading-agent/integration` branch).
 
 ## Three interfaces
 
@@ -94,25 +94,25 @@ operator program is paused. Operator payouts are not active.
     Polygon, credited automatically to your API key.
   - A one-time USD credit pack via Dodo Payments (card/UPI) is the human
     checkout path — see [satelink.network/pricing](https://satelink.network/pricing).
-- A free tier exists for evaluation (500 RPC requests/day/IP; a free
-  discovery tier for intelligence). Paid conversion is early. No revenue
-  numbers are advertised here — anything you see is on-chain and verifiable.
+- No free tier: every RPC call is paid — **x402 bundle: $0.10 USDC = 1,000
+  calls** (USDC on Base), or **prepaid USDT deposit: $0.00003/call, min
+  $0.50** (Polygon). Paid conversion is early. No revenue numbers are
+  advertised here — anything you see is on-chain and verifiable.
 
 ### Try it (no key needed)
 
 ```bash
-# RPC
+# RPC — unauthenticated/unfunded calls get a machine-readable 402 with
+# everything needed to pay (x402 challenge or deposit instructions); agents
+# can self-onboard without a human.
 curl -X POST https://rpc.satelink.network/rpc/polygon \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
 
-# Intelligence — free discovery: metrics, prices, how to pay
+# Intelligence — free discovery metadata only (metrics, prices, how to pay;
+# not a free RPC/data allowance)
 curl https://rpc.satelink.network/v1/intelligence
 ```
-
-When the free taste runs out you get a machine-readable `402` response that
-contains everything needed to pay (x402 challenge or instant trial key) —
-agents can self-onboard without a human.
 
 ### Machine-consumer quickstart
 
@@ -138,7 +138,7 @@ curl https://rpc.satelink.network/v1/pricing
 
 ### Ecosystem
 
-- **[x402-kit](https://github.com/Satelink-Protocol/x402-kit)** — standalone,
+- **[x402-kit](https://github.com/Jakuraa/x402-kit)** — standalone,
   MIT-licensed Express middleware that puts an x402 USDC paywall in front of
   any route. Extracted from this codebase, mainnet-proven.
 - **MCP server** (`apps/mcp-server`) — gives AI agents Satelink RPC access as
@@ -161,7 +161,7 @@ curl https://rpc.satelink.network/v1/pricing
 ## Development
 
 ```bash
-git clone https://github.com/Satelink-Protocol/Satelink_Network.git
+git clone https://github.com/Jakuraa/Satelink_Network.git
 cd Satelink_Network && npm install
 cd apps/api && npm test   # mocha; see CLAUDE.md for the known-failure baseline
 ```
@@ -183,4 +183,4 @@ MIT
 
 ---
 
-[Website](https://satelink.network) · [RPC](https://rpc.satelink.network) · [Intelligence](https://satelink.network/intelligence) · [x402-kit](https://github.com/Satelink-Protocol/x402-kit)
+[Website](https://satelink.network) · [RPC](https://rpc.satelink.network) · [Intelligence](https://satelink.network/intelligence) · [x402-kit](https://github.com/Jakuraa/x402-kit)
