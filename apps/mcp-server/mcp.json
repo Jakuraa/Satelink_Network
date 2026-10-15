@@ -1,6 +1,6 @@
 {
   "name": "satelink-mcp",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "Pay-per-call Polygon PoS (chain 137) JSON-RPC over MCP. Every call is paid: calls settle automatically via x402 (USDC on Base) — $0.10 buys a 1,000-call bundle that later calls draw down. No account, no subscription.",
   "homepage": "https://satelink.network",
   "vendor": "Satelink Protocol",
