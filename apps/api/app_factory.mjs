@@ -52,6 +52,7 @@ import { createDodoV2WebhookHandler, isSubscriptionsEnabled, dodoMode } from './
 import { railPrices } from './src/pricing_v2/rails.mjs';
 import { startPricingReconcile } from './src/pricing_v2/reconcile.mjs';
 import { createAdminRouter, requireAdminAuth } from './src/admin/admin_router.js';
+import { createRpcTrafficRecorder } from './src/analytics/rpc_traffic_recorder.mjs';
 import { ensureAdminTables } from './src/admin/ensure_admin_tables.js';
 import { createVnextKernelRouter } from './src/vnext/http/kernel_router.js';
 
@@ -383,6 +384,8 @@ app.get("/api/mode", (req, res) => {
   // quota, so the gate is skipped for exactly that case; every other request
   // hits freeTierGate unchanged (the gate module itself is untouched).
   const x402Middleware = createX402Middleware(pool, console);
+  const rpcTrafficRecorder = createRpcTrafficRecorder(pool);
+  rpcTrafficRecorder.start();
   const freeTierGateUnlessX402Paid = (req, res, next) =>
     req.x402?.settled ? next() : freeTierGate(req, res, next);
 
@@ -398,6 +401,10 @@ app.get("/api/mode", (req, res) => {
   // RPC Gateway — freeTierGate runs before JSON parsing to reject rate-limited IPs
   // before their request body is allocated (prevents OOM from high-volume abusers).
   // Body limit 1mb covers all legitimate RPC batch calls; 50mb caused heap exhaustion.
+  // Persistent traffic aggregates (rpc_traffic_daily). Mounted FIRST so 402s from the
+  // x402 middleware and freeTierGate are counted too. Records on res 'finish' into an
+  // in-memory batch flushed every 60s — never blocks or fails the request.
+  app.use("/rpc", rpcTrafficRecorder.middleware);
   app.use("/rpc", x402Middleware, freeTierGateUnlessX402Paid, express.json({ limit: '1mb' }), createRpcGateway(pool));
 
   // MEV Private Relay (S3-001) — 10x pricing, requires API key

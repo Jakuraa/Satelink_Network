@@ -26,6 +26,7 @@ import {
 } from '../economics/pricing_intelligence/index.js';
 import { PRICE_PER_CALL_USDT } from '../billing/credit_service.mjs';
 import { betaFounderEmailStatus } from '../beta/beta_requests.mjs';
+import { getRpcTrafficReport } from '../analytics/rpc_traffic_report.mjs';
 
 // Mirrors BAD_ASNS in apps/api/src/middleware/free_tier_gate.js — kept as a
 // separate literal here rather than imported so the admin router has no
@@ -627,6 +628,16 @@ export function createAdminRouter(pool, redis) {
       ok(res, await getX402PayerFunnel(pool));
     } catch (err) {
       res.status(500).json({ ok: false, error: 'funnel_unavailable' });
+    }
+  });
+
+  // OBSERVER — persistent /rpc traffic aggregates (rpc_traffic_daily, 2026-10-15).
+  // Aggregates only; ?days=1..30 (default 7). See src/analytics/rpc_traffic_report.mjs.
+  router.get('/traffic/rpc', async (req, res) => {
+    try {
+      ok(res, await getRpcTrafficReport(pool, { days: req.query.days }));
+    } catch (err) {
+      res.status(500).json({ ok: false, error: 'traffic_unavailable' });
     }
   });
 
