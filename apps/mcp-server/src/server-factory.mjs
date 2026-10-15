@@ -96,7 +96,7 @@ export function advertisedTools({ includeInternal = process.env.SATELINK_MCP_INT
 
 export function createSatelinkMcpServer({ executeRpc, executeIntelligence, rpcUrl, wallet, canPay, includeInternal }) {
   const server = new Server(
-    { name: 'satelink-mcp', version: '2.1.1' },
+    { name: 'satelink-mcp', version: '2.1.2' },
     { capabilities: { tools: {}, resources: {}, prompts: {} } },
   );
 
