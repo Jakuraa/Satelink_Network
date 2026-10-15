@@ -58,5 +58,8 @@
         "gateway": "node gateway.js",
         "test": "mocha --require test/_guard/prod_db_guard.cjs test/**/*.test.js",
         "test:baseline": "mocha --no-config --exit --require test/_guard/prod_db_guard.cjs --reporter min --no-colors 'test/**/*.test.js'"
+    },
+    "overrides": {
+        "vitest": "4.1.11"
     }
 }
