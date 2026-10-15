@@ -1,0 +1,25 @@
+# Local environment files
+.env.local
+.env.*.local
+.env.development
+
+# Test reports and test results
+playwright-report
+test-results
+
+# Test suites
+test
+tests
+__tests__
+e2e
+*.test.ts
+*.test.tsx
+*.test.js
+*.test.mjs
+*.spec.ts
+*.spec.tsx
+*.spec.js
+
+# Build caches, typecheck artifacts, and logs
+*.tsbuildinfo
+*.log
