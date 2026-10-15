@@ -36,7 +36,7 @@ const paymentRequiredBody = (message) => paymentRequiredResponse({
     how_to_pay: [
         `Fastest (x402 SDKs): retry this call with an x402 payment header — one $0.10 USDC payment on Base buys a 1,000-call bundle. The 402 you received carries the exact requirements in "accepts".`,
         'Prepaid (any HTTP client): register your wallet (see "register"), fetch deposit calldata (see "deposit.calldata_url"), send the USDT, retry with the X-API-Key you were issued.',
-        'No code to write: `npx -y satelink-mcp` pays and retries for you (see "mcp").',
+        'No code to write: the satelink-mcp package pays and retries for you — see "mcp" (npm_url) to look it up and verify before running anything.',
         'Full machine-readable service manifest: see "manifest_url"; live pricing and market comparison: see "pricing_url".',
     ],
 });
