@@ -84,16 +84,15 @@ export default function HomePage() {
 
               <MotionReveal delay={120}>
                 <h1 className="mt-5 font-sans font-medium text-[clamp(2.5rem,5.2vw,4.5rem)] leading-[1.08] tracking-[-0.03em] text-ink">
-                  We build the AI that trades within your rules.
+                  Building software infrastructure for an agent-driven economy.
                 </h1>
               </MotionReveal>
 
               <MotionReveal delay={200}>
                 <p className="mt-6 max-w-xl text-lg sm:text-xl font-sans leading-relaxed text-stone-4">
-                  Jakuraa Commercial Private Limited, incorporated in Coimbatore in 2019, builds Satelink Trading AI: an AI
-                  trading operating system for people, AI agents and machines. AI proposes; deterministic risk and your signed
-                  mandate decide; you keep custody. Satelink also runs machine-commerce rails for software that pays software.
-                  Paper trading in controlled beta. Live execution is not yet available.
+                  Jakuraa Commercial Private Limited, incorporated in Coimbatore in 2019, is a corporate technology institution
+                  developing software infrastructure for AI-agent workflows, programmatic service access, and machine commerce.
+                  Satelink is its flagship platform.
                 </p>
               </MotionReveal>
 
@@ -223,12 +222,12 @@ export default function HomePage() {
                   {/* Telemetry Footer */}
                   <div className="mt-5 grid grid-cols-2 gap-3 border-t border-stone-1 pt-4 font-mono text-[10px] text-stone-3">
                     <div>
-                      <span className="block text-stone-4">SETTLEMENT LATENCY</span>
-                      <span className="font-semibold text-ink">Sub-second (&lt; 400ms)</span>
+                      <span className="block text-stone-4">SETTLEMENT RAILS</span>
+                      <span className="font-semibold text-ink">Base (USDC) &amp; Polygon (USDT)</span>
                     </div>
                     <div>
-                      <span className="block text-stone-4">TRANSACTION OVERHEAD</span>
-                      <span className="font-semibold text-ink">&lt; $0.0001 per call</span>
+                      <span className="block text-stone-4">SETTLEMENT MODEL</span>
+                      <span className="font-semibold text-ink">Non-Custodial On-Chain Receipts</span>
                     </div>
                   </div>
                 </div>
@@ -259,13 +258,13 @@ export default function HomePage() {
                   id="satelink-heading"
                   className="mt-2 font-serif text-3xl sm:text-4xl lg:text-5xl font-normal tracking-tight text-ink"
                 >
-                  Satelink: AI trading agents and machine commerce.
+                  Satelink: agent commerce and programmatic procurement.
                 </h2>
                 <p className="mt-4 text-base sm:text-lg leading-relaxed text-stone-4 font-sans">
-                  Satelink is the flagship platform engineered by Jakuraa. Its first product, Satelink Trading AI,
-                  reasons about markets, validates strategies, scores each decision GO, WAIT or REJECT, and executes
-                  only inside a mandate you signed. Underneath, Satelink provides the payment rails, vaults and
-                  usage-metered gateways that let software agents pay for data, compute and APIs per call.
+                  Satelink is the flagship technology platform engineered by Jakuraa. It provides the programmatic service
+                  discovery, payment rails, vaults, and usage-metered gateways that let autonomous software agents and automated
+                  systems discover, evaluate, access, and procure digital capabilities per call. Satelink Trading AI is its first
+                  intended application, currently in controlled paper-trading beta.
                 </p>
               </MotionReveal>
 
@@ -378,9 +377,9 @@ export default function HomePage() {
                 Satelink Trading AI: reason, validate, score, authorize, execute, learn.
               </h2>
               <p className="mt-4 text-base sm:text-lg text-stone-4 font-sans leading-relaxed">
-                An AI trading operating system for people, AI agents and machines. AI agents read the market and propose;
-                deterministic engines validate and score; nothing executes unless the risk engine and a mandate you signed
-                allow it. Your money stays at your broker and withdrawals are never enabled.
+                An application where AI models analyze market structure and propose suggestions, while deterministic
+                risk engines and signed user mandates decide. Currently in controlled paper-trading beta; live execution
+                is not yet available. Your money stays at your broker and withdrawals are never enabled.
               </p>
             </div>
           </MotionReveal>

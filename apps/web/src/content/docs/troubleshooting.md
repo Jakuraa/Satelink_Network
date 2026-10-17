@@ -1,20 +1,14 @@
 ## HTTP 402 Payment Required
 
-**Cause:** free tier exhausted (500 calls/day per IP) or your key's credit
-balance is zero.
+**Cause:** unpaid request without credentials, keyless payment not attached, or your API key's credit balance is zero.
 
-**Fix:** the 402 body itself contains the remediation — registration
-endpoint, deposit calldata, and the current real minimum. Either deposit
-USDT ([Billing](/docs/billing)) or wait for the UTC-midnight free-tier reset.
+**Fix:** the 402 body contains machine-readable remediation: pay keylessly per-call via x402 (USDC on Base), or fund your API key with a USDT deposit on Polygon ([Billing](/docs/billing)).
 
 ## HTTP 429 Too Many Requests
 
-**Cause:** the abuse limiter — very high volume from automated,
-non-developer traffic that keeps hammering after 402.
+**Cause:** the abuse limiter — very high volume from automated traffic that continues hammering without valid payment or authorization.
 
-**Fix:** honor the `Retry-After` header. If you're a legitimate high-volume
-caller, register a key and deposit credits; paid keys are not subject to the
-free-tier gate.
+**Fix:** honor the `Retry-After` header. If you are a high-volume caller, register a key and deposit credits, or use the x402 payment rail with appropriate concurrency.
 
 ## My deposit hasn't appeared
 

@@ -5,16 +5,15 @@ always meant to be used.
 
 ## The 402 flow
 
-1. **A machine calls the gateway anonymously** and eventually exhausts the
-   free tier (500 calls/day per IP).
-2. **The gateway answers 402** — and the response body is self-contained
-   machine-readable onboarding:
-   - the registration endpoint (`POST /v1/machine/register`),
+1. **A machine discovers endpoints** via `/.well-known/satelink.json` or calls the gateway directly without authentication.
+2. **The gateway answers 402 Payment Required** — and the response body is self-contained
+   machine-readable requirements:
+   - keyless pay-per-call via x402 (USDC on Base),
+   - or the registration endpoint (`POST /v1/machine/register`),
    - the calldata endpoint for a USDT deposit (`GET /credits/initiate`),
    - the **real minimum deposit** (not a marketing number),
    - working example requests it can copy verbatim.
-3. **The machine registers**, receives an API key, and has its operator
-   wallet send USDT to the RevenueVault on Polygon PoS.
+3. **The machine registers** or funds its calls: it can pay per-call via x402, or send USDT to the RevenueVault on Polygon PoS.
 4. **The deposit listener** watches the chain; after ~25 confirmations the
    machine's balance is credited and its calls are metered at $0.00003 each.
 
@@ -23,7 +22,7 @@ on-chain transfer.
 
 ## Try it
 
-Exhaust the free tier (or just inspect a 402):
+Inspect a 402 challenge response:
 
 ```bash
 curl -i -X POST https://rpc.satelink.network/rpc \

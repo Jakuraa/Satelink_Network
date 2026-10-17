@@ -18,14 +18,14 @@ function priceList(prices: PriceLine[]): string {
 
 export function generateLlmsTxt(input: LlmsInput): string {
   const lines: string[] = [];
-  lines.push("# Satelink — Satelink Trading AI and machine commerce");
+  lines.push("# Satelink — AI-Agent & Machine-Commerce Infrastructure");
   lines.push("");
   lines.push(
-    "Satelink Trading AI is an AI trading operating system for people, AI agents and machines: reason, validate, score (GO / WAIT / REJECT), authorize, execute, learn. AI proposes; deterministic risk and the user's signed mandate decide; the user keeps custody and withdrawals are never enabled. Paper trading in controlled beta. Live execution is not yet available. Overview: " + SITES.satelink.origin + "/trading-agent"
+    "Satelink is AI-agent assistance and machine-commerce infrastructure for software agents and machines to discover, evaluate, access, use, meter, and pay for supported digital services programmatically. Satelink is developed and operated by Jakuraa Commercial Private Limited."
   );
   lines.push("");
   lines.push(
-    "Satelink also runs machine-commerce infrastructure for software agents, machines, developers, and businesses to discover, access, pay for, and settle machine-native services."
+    "Satelink Trading AI is an intelligent algorithmic market-analysis application built on the Satelink platform: reason, validate, score (GO / WAIT / REJECT), authorize, execute, learn. AI proposes; deterministic risk and the user's signed mandate decide; the user keeps custody and withdrawals are never enabled. Currently in controlled paper-trading beta. Live trade execution is not yet enabled. Overview: " + SITES.satelink.origin + "/trading-agent"
   );
   lines.push("");
   lines.push("## Canonical concepts");

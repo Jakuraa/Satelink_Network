@@ -9,8 +9,14 @@ export interface FooterLinkItem {
   badge?: string;
 }
 
+export interface FooterSectionItem {
+  heading: string;
+  links: FooterLinkItem[];
+}
+
 export interface FooterColumn {
   heading: string;
+  sections?: FooterSectionItem[];
   links: FooterLinkItem[];
 }
 
@@ -66,18 +72,22 @@ export function FooterWrap({ config, className = '', theme = 'dark' }: FooterWra
 
   return (
     <footer className={`footer_wrap w-full transition-colors ${containerBg} ${className}`}>
-      <div className="mx-auto max-w-7xl px-6 py-16 sm:px-8 sm:py-20 lg:px-12">
-        {/* Top Institutional Header Strip */}
-        <div className="flex flex-col gap-8 pb-12 border-b border-white/10 lg:flex-row lg:items-start lg:justify-between">
-          <div className="max-w-xl">
+      <div className="mx-auto max-w-7xl px-6 py-16 sm:px-8 sm:py-20 lg:py-24">
+        {/* Main Composition Grid: Brand mark on upper-left, Link columns on the right */}
+        <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-10">
+          {/* Brand Identity & Mission (Upper-Left) */}
+          <div className="flex flex-col lg:col-span-4 max-w-sm">
             <Link
               href={config.brandHref || '/'}
-              className={`inline-flex items-center gap-2.5 font-sans text-2xl font-bold tracking-[0.14em] uppercase transition-opacity ${brandColor}`}
+              className={`inline-flex items-center gap-3 font-sans text-2xl font-bold tracking-[0.14em] uppercase transition-opacity ${brandColor}`}
               aria-label={config.brandName}
             >
+              <span className="flex size-8 items-center justify-center rounded border border-white/20 bg-white/5 font-serif text-lg font-semibold text-white">
+                J
+              </span>
               <span>{config.brandName}</span>
             </Link>
-            <p className={`mt-2 text-sm font-medium ${taglineColor}`}>
+            <p className={`mt-3 text-sm font-medium ${taglineColor}`}>
               {config.brandTagline}
             </p>
             {config.brandDescription && (
@@ -85,24 +95,24 @@ export function FooterWrap({ config, className = '', theme = 'dark' }: FooterWra
                 {config.brandDescription}
               </p>
             )}
-          </div>
 
-          <div className="flex flex-wrap items-center gap-4">
             {/* Live System Status Pill */}
-            <a
-              href="https://status.satelink.network"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 font-mono text-xs text-ivory hover:border-white/30 transition-colors"
-            >
-              <span className="size-2 rounded-full bg-green animate-pulse" />
-              <span>Network Status: Operational</span>
-              <span className="text-stone-4">↗</span>
-            </a>
+            <div className="mt-6">
+              <a
+                href="https://status.satelink.network"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 font-mono text-xs text-ivory hover:border-white/30 transition-colors"
+              >
+                <span className="size-2 rounded-full bg-green animate-pulse" />
+                <span>Network Status: Operational</span>
+                <span className="text-stone-4 text-[10px]">↗</span>
+              </a>
+            </div>
 
-            {/* Social / Direct Links */}
+            {/* Social / Direct Connect Links */}
             {config.socialLinks && config.socialLinks.length > 0 && (
-              <div className="flex items-center gap-2.5">
+              <div className="mt-6 flex items-center gap-2.5">
                 {config.socialLinks.map((s) => {
                   const Icon =
                     s.icon === 'github' ? Github : s.icon === 'mail' ? Mail : Globe;
@@ -126,59 +136,42 @@ export function FooterWrap({ config, className = '', theme = 'dark' }: FooterWra
               </div>
             )}
           </div>
-        </div>
 
-        {/* 6-Column Navigation Grid */}
-        <div className="pt-12 grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-8 sm:gap-6">
-          {config.columns.map((col) => (
-            <div key={col.heading} className="flex flex-col">
-              <h3 className={`text-xs font-mono font-semibold uppercase tracking-wider mb-4 ${headingColor}`}>
-                {col.heading}
-              </h3>
-              <ul className="space-y-2.5">
-                {col.links.map((link) => (
-                  <li key={link.href + link.label}>
-                    {link.external ? (
-                      <a
-                        href={link.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={`group inline-flex items-center gap-1.5 text-sm transition-colors ${linkColor}`}
-                      >
-                        <span>{link.label}</span>
-                        <svg
-                          className="size-3 text-stone-4 transition-colors group-hover:text-white opacity-80"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          strokeWidth={2}
-                          aria-hidden="true"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                          />
-                        </svg>
-                      </a>
-                    ) : (
-                      <Link
-                        href={link.href}
-                        className={`inline-flex items-center gap-1.5 text-sm transition-colors ${linkColor}`}
-                      >
-                        <span>{link.label}</span>
-                        {link.badge && (
-                          <span className="rounded bg-white/10 px-1.5 py-0.2 font-mono text-[9px] uppercase font-semibold text-green">
-                            {link.badge}
-                          </span>
-                        )}
-                      </Link>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          {/* Right Navigation Columns */}
+          <div className={`grid grid-cols-2 gap-8 sm:grid-cols-3 lg:col-span-8 ${config.columns.length === 5 ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} lg:gap-6`}>
+            {config.columns.map((col) => {
+              if (col.sections && col.sections.length > 0) {
+                return (
+                  <div key={col.heading} className="flex flex-col space-y-8">
+                    {col.sections.map((sec) => (
+                      <div key={sec.heading} className="flex flex-col">
+                        <h3 className={`text-xs font-mono font-semibold uppercase tracking-wider mb-3.5 ${headingColor}`}>
+                          {sec.heading}
+                        </h3>
+                        <ul className="space-y-2">
+                          {sec.links.map((link) => (
+                            <FooterLinkRow key={link.href + link.label} link={link} linkColor={linkColor} />
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                );
+              }
+              return (
+                <div key={col.heading} className="flex flex-col">
+                  <h3 className={`text-xs font-mono font-semibold uppercase tracking-wider mb-3.5 ${headingColor}`}>
+                    {col.heading}
+                  </h3>
+                  <ul className="space-y-2">
+                    {col.links.map((link) => (
+                      <FooterLinkRow key={link.href + link.label} link={link} linkColor={linkColor} />
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {/* Institutional Metadata Badges Strip */}
@@ -235,5 +228,48 @@ export function FooterWrap({ config, className = '', theme = 'dark' }: FooterWra
         </div>
       </div>
     </footer>
+  );
+}
+
+function FooterLinkRow({ link, linkColor }: { link: FooterLinkItem; linkColor: string }) {
+  return (
+    <li>
+      {link.external ? (
+        <a
+          href={link.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`group inline-flex items-center gap-1.5 text-xs sm:text-sm transition-colors ${linkColor}`}
+        >
+          <span>{link.label}</span>
+          <svg
+            className="size-3 text-stone-4 transition-colors group-hover:text-white opacity-80"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+            />
+          </svg>
+        </a>
+      ) : (
+        <Link
+          href={link.href}
+          className={`inline-flex items-center gap-1.5 text-xs sm:text-sm transition-colors ${linkColor}`}
+        >
+          <span>{link.label}</span>
+          {link.badge && (
+            <span className="rounded bg-white/10 px-1.5 py-0.2 font-mono text-[9px] uppercase font-semibold text-green">
+              {link.badge}
+            </span>
+          )}
+        </Link>
+      )}
+    </li>
   );
 }

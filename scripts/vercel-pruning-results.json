@@ -1,0 +1,26 @@
+{
+  "totalScanned": 652,
+  "preserved": 21,
+  "pruned": 631,
+  "failed": 0,
+  "byProject": {
+    "web": {
+      "scanned": 184,
+      "preserved": 7,
+      "pruned": 177,
+      "failed": 0
+    },
+    "satelink-console": {
+      "scanned": 232,
+      "preserved": 7,
+      "pruned": 225,
+      "failed": 0
+    },
+    "jakuraa-corporate": {
+      "scanned": 236,
+      "preserved": 7,
+      "pruned": 229,
+      "failed": 0
+    }
+  }
+}

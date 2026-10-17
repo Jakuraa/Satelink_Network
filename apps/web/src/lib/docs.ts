@@ -27,7 +27,7 @@ export const DOC_CATEGORIES = [
 
 export const DOCS: DocEntry[] = [
   // Getting Started
-  { slug: "quick-start", title: "Quick Start", description: "Make your first metered RPC call in under two minutes — free tier, no account required.", category: "Getting Started" },
+  { slug: "quick-start", title: "Quick Start", description: "Make your first metered RPC call in under two minutes via keyless x402 or prepaid credits.", category: "Getting Started" },
   { slug: "architecture", title: "Architecture", description: "How the Satelink gateway, metering, epoch ledger, and on-chain settlement fit together.", category: "Getting Started" },
   { slug: "authentication", title: "Authentication", description: "API keys, wallet-bound keys via MetaMask signature, and machine identity via HTTP 402.", category: "Getting Started" },
 
@@ -38,8 +38,8 @@ export const DOCS: DocEntry[] = [
 
   // Billing & Economics
   { slug: "billing", title: "Billing & Credits", description: "How per-call USDT metering, credit balances, and permissionless vault deposits work.", category: "Billing & Economics" },
-  { slug: "pricing", title: "Pricing", description: "Free tier limits and the flat $0.00003-per-call metered rate. No subscriptions.", category: "Billing & Economics" },
-  { slug: "revenue-model", title: "Revenue Model", description: "The 50/30/20 revenue split, epoch aggregation, and on-chain settlement lifecycle.", category: "Billing & Economics" },
+  { slug: "pricing", title: "Pricing", description: "The flat $0.00003-per-call metered rate and keyless x402 bundles. No subscriptions.", category: "Billing & Economics" },
+  { slug: "revenue-model", title: "Revenue Model", description: "Epoch aggregation, RevenueVaultV2 lifecycle, and paused operator distributions status.", category: "Billing & Economics" },
 
   // Network Participants
   { slug: "node-operators", title: "Node Operators", description: "The node operator program is paused. Operator payouts are not active.", category: "Network Participants" },
@@ -53,7 +53,7 @@ export const DOCS: DocEntry[] = [
 
   // Reference
   { slug: "faq", title: "FAQ", description: "Frequently asked questions about Satelink, honestly answered from the current production state.", category: "Reference" },
-  { slug: "glossary", title: "Glossary", description: "Canonical definitions: epoch, settlement batch, RevenueVault, free-tier gate, demand radar.", category: "Reference" },
+  { slug: "glossary", title: "Glossary", description: "Canonical definitions: agent procurement, epoch, settlement batch, RevenueVault, and x402.", category: "Reference" },
   { slug: "changelog", title: "Changelog", description: "Notable platform changes, newest first.", category: "Reference" },
   { slug: "roadmap", title: "Roadmap", description: "Completed, in progress, and planned work — kept in sync with the repository.", category: "Reference" },
 ];

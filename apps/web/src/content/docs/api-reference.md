@@ -1,12 +1,21 @@
 Base URL: `https://rpc.satelink.network` (also served as
 `api.satelink.network`). All bodies are JSON.
 
+## Discovery
+
+### `GET /.well-known/satelink.json`
+
+The public machine-readable service discovery catalogue. Returns available services,
+supported payment rails (x402 on Base, USDT on Polygon PoS), endpoints, and unit prices
+without authentication.
+
 ## RPC
 
 ### `POST /rpc`
 
 The metered JSON-RPC gateway (Polygon PoS by default). Standard JSON-RPC 2.0
-body. Optional `X-API-Key` header; anonymous calls use the IP free tier.
+body. Requires `X-API-Key` (metered against prepaid USDT credits) or keyless
+`X-Payment` (x402 micropayment in USDC on Base). Unpaid calls return HTTP 402.
 
 ```bash
 curl -X POST https://rpc.satelink.network/rpc \
@@ -19,7 +28,7 @@ Error responses you should handle:
 
 | Status | Meaning | Action |
 |---|---|---|
-| 402 | Free tier exhausted / no credits | Follow the onboarding instructions in the body |
+| 402 | Unpaid call / zero credit balance | Satisfy x402 payment requirements or deposit USDT credits |
 | 429 | Abuse limit (automated non-developer traffic) | Respect `Retry-After` |
 
 ### `GET /rpc/health`
@@ -66,21 +75,17 @@ counter, resets UTC midnight), measured uptime and p50 latency over the last
 24h of health samples (`null` when there is no sample — never a made-up
 number).
 
-### `GET /stats/free-tier`
+### `GET /v1/intelligence/catalog`
 
-Active free-tier IPs today, total calls, near-limit count, and the current
-free-tier limit.
+Returns the catalogue of active Trading Intelligence analytical metrics, pricing, and schema specifications.
 
 ### `GET /health`
 
 Liveness: `{ ok, server, db, uptime }`.
 
-## Node operators
+## Node operators (Paused)
 
-### `POST /api/nodes/register`
-
-Register a node to serve routed traffic. See
-[Node Operators](/docs/node-operators) for the full flow and requirements.
+The node operator program is paused. Operator payouts are not active, and node registration is not currently accepting new operators. See [Node Operators](/docs/node-operators).
 
 ## Conventions
 

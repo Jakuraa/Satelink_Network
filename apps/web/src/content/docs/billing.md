@@ -60,5 +60,6 @@ cannot be credited.
 
 ## Where the money goes
 
-Your spend enters the epoch ledger and is split 50% node operators /
-30% platform / 20% distribution pool — see [Revenue Model](/docs/revenue-model).
+Your spend enters the epoch ledger and settles on-chain to RevenueVaultV2.
+The node operator program is paused. Operator payouts are not active —
+see [Revenue Model](/docs/revenue-model).

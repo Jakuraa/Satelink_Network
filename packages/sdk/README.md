@@ -6,7 +6,7 @@
 > **Published:** [npmjs.com/package/@satelink/sdk](https://npmjs.com/package/@satelink/sdk) (scoped)  
 > **Fallback:** [npmjs.com/package/satelink-sdk](https://npmjs.com/package/satelink-sdk) (unscoped)
 
-Official SDK for the Satelink DePIN network — blockchain RPC, MEV relay, AI inference, and more.
+Official TypeScript/JavaScript SDK for the Satelink AI-agent and machine-commerce platform — metered Polygon PoS RPC, agent adapters, and payment rails.
 
 ## Install
 
@@ -21,23 +21,16 @@ yarn add @satelink/sdk
 ## Quick Start
 
 ```typescript
-import { SatelinkRPC, SatelinkMEV, getEthersProvider } from '@satelink/sdk';
+import { SatelinkRPC, getEthersProvider } from '@satelink/sdk';
 
-// RPC calls (no API key needed for public tier)
-const rpc = new SatelinkRPC({ chain: 'polygon' });
+// RPC calls with your API key
+const rpc = new SatelinkRPC({ apiKey: 'sat_live_...', chain: 'polygon' });
 const blockNumber = await rpc.getBlockNumber();
 console.log('Current block:', blockNumber);
 
-// ethers.js provider (drop-in Alchemy replacement)
-const provider = getEthersProvider('polygon');
+// ethers.js provider (drop-in Polygon RPC provider)
+const provider = getEthersProvider('polygon', { apiKey: 'sat_live_...' });
 const balance = await provider.getBalance('0x...');
-
-// MEV relay (API key required)
-const mev = new SatelinkMEV({ apiKey: 'sk_your_api_key' });
-const simulation = await mev.simulateBundle([signedTx1, signedTx2]);
-if (simulation.profitable) {
-  const result = await mev.submitBundle([signedTx1, signedTx2]);
-}
 ```
 
 ## RPC Usage
@@ -46,8 +39,8 @@ if (simulation.profitable) {
 import { SatelinkRPC } from '@satelink/sdk';
 
 const rpc = new SatelinkRPC({
-  apiKey: 'sk_your_api_key', // optional for higher rate limits
-  chain: 'ethereum' // ethereum, polygon, arbitrum, base, polygon-amoy
+  apiKey: 'sat_live_...', // Your metered API key
+  chain: 'polygon' // polygon (live gateway), ethereum, arbitrum, base
 });
 
 // Get block number
@@ -183,7 +176,7 @@ const ai = new SatelinkAI({ apiKey: 'sk_your_api_key' });
 // Chat completion (OpenAI-compatible)
 const chatResponse = await ai.chat([
   { role: 'system', content: 'You are a helpful assistant.' },
-  { role: 'user', content: 'What is DePIN?' }
+  { role: 'user', content: 'What is machine commerce?' }
 ], {
   model: 'gpt-4o',
   max_tokens: 500

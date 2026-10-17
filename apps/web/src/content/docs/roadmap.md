@@ -19,7 +19,7 @@ code or are explicitly planned. Nothing below is invented for marketing.
   paused; payouts not active), usage metering, deposits consoles
 - **Monitoring & status** — public status page, per-provider health API,
   measured (never fabricated) uptime/latency
-- **Paperclip agent OS foundations** — machine-access control plane (hashed
+- **Autonomous agent OS foundations** — machine-access control plane (hashed
   tokens, scoped auth, audit chaining)
 
 ## In progress

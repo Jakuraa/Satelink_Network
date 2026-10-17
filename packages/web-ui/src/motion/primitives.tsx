@@ -38,20 +38,29 @@ export interface ScrollRevealProps {
 export function ScrollReveal({ children, delay = 0, y = 12, as = "div", className }: ScrollRevealProps) {
   const reduce = useReducedMotion();
   const ref = React.useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, margin: "0px 0px -10% 0px" });
+  const inView = useInView(ref, { once: true, margin: "200px 0px 200px 0px" });
+  const [hasMounted, setHasMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
   const Comp = m[as];
   if (reduce) {
     const Static = as;
     return <Static className={className}>{children}</Static>;
   }
+
+  const shouldAnimate = inView || !hasMounted;
+
   return (
     <MP>
       <Comp
         ref={ref as never}
         className={className}
-        initial={{ opacity: 0, y }}
-        animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y }}
-        transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1], delay: delay / 1000 }}
+        initial={{ opacity: 0.85, y: 4 }}
+        animate={shouldAnimate ? { opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1], delay: delay / 1000 }}
       >
         {children}
       </Comp>
@@ -70,15 +79,15 @@ export interface StaggerProps {
 export function Stagger({ children, step = 0.06, className }: StaggerProps) {
   const reduce = useReducedMotion();
   const ref = React.useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, margin: "0px 0px -10% 0px" });
+  const inView = useInView(ref, { once: true, margin: "200px 0px 200px 0px" });
   if (reduce) return <div className={className}>{children}</div>;
   return (
     <MP>
       <m.div
         ref={ref}
         className={className}
-        initial="hidden"
-        animate={inView ? "show" : "hidden"}
+        initial="show"
+        animate={inView ? "show" : "show"}
         variants={{ show: { transition: { staggerChildren: step } }, hidden: {} }}
       >
         {children}
@@ -96,8 +105,8 @@ export function StaggerItem({ children, className }: { children: React.ReactNode
       <m.div
         className={className}
         variants={{
-          hidden: { opacity: 0, y: 12 },
-          show: { opacity: 1, y: 0, transition: { duration: 0.22, ease: [0.16, 1, 0.3, 1] } },
+          hidden: { opacity: 0.7, y: 6 },
+          show: { opacity: 1, y: 0, transition: { duration: 0.25, ease: [0.16, 1, 0.3, 1] } },
         }}
       >
         {children}

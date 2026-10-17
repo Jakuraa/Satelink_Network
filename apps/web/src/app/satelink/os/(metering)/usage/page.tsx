@@ -186,7 +186,7 @@ export default function UsagePage() {
       <DashboardSection title="Funding & Deposits" flush>
         <div className="px-2">
           <AsyncBoundary loading={loading} error={error} isEmpty={!loading && deposits.length === 0}
-            emptyTitle="No deposits yet" emptyDescription="Fund credits to keep requests flowing past the free tier."
+            emptyTitle="No deposits yet" emptyDescription="Fund credits to authorize and meter your requests."
             emptyAction={<a href="/satelink/os/deposit" className="text-[11px] text-primary hover:underline">Add credits →</a>} onRetry={() => load(selected)}>
             <DataTable columns={depCols} rows={deposits} rowKey={(i) => i.tx_hash} />
           </AsyncBoundary>

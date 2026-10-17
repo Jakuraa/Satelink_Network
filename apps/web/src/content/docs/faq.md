@@ -2,11 +2,14 @@
 
 ### What is Satelink?
 
-Satelink Trading AI is an AI trading operating system for people, AI agents
-and machines (paper trading in controlled beta; live execution is not yet
-available). This FAQ covers the legacy Satelink RPC gateway on Polygon PoS,
-where developers and machines pay $0.00003 per blockchain RPC call in USDT.
-The node operator program is paused. Operator payouts are not active.
+Satelink is AI-agent and machine-commerce infrastructure for discovering,
+evaluating, authorizing, accessing, metering, paying for, and settling
+supported digital services programmatically. Operated by Jakuraa Commercial
+Private Limited. Supported platform capabilities include metered Polygon PoS
+RPC ($0.00003/call) and keyless x402 micropayments in USDC on Base. Trading
+Intelligence is a metered analytics API, and Satelink Trading AI is a paper-
+trading beta application (live execution is not yet available). The node operator
+program is paused. Operator payouts are not active.
 
 ### Is this real or a testnet simulation?
 
@@ -19,10 +22,12 @@ publish measured numbers rather than marketing claims.
 
 ### How is Satelink different from Infura or Alchemy?
 
-Three structural differences: revenue is shared with the people running the
-infrastructure (50% to node operators), billing is a flat on-chain metered
-rate instead of plan tiers, and onboarding works for machines (HTTP 402 +
-ERC-20 payment) — not just humans with credit cards.
+Satelink is built for machine commerce and agent procurement rather than human
+subscription accounts: billing is a flat on-chain metered rate ($0.00003/call)
+instead of monthly plan tiers, and onboarding works natively for autonomous
+software agents via HTTP 402 and keyless x402 micropayments in USDC on Base.
+Third-party node operator onboarding is currently paused while contract
+upgrades proceed.
 
 ## For developers
 

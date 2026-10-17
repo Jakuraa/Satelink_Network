@@ -58,7 +58,7 @@ export function buildPricingJson(catalog: Catalog): PricingJson {
 export function buildWellKnown(catalog: Catalog) {
   return {
     name: "Satelink",
-    description: "Machine commerce infrastructure — discover, pay, and settle for API calls.",
+    description: "AI-agent assistance and machine-commerce infrastructure for software agents and machines to discover, evaluate, access, use, meter, and pay for supported digital services programmatically.",
     site: SITE,
     services: PRODUCT_ORDER.map((slug) => ({ product: slug, url: `${SITE}${PRODUCTS[slug].href}`, spec: `${SITE}/products/${slug}.json` })),
     discovery: DISCOVERY.wellKnown,

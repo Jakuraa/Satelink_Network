@@ -52,7 +52,7 @@ Read-only. Contract: `{ ok:true, data:{…}, ts }` / error `{ ok:false, error, t
 | `GET /admin/billing/credits` | total/free/paid keys, deposited/spent/outstanding usdt, deposits[] |
 | `GET /admin/treasury/status` | dry_run, signer_balance_pol, addresses, batch counts/usdt by status, threshold_met |
 | `GET /admin/customers/list` | paying[], free_tier[], total_paying |
-| `GET /admin/agents/status` | honest FAILED report (Satelink_Paperclip offline) |
+| `GET /admin/agents/status` | honest DECOMMISSIONED report (Paperclip retired) |
 | `GET /admin/security/threats` | top scanner/unknown/high-volume IPs from `developer_intel` |
 | `GET /admin/security/classifier-stats` | machine/developer/unknown/scanner/total |
 | `GET /admin/observability/metrics` | cpu_pct, memory_mb, uptime_s, db/redis status, api_p50_ms, requests_24h |

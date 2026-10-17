@@ -75,8 +75,8 @@ export const PRODUCTS: Record<ProductSlug, ProductFacts> = {
     name: "Machine Commerce",
     category: "product",
     definition:
-      "Machine commerce is software paying software for services. Satelink is the infrastructure a machine uses to discover a priced API, pay for it without a human, call it, and settle the payment on-chain.",
-    tagline: "The full discover → pay → call → settle loop for autonomous buyers.",
+      "AI-agent assistance and machine-commerce infrastructure for software agents and machines to discover, evaluate, access, use, meter, and pay for supported digital services programmatically.",
+    tagline: "The programmatic discover → evaluate → authorize → access → meter → pay → settle workflow for autonomous agents.",
     endpoint: `${SITES.api.origin}/rpc/polygon`,
     discovery: DISCOVERY.wellKnown,
     docs: `${SITES.docs.origin}`,
@@ -151,8 +151,8 @@ export const PRODUCTS: Record<ProductSlug, ProductFacts> = {
     name: "RPC Infrastructure",
     category: "infrastructure",
     definition:
-      "Satelink RPC is a metered gateway to blockchain RPC methods (eth_getBalance, eth_call, …) on Polygon PoS. Machines and agents pay per call over a crypto rail — no subscription, no seat.",
-    tagline: "Metered blockchain RPC that machines pay for per call.",
+      "Satelink RPC is a supported blockchain gateway capability providing metered JSON-RPC access on Polygon PoS (chain 137). Software agents and automated services access endpoints programmatically, paying per call via x402 on Base or prepaid Polygon vaults.",
+    tagline: "Metered Polygon PoS RPC capability that machines pay for per call.",
     endpoint: `${SITES.api.origin}/rpc/polygon`,
     discovery: DISCOVERY.wellKnown,
     docs: `${SITES.docs.origin}`,
@@ -191,7 +191,7 @@ export const PRODUCTS: Record<ProductSlug, ProductFacts> = {
     name: "x402 Machine Payments",
     category: "rail",
     definition:
-      "x402 is the keyless payment rail behind Satelink: a service answers an unpaid request with HTTP 402 and machine-readable requirements, the caller pays in USDC on Base, and the request completes — no account, no checkout.",
+      "x402 is an HTTP-native micropayment rail supported by Satelink: unpaid requests return HTTP 402 with machine-readable payment terms, allowing autonomous software agents to pay keylessly in USDC on Base (eip155:8453) without accounts, subscriptions, or credit card checkouts.",
     tagline: "HTTP-native, keyless payments in USDC on Base.",
     endpoint: `${SITES.api.origin}/rpc/polygon`,
     discovery: DISCOVERY.wellKnown,

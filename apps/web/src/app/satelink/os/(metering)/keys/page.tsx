@@ -242,7 +242,7 @@ export default function KeysPage() {
             loading={loading && rows.length === 0}
             isEmpty={!loading && rows.length === 0}
             emptyTitle="No API keys yet"
-            emptyDescription="Create your first key above — it takes one click and includes a free tier."
+            emptyDescription="Create your first key above — keys start with a 500 calls/day rate limit ceiling and require deposited credits or x402."
             emptyAction={<span className="text-[11px] text-muted-foreground">Next: fund credits on the Deposit page.</span>}
           >
             <DataTable columns={columns} rows={rows} rowKey={(k) => k.key} />
@@ -251,15 +251,15 @@ export default function KeysPage() {
 
         {/* Right: Key Health Panel */}
         <div className="space-y-6 min-w-0">
-          {/* Free Tier Limits — static product spec, not live metrics */}
+          {/* Starter Tier Limits — static product spec, not live metrics */}
           <div className="bg-zinc-900 border border-zinc-800 rounded-sm p-4">
-            <div className="text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-3">Free Tier Limits</div>
+            <div className="text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-3">Starter Tier Rate Limits</div>
             <div className="flex justify-between items-center py-2 border-b border-zinc-800/50">
-              <span className="text-xs text-zinc-500">Daily quota (per IP)</span>
+              <span className="text-xs text-zinc-500">Daily rate limit ceiling</span>
               <span className="text-sm font-mono text-white tabular-nums">500 calls/day</span>
             </div>
             <div className="flex justify-between items-center py-2 border-b border-zinc-800/50">
-              <span className="text-xs text-zinc-500">Shared quota (per /24 subnet)</span>
+              <span className="text-xs text-zinc-500">Shared subnet rate limit (/24)</span>
               <span className="text-sm font-mono text-white tabular-nums">500 calls/day</span>
             </div>
             <div className="flex justify-between items-center py-2 border-b border-zinc-800/50 last:border-0">
@@ -267,7 +267,7 @@ export default function KeysPage() {
               <span className="text-sm font-mono text-white tabular-nums">$0.00003 / call</span>
             </div>
             <p className="mt-3 text-[11px] text-zinc-600">
-              Reference — static tier spec. Deposit USDT on the Credits page to continue past the free tier.
+              Reference — static tier spec. All RPC calls are metered at $0.00003/call; deposit USDT on the Credits page or pay keylessly via x402.
             </p>
           </div>
           <div className="min-w-0 h-[220px] relative">

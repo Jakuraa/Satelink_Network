@@ -58,7 +58,7 @@ function routeEvent(event) {
 function triggerCommander(commander, eventId, eventType) {
   console.log(`[EVENT-WATCHER] ${new Date().toISOString()} | Trigger: ${commander} | Event: ${eventId} | Type: ${eventType}`);
 
-  // Write trigger log so founder can see what needs manual activation in Paperclip
+  // Write trigger log so founder can see what needs manual activation
   const triggerLog = path.join(REPO_ROOT, 'agent/memory/events/PENDING_TRIGGERS.md');
   const entry = `TRIGGER | ${new Date().toISOString()} | ${commander} | ${eventId} | ${eventType} | AWAITING_ACTIVATION\n`;
 

@@ -2,6 +2,110 @@ import React from 'react';
 import { FooterWrap, FooterConfig } from './layout/FooterWrap';
 import { company, registeredOfficeLine } from '@/content/company';
 
+const col1Sections = [
+  {
+    heading: 'Enterprise',
+    links: [
+      { href: '/company', label: 'About Jakuraa' },
+      { href: '/history', label: 'Operating History' },
+      { href: '/company/leadership', label: 'Leadership & Directors' },
+      { href: '/legal/company-information', label: 'Corporate Governance' },
+      { href: '/careers', label: 'Careers & Talent' },
+    ],
+  },
+  {
+    heading: 'Communication',
+    links: [
+      { href: '/contact', label: 'Contact Offices' },
+      { href: '/media-kit', label: 'Press & Media Kit' },
+      { href: '/news', label: 'Dispatches & Newsroom' },
+    ],
+  },
+];
+
+const col2Sections = [
+  {
+    heading: 'Satelink Platform',
+    links: [
+      { href: 'https://satelink.network', label: 'Satelink Platform', external: true },
+      { href: 'https://satelink.network/products/machine-commerce', label: 'Machine Commerce', external: true },
+      { href: 'https://satelink.network/products/rpc', label: 'Polygon RPC Gateway', external: true },
+      { href: 'https://satelink.network/platform/x402', label: 'x402 Machine Protocol', external: true },
+      { href: 'https://satelink.network/trading-agent', label: 'Satelink Trading AI', badge: 'Beta', external: true },
+    ],
+  },
+  {
+    heading: 'Commercial Portfolio',
+    links: [
+      { href: '/businesses', label: 'Operating Businesses' },
+      { href: '/products', label: 'Platform Catalog' },
+      { href: '/contact', label: 'Enterprise Procurement' },
+    ],
+  },
+];
+
+const col3Sections = [
+  {
+    heading: 'Deep Technology',
+    links: [
+      { href: '/technology', label: 'Technology Overview' },
+      { href: '/systems', label: 'Systems Architecture' },
+      { href: '/technology', label: 'Computing Rails' },
+      { href: '/systems', label: 'Protocol Engineering' },
+    ],
+  },
+  {
+    heading: 'Systems Research',
+    links: [
+      { href: '/research', label: 'Research Papers' },
+      { href: '/research', label: 'Agent Commerce Models' },
+      { href: '/technology', label: 'Deterministic Gates' },
+      { href: 'https://status.satelink.network', label: 'Network Telemetry', external: true },
+    ],
+  },
+];
+
+const col4Sections = [
+  {
+    heading: 'Developer Ecosystem',
+    links: [
+      { href: 'https://docs.satelink.network', label: 'Developer Documentation', external: true },
+      { href: 'https://satelink.network/developers', label: 'Developer Guides', external: true },
+      { href: 'https://satelink.network/developers/api', label: 'API Reference', external: true },
+      { href: 'https://github.com/Jakuraa', label: 'GitHub Repositories', external: true },
+    ],
+  },
+  {
+    heading: 'Public Information',
+    links: [
+      { href: '/faq', label: 'Corporate FAQ' },
+      { href: '/llms.txt', label: 'Machine LLMs Manifest' },
+      { href: '/sitemap.xml', label: 'Public Sitemap' },
+    ],
+  },
+];
+
+const col5Sections = [
+  {
+    heading: 'Statutory Registry',
+    links: [
+      { href: '/legal/company-information', label: 'Corporate Information' },
+      { href: '/legal/company-information', label: 'Statutory Disclosures' },
+      { href: '/legal/grievance', label: 'Grievance Officer' },
+      { href: '/contact', label: 'Registered Office' },
+    ],
+  },
+  {
+    heading: 'Legal Policies',
+    links: [
+      { href: '/legal/privacy', label: 'Privacy Policy' },
+      { href: '/legal/terms', label: 'Terms of Use' },
+      { href: '/contact', label: 'Security & Vulnerability' },
+      { href: '/legal', label: 'Statutory Overview' },
+    ],
+  },
+];
+
 export const jakuraaFooterConfig: FooterConfig = {
   brandName: 'JAKURAA',
   brandTagline: 'A technology, engineering, and commercial enterprise.',
@@ -11,85 +115,29 @@ export const jakuraaFooterConfig: FooterConfig = {
   brandHref: '/',
   columns: [
     {
-      heading: 'JAKURAA',
-      links: [
-        { href: '/company', label: 'Company Overview' },
-        { href: '/company/leadership', label: 'Founder & Leadership' },
-        { href: '/history', label: 'Operating History (2019 - 2026)' },
-        { href: '/company', label: 'Operating Principles' },
-        { href: '/businesses', label: 'Business Verticals' },
-        { href: '/legal/company-information', label: 'Statutory Disclosures' },
-        { href: '/contact', label: 'Institutional Enquiries' },
-      ],
+      heading: 'Company & Governance',
+      sections: col1Sections,
+      links: col1Sections.flatMap((s) => s.links),
     },
     {
-      heading: 'SATELINK PLATFORM',
-      links: [
-        { href: '/products', label: 'Products' },
-        { href: 'https://satelink.network/trading-agent', label: 'Satelink Trading AI', external: true },
-        { href: 'https://satelink.network', label: 'Platform Overview', external: true },
-        { href: 'https://satelink.network/products/machine-commerce', label: 'Machine Commerce', external: true },
-        { href: '/technology', label: 'AI Trading Architecture' },
-        { href: 'https://satelink.network/products/trading-intelligence', label: 'Trading Intelligence', external: true },
-        { href: 'https://satelink.network/platform/payments', label: 'Machine Payments', external: true },
-        { href: 'https://satelink.network/platform/x402', label: 'x402 Protocol', external: true },
-        { href: '/research#revenue-vault-v2', label: 'Prepaid Credit Vault' },
-        { href: 'https://satelink.network/products/metering', label: 'API Metering Gateway', external: true },
-        { href: '/systems', label: 'Systems Architecture' },
-      ],
+      heading: 'Platforms & Capabilities',
+      sections: col2Sections,
+      links: col2Sections.flatMap((s) => s.links),
     },
     {
-      heading: 'SOLUTIONS',
-      links: [
-        { href: 'https://satelink.network/solutions/ai-agents', label: 'AI Agent Infrastructure', external: true },
-        { href: 'https://satelink.network/solutions/machine-commerce', label: 'Machine Commerce Rails', external: true },
-        { href: 'https://satelink.network/solutions/trading', label: 'Algorithmic Trading Systems', external: true },
-        { href: 'https://satelink.network/solutions/api-monetization', label: 'API Monetization', external: true },
-        { href: 'https://satelink.network/solutions/developers', label: 'Developer Infrastructure', external: true },
-        { href: 'https://satelink.network/solutions/enterprise', label: 'Enterprise Automation', external: true },
-        { href: '/businesses/industrial-manufacturing', label: 'Industrial Machinery' },
-        { href: '/businesses/trading-distribution', label: 'Trade & Distribution' },
-      ],
+      heading: 'Engineering & Research',
+      sections: col3Sections,
+      links: col3Sections.flatMap((s) => s.links),
     },
     {
-      heading: 'RESEARCH & NEWS',
-      links: [
-        { href: '/research', label: 'Research Overview' },
-        { href: '/research', label: 'Working Papers' },
-        { href: '/research#x402-machine-payments', label: 'x402 Protocol Spec' },
-        { href: '/research#revenue-vault-v2', label: 'RevenueVaultV2 Settlement' },
-        { href: '/research#autonomous-finance', label: 'Agent Microstructure' },
-        { href: '/research#distributed-telemetry', label: 'Network Telemetry' },
-        { href: '/news', label: 'Newsroom & Dispatches' },
-        { href: '/#video', label: 'Media & Video Analysis' },
-      ],
+      heading: 'Resources & Developers',
+      sections: col4Sections,
+      links: col4Sections.flatMap((s) => s.links),
     },
     {
-      heading: 'RESOURCES',
-      links: [
-        { href: 'https://satelink.network/docs', label: 'Technical Documentation', external: true },
-        { href: 'https://satelink.network/developers', label: 'Developer Hub', external: true },
-        { href: 'https://satelink.network/pricing', label: 'Network Pricing & Rates', external: true },
-        { href: 'https://status.satelink.network', label: 'System Status', external: true },
-        { href: '/history#chapter-2019-compute-mining', label: 'Compute Archives (2019)' },
-        { href: '/media-kit', label: 'Media Kit & Press Assets' },
-        { href: '/systems', label: 'Systems Directory' },
-        { href: '/sitemap.xml', label: 'Public Sitemap' },
-      ],
-    },
-    {
-      heading: 'COMPANY & DIRECTORY',
-      links: [
-        { href: '/company', label: 'About Jakuraa' },
-        { href: '/company/leadership', label: 'Leadership & Governance' },
-        { href: '/careers', label: 'Careers (Jakuraa & Satelink)' },
-        { href: '/contact', label: 'Contact & Inquiries' },
-        { href: '/contact', label: 'Press & Media Relations' },
-        { href: '/contact', label: 'Security & Vulnerability' },
-        { href: '/legal/privacy', label: 'Privacy Policy' },
-        { href: '/legal/terms', label: 'Terms of Use' },
-        { href: '/legal/grievance', label: 'Grievance Officer' },
-      ],
+      heading: 'Trust & Statutory',
+      sections: col5Sections,
+      links: col5Sections.flatMap((s) => s.links),
     },
   ],
   legalLinks: [
@@ -105,7 +153,7 @@ export const jakuraaFooterConfig: FooterConfig = {
     { href: 'mailto:contact@jakuraa.com', label: 'Email', icon: 'mail' },
   ],
   copyrightText: `${company?.legalName || 'Jakuraa Commercial Private Limited'}. All rights reserved.`,
-  entityNotice: `CIN: ${company?.cin} | GSTIN: ${company?.gstin} | DGFT IEC: ${company?.iec}`,
+  entityNotice: `CIN: ${company?.cin || 'U52190TZ2019PTC033093'} | GSTIN: ${company?.gstin || '33AAFCJ6394G1Z2'} | DGFT IEC: ${company?.iec || 'AALCJ6394G'}`,
   addressLines: [registeredOfficeLine()],
   metaBadges: [
     { label: 'INSTITUTION', value: 'JAKURAA COMMERCIAL' },

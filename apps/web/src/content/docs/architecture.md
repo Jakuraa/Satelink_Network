@@ -4,9 +4,9 @@ Every metered request follows one pipeline, end to end:
 
 ```
 HTTP request
-  → free-tier gate        rate-limits anonymous IPs (500/day); paid keys bypass
+  → auth / 402 gate       verifies API key or keyless x402 payment
   → RPC gateway           routes to healthy upstream providers (circuit breakers)
-  → billing               deducts $0.00003/call from the caller's credit balance
+  → billing               deducts $0.00003/call from credit balance or accepts x402
   → revenue event         one immutable row per billed call (the canonical record)
   → epoch aggregation     events roll into settlement epochs (~every 10 minutes)
   → settlement batches    per-epoch payable rollups
@@ -21,19 +21,19 @@ row in this pipeline or an on-chain read.
 - **RPC Gateway** — the public entry point (`rpc.satelink.network`). Multi-chain
   JSON-RPC with provider health monitoring, automatic failover, and an edge
   cache. Live provider status: `/rpc/health`, `/rpc/stats/polygon`.
-- **Free-tier gate** — IP-based metering for anonymous callers using
-  Redis counters that reset at UTC midnight. Over-limit traffic receives a
-  self-describing HTTP 402.
+- **Auth & 402 gate** — verifies API keys against prepaid credit balances or
+  accepts keyless x402 micropayments in USDC on Base. Unpaid callers receive
+  a self-describing HTTP 402 with machine-readable requirements.
 - **Credit system** — customer balances in USDT. Deposits are permissionless:
   send USDT to the RevenueVault contract and your account is credited after
   on-chain confirmation. No custodian sits between your wallet and the vault.
 - **Epoch ledger** — billed events aggregate into epochs (~10-minute windows).
-  Epochs produce settlement batches with the 50/30/20 revenue split applied.
+  Epochs produce settlement batches accounted for on-chain reconciliation.
 - **Settlement** — batches broadcast to Polygon when funded and enabled.
   Settlement automation is currently in final verification (dry-run mode);
   the ledger aggregates continuously either way. See [Roadmap](/docs/roadmap).
-- **Node network** — permissionless operators register via the node portal
-  and serve routed traffic for 50% of revenue. See
+- **Node network** — (program paused; onboarding and payouts not active)
+  designated nodes configured to serve routed capacity. See
   [Node Operators](/docs/node-operators).
 
 ## On-chain contracts (Polygon PoS, chain 137)

@@ -23,21 +23,21 @@ const ibmPlexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL("https://satelink.network"),
   title: {
-    default: "Satelink Trading AI — AI trading operating system for people, AI agents and machines",
+    default: "Satelink — AI-Agent & Machine-Commerce Infrastructure",
     template: "%s | Satelink",
   },
   description:
-    "Reason, validate, score, authorize, execute, learn. AI proposes; deterministic risk and your signed mandate decide. You keep custody; withdrawals are never enabled. Paper trading in controlled beta. Live execution is not yet available.",
+    "Programmatic infrastructure for AI agents and automated systems to discover digital services, evaluate options, and access APIs through controlled, machine-readable workflows.",
   keywords: [
-    "Satelink Trading AI",
-    "AI trading agents",
-    "AI trading operating system",
-    "algorithmic trading",
-    "risk management",
-    "trading mandates",
-    "MCP",
+    "Satelink",
+    "AI agents",
     "machine commerce",
+    "agent procurement",
     "x402",
+    "API metering",
+    "Polygon RPC",
+    "micropayments",
+    "Satelink Trading AI",
     "pay per call API",
   ],
   authors: [{ name: "Satelink Network" }],
@@ -59,16 +59,16 @@ export const metadata: Metadata = {
     type: "website",
     url: "https://satelink.network",
     siteName: "Satelink Network",
-    title: "Satelink Trading AI — AI trading operating system for people, AI agents and machines",
+    title: "Satelink — AI-Agent & Machine-Commerce Infrastructure",
     description:
-      "Reason, validate, score, authorize, execute, learn. AI proposes; deterministic risk and your signed mandate decide. You keep custody; withdrawals are never enabled. Paper trading in controlled beta. Live execution is not yet available.",
+      "Programmatic infrastructure for AI agents and automated systems to discover digital services, evaluate options, and access APIs through controlled, machine-readable workflows.",
     images: ["https://satelink.network/og-image.png"],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Satelink Trading AI — AI trading operating system for people, AI agents and machines",
+    title: "Satelink — AI-Agent & Machine-Commerce Infrastructure",
     description:
-      "Reason, validate, score, authorize, execute, learn. AI proposes; deterministic risk and your signed mandate decide. You keep custody; withdrawals are never enabled. Paper trading in controlled beta. Live execution is not yet available.",
+      "Programmatic infrastructure for AI agents and automated systems to discover digital services, evaluate options, and access APIs through controlled, machine-readable workflows.",
   },
 };
 
@@ -77,7 +77,7 @@ const ORG_JSON_LD = {
   "@type": "Organization",
   name: "Satelink Network",
   description:
-    "Satelink Trading AI: an AI trading operating system for people, AI agents and machines, plus machine-commerce rails (x402 payments, metered Polygon RPC). Operated by Jakuraa Commercial Pvt Ltd.",
+    "AI-agent and machine-commerce infrastructure for programmatic service discovery, metering, and settlement. Featuring Satelink Trading AI (controlled beta) and metered Polygon RPC. Operated by Jakuraa Commercial Pvt Ltd.",
   url: "https://satelink.network",
   email: "satelinknetwork@gmail.com",
   foundingDate: "2025",

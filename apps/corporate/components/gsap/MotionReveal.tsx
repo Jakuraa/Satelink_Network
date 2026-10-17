@@ -41,8 +41,8 @@ export function MotionReveal({
       gsap.fromTo(
         elementRef.current,
         {
-          opacity: 0,
-          y,
+          opacity: 0.85,
+          y: Math.min(y, 8),
         },
         {
           opacity: 1,
@@ -52,7 +52,7 @@ export function MotionReveal({
           ease: 'power2.out',
           scrollTrigger: {
             trigger: elementRef.current,
-            start: 'top 88%',
+            start: 'top 95%',
             once: true,
           },
         }

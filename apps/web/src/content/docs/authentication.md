@@ -1,19 +1,20 @@
-Satelink has three ways to identify a caller, in increasing order of
-capability. None of them require a password or an email.
+Satelink supports three caller identification and authorization models,
+designed for both automated software agents and developer teams. None of them
+require a password or email.
 
-## 1. Anonymous (free tier)
+## 1. Keyless x402 (Base)
 
-No credentials at all. The gateway meters by source IP: **500 calls/day per
-IP**, also capped per /24 subnet. Exceeding the limit returns HTTP 402 with
-machine-readable onboarding instructions.
+On the x402 rail, payment travels directly in the HTTP request (`X-Payment` header)
+in USDC on Base (`eip155:8453`). The caller's paying wallet address is the only
+identity — no registration, account creation, or stored API key required.
 
 ## 2. API key
 
-Create a key with one HTTP call (see [Quick Start](/docs/quick-start)) and
+Create an API key with one HTTP call (see [Quick Start](/docs/quick-start)) and
 send it on every request:
 
 ```
-X-API-Key: sk_free_...
+X-API-Key: sat_live_...
 ```
 
 Keys are the billing identity: usage, spend, and credit balance attach to the
