@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { Inter, JetBrains_Mono, Source_Serif_4 } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
@@ -17,7 +18,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const theme = (await cookies()).get("slc_theme")?.value === "light" ? "light" : "dark";
   return (
     <html lang="en" data-theme={theme} className={`${inter.variable} ${mono.variable} ${serif.variable}`}>
-      <body className="min-h-screen text-[13px]">{children}</body>
+      <body className="min-h-screen text-[13px]">
+        {children}
+        <Analytics />
+      </body>
     </html>
   );
 }
