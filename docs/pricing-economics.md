@@ -19,11 +19,18 @@ A plan or pack is **purchasable only if its worst-case contribution per charge i
 | launch | renewal | $19.00 | $1.54 | $1.00 | 33,225 | $0.00 | **$17.46** | $0.000526 | −$20.00 | −$49.00 | pass |
 | pro | monthly | $19.00 | $1.54 | $1.00 | 33,225 | $0.00 | **$17.46** | $0.000526 | −$20.00 | −$49.00 | pass |
 | max | monthly | $79.00 | $5.14 | $3.70 | 132,900 | $0.00 | **$73.86** | $0.000556 | −$80.00 | −$109.00 | pass |
-| pro_yearly | yearly | $190.00 | $11.80 | $8.70 | 397,500 | $0.00 | **$178.20** | $0.000448 | −$191.00 | −$220.00 | pass |
+| pro_yearly | yearly | $120.00 | $7.60 | $5.55 | 397,500 | $0.00 | **$112.40** | $0.000283 | −$121.00 | −$150.00 | pass |
 | max_yearly | yearly | $790.00 | $47.80 | $35.70 | 1,590,000 | $0.00 | **$742.20** | $0.000467 | −$791.00 | −$820.00 | pass |
+| max_5x | monthly | $48.00 | $3.28 | $2.31 | 166,125 | $0.00 | **$44.72** | $0.000269 | −$49.00 | −$78.00 | pass |
+| max_5x_yearly | yearly | $480.00 | $29.20 | $21.75 | 1,987,500 | $0.00 | **$450.80** | $0.000227 | −$481.00 | −$510.00 | pass |
+| max_20x | monthly | $96.00 | $6.16 | $4.47 | 664,500 | $0.00 | **$89.84** | $0.000135 | −$97.00 | −$126.00 | pass |
+| max_20x_yearly | yearly | $960.00 | $58.00 | $43.35 | 7,950,000 | $0.00 | **$902.00** | $0.000113 | −$961.00 | −$990.00 | pass |
 | pack_10 | one-time | $10.00 | $0.95 | $0.55 | 10,000 | $0.00 | **$9.05** | $0.000905 | −$11.00 | −$40.00 | pass |
 | pack_50 | one-time | $50.00 | $3.15 | $2.15 | 52,500 | $0.00 | **$46.85** | $0.000892 | −$51.00 | −$80.00 | pass |
 | pack_200 | one-time | $200.00 | $11.40 | $8.15 | 220,000 | $0.00 | **$188.60** | $0.000857 | −$201.00 | −$230.00 | pass |
+| pack_100 | one-time | $100.00 | $5.90 | $4.15 | 100,000 | $0.00 | **$94.10** | $0.000941 | −$101.00 | −$130.00 | pass |
+| pack_250 | one-time | $250.00 | $14.15 | $10.15 | 250,000 | $0.00 | **$235.85** | $0.000943 | −$251.00 | −$280.00 | pass |
+| pack_1000 | one-time | $1000.00 | $55.40 | $40.15 | 1,000,000 | $0.00 | **$944.60** | $0.000945 | −$1001.00 | −$1030.00 | pass |
 
 ## Reading it
 - **Every paid plan and pack passes** at the configured marginal cost. The binding risk is not steady state but **loss events**: a lost dispute costs the price **plus $30**, which on the $5 Launch intro erases ~8 intro payments (see `docs/pricing-v2/02_USAGE_UNIT_MODEL.md` §59). Mitigations there (UPI-first, velocity limits on $5 checkouts, email verification before the charge) are founder decisions.

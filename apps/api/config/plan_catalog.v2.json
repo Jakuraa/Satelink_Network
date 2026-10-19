@@ -109,7 +109,7 @@
         "test": "pdt_0NoLWYJyptwAdEZCsc3ui",
         "live": null
       },
-      "inr_price": null,
+      "inr_price": 999,
       "sort": 2
     },
     {
@@ -139,7 +139,7 @@
       "kind": "subscription",
       "base_plan": "pro",
       "entitlement_plan": "pro",
-      "price_usd": 190,
+      "price_usd": 120,
       "interval": "year",
       "allowance": {
         "session_uu": 1500,
@@ -153,7 +153,7 @@
         "test": "pdt_0NoNG215niHtH4Bar1Qvs",
         "live": null
       },
-      "inr_price": null,
+      "inr_price": 9990,
       "sort": 4
     },
     {
@@ -178,6 +178,102 @@
       },
       "inr_price": null,
       "sort": 5
+    },
+    {
+      "id": "max_5x",
+      "name": "Max 5×",
+      "kind": "subscription",
+      "price_usd": 48,
+      "inr_price": 3999,
+      "interval": "month",
+      "multiplier": 5,
+      "allowance": {
+        "session_uu": 7500,
+        "weekly_uu": 37500
+      },
+      "limits": {
+        "api_keys": 20,
+        "machines": 20,
+        "concurrency": 10
+      },
+      "dodo": {
+        "test": "pdt_0NoMERbmVHn5d2jlpAAZX",
+        "live": null
+      },
+      "sort": 6
+    },
+    {
+      "id": "max_5x_yearly",
+      "name": "Max 5×",
+      "kind": "subscription",
+      "base_plan": "max_5x",
+      "entitlement_plan": "max_5x",
+      "price_usd": 480,
+      "inr_price": 39990,
+      "interval": "year",
+      "multiplier": 5,
+      "allowance": {
+        "session_uu": 7500,
+        "weekly_uu": 37500
+      },
+      "limits": {
+        "api_keys": 20,
+        "machines": 20,
+        "concurrency": 10
+      },
+      "dodo": {
+        "test": "pdt_0NoNG22gitFEXmPp6EUgP",
+        "live": null
+      },
+      "sort": 7
+    },
+    {
+      "id": "max_20x",
+      "name": "Max 20×",
+      "kind": "subscription",
+      "price_usd": 96,
+      "inr_price": 7999,
+      "interval": "month",
+      "multiplier": 20,
+      "allowance": {
+        "session_uu": 30000,
+        "weekly_uu": 150000
+      },
+      "limits": {
+        "api_keys": 50,
+        "machines": 50,
+        "concurrency": 25
+      },
+      "dodo": {
+        "test": "pdt_0NoMERbmVHn5d2jlpAAZX",
+        "live": null
+      },
+      "sort": 8
+    },
+    {
+      "id": "max_20x_yearly",
+      "name": "Max 20×",
+      "kind": "subscription",
+      "base_plan": "max_20x",
+      "entitlement_plan": "max_20x",
+      "price_usd": 960,
+      "inr_price": 79990,
+      "interval": "year",
+      "multiplier": 20,
+      "allowance": {
+        "session_uu": 30000,
+        "weekly_uu": 150000
+      },
+      "limits": {
+        "api_keys": 50,
+        "machines": 50,
+        "concurrency": 25
+      },
+      "dodo": {
+        "test": "pdt_0NoNG22gitFEXmPp6EUgP",
+        "live": null
+      },
+      "sort": 9
     }
   ],
   "packs": [
@@ -216,6 +312,42 @@
         "live": null
       },
       "inr_price": null
+    },
+    {
+      "id": "pack_100",
+      "name": "Usage credits $100 eq (₹8,400)",
+      "price_usd": 100,
+      "inr_price": 8400,
+      "grant_uu": 100000,
+      "bonus_uu": 0,
+      "dodo": {
+        "test": "pdt_0NoMERhtlswnoRgwYjJ1f",
+        "live": null
+      }
+    },
+    {
+      "id": "pack_250",
+      "name": "Usage credits $250 eq (₹21,000)",
+      "price_usd": 250,
+      "inr_price": 21000,
+      "grant_uu": 250000,
+      "bonus_uu": 0,
+      "dodo": {
+        "test": "pdt_0NoMERhtlswnoRgwYjJ1f",
+        "live": null
+      }
+    },
+    {
+      "id": "pack_1000",
+      "name": "Usage credits $1,000 eq (₹84,000)",
+      "price_usd": 1000,
+      "inr_price": 84000,
+      "grant_uu": 1000000,
+      "bonus_uu": 0,
+      "dodo": {
+        "test": "pdt_0NoMERhtlswnoRgwYjJ1f",
+        "live": null
+      }
     }
   ],
   "economics": {
