@@ -9,7 +9,7 @@ Base: `origin/main` @ `bdb52ecf`. Recovery: tag **`archive/pre-cleanup-2026-10-0
 |---|---|---|
 | Railway `Satelink-api` | service `rootDirectory=/apps/api` → `apps/api/railway.json:7` (`node server.js`), `apps/api/nixpacks.toml` | `apps/api/server.js` |
 | Railway `satelink-reconciler` | `workers/reconciler/railway.json:7` | `@satelink/reconciler` |
-| Railway `Satelink_Paperclip` (FAILED) | `railway.paperclip.json` → `Dockerfile.paperclip`, `start-cloud.sh` | — |
+| Railway `Satelink_Paperclip` (DECOMMISSIONED) | Service deleted by founder; deploy files removed | — |
 | Vercel web / console / corporate | `apps/web/vercel.json`, `apps/console/vercel.json`, corporate project | `next build` |
 | CI | `.github/workflows/ci.yml` (turbo test web, `scripts/ci-baseline-check.sh`, web build), `architecture.yml` | — |
 
@@ -59,7 +59,7 @@ DELETE only if (1) `rg`/`git grep` finds zero runtime imports or references, (2)
 | `.playwright-mcp/` | local MCP artefacts | untracked | | **`.gitignore` added** |
 | root `nixpacks.toml` | stale Nixpacks config (`node server.js`, `better-sqlite3`) | documented as never applied | `apps/api/nixpacks.toml:1-7` | **KEEP** — it is a deploy config file; deleting it needs founder confirmation of every Railway service's root dir |
 | root `railway.json` | Railway config (`node apps/api/server.js`) | | | **KEEP** |
-| `Dockerfile.paperclip`, `railway.paperclip.json`, `start-cloud.sh` | Paperclip deploy files | service FAILED, decommission is a founder action (B-04) | `docs/OPERATIONS.md:38` | **KEEP** until the founder deletes the Railway service |
+| `Dockerfile.paperclip`, `railway.paperclip.json`, `start-cloud.sh` | Paperclip deploy files | service deleted by founder (B-04) | `docs/OPERATIONS.md:38` | **DELETE** — removed post-decommission |
 | `apps/api/src/gateway/routes/staging_auth.js` | route | not reachable from `server.js` (not in the 205) | | **KEEP** (not verified to zero refs; follow-up) |
 | `mint.json`, `docs.json` | Mintlify config | a "Mintlify Deployment" check still runs on PRs | | **KEEP** (verify Mintlify project first) |
 | `ci.yml:120` `refs/heads/develop` | dead CI condition | no `develop` branch | | **KEEP** (CI edit out of scope; noted) |

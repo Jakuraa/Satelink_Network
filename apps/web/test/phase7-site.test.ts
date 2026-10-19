@@ -48,18 +48,15 @@ describe("navigation", () => {
   it("no Network / Run-a-node anywhere in the header or footer", () => {
     for (const l of [...items, ...footerLinks]) expect(l.href, l.label).not.toMatch(/^\/network/);
   });
-  it("Products leads with Satelink Trading AI; the primary CTA is Request beta access", () => {
-    expect(navigationFallback.menus[0].groups[0].title).toBe("Satelink Trading AI");
-    expect(navigationFallback.menus[0].groups[0].items[0].href).toBe("/trading-agent");
+  it("Products leads with Machine commerce & rails; the primary CTA is Quickstart", () => {
+    expect(navigationFallback.menus[0].groups[0].title).toBe("Machine commerce & rails");
+    expect(navigationFallback.menus[0].groups[0].items[0].href).toBe("/products/machine-commerce");
     const primary = navigationFallback.cta.find((c) => c.variant === "primary");
-    expect(primary).toMatchObject({ label: "Request beta access", href: "/contact-sales?interest=beta" });
+    expect(primary).toMatchObject({ label: "Quickstart", href: "/developers/quickstart" });
   });
-  it("RPC, x402 and the MCP server sit under Developers", () => {
+  it("RPC, x402 and developer tools sit under Developers", () => {
     const dev = navigationFallback.menus.find((m) => m.label === "Developers")!.groups.flatMap((g) => g.items.map((i) => i.label));
-    expect(dev).toEqual(expect.arrayContaining(["RPC Infrastructure", "x402 Machine Payments", "MCP server"]));
-    const products = navigationFallback.menus[0].groups.flatMap((g) => g.items.map((i) => i.label));
-    expect(products).not.toContain("RPC Infrastructure");
-    expect(products).not.toContain("x402 Machine Payments");
+    expect(dev).toEqual(expect.arrayContaining(["RPC Infrastructure", "x402 Protocol", "Docs", "Quickstart"]));
   });
   it("no footer link points at a jakuraa.com path that 404s", () => {
     for (const l of footerLinks) expect(l.href).not.toMatch(/jakuraa\.com\/company\/(mission|research|news)/);
@@ -94,8 +91,8 @@ describe("internal surfaces: 404 in production, noindex, not in the sitemap", ()
 describe("homepage and metadata", () => {
   const home = read("src/app/(marketing)/page.tsx");
   it("positioning, verbatim status line, beta CTA, loop, safety boundary, three interfaces", () => {
-    expect(home).toMatch(/An AI trading operating system for people, AI agents and machines\./);
-    expect(home).toMatch(/Reason, validate, score, authorize, execute, learn/);
+    expect(home).toMatch(/Infrastructure for AI agents that discover and use digital services\./);
+    expect(home).toMatch(/Discover, evaluate, authorize, access, meter, pay, settle/);
     expect(home).toContain(`"${STATUS}"`);
     expect(home).toMatch(/Request beta access/);
     for (const s of ["GO", "WAIT", "REJECT"]) expect(home).toContain(`label: "${s}"`);
@@ -103,9 +100,9 @@ describe("homepage and metadata", () => {
     expect(home).toMatch(/withdrawals are never enabled/);
     for (const i of ["Web", "API", "MCP"]) expect(home).toContain(`name: "${i}"`);
   });
-  it("root metadata says Satelink Trading AI and nothing says DePIN", () => {
+  it("root metadata reflects Satelink infrastructure positioning and nothing says DePIN", () => {
     const layout = read("src/app/layout.tsx");
-    expect(layout).toMatch(/default: "Satelink Trading AI/);
+    expect(layout).toMatch(/default: "Satelink — AI-Agent & Machine-Commerce Infrastructure"/);
     expect(layout).not.toMatch(/DePIN/i);
     for (const f of ["src/app/docs/layout.tsx", "src/app/docs/page.tsx", "src/app/feed.xml/route.ts", "src/content/docs/glossary.md"]) expect(read(f), f).not.toMatch(/DePIN/i);
   });

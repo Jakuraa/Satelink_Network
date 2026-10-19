@@ -1,5 +1,6 @@
-Canonical terminology, used consistently across the site, docs, consoles, and
-codebase.
+**Agent procurement** — the automated workflow (discover → evaluate →
+authorize → access → meter → pay → settle) by which software agents and
+autonomous callers procure supported digital services programmatically.
 
 **Credit** — prepaid USDT balance attached to an API key, deducted
 $0.00003 per metered call. Credits never expire.
@@ -15,23 +16,22 @@ nodes based on uptime and traffic.
 revenue events into a settlement batch, so settlement doesn't pay per-call
 gas.
 
-**Free-tier gate** — IP-based metering for anonymous callers: 500 calls/day
-per IP (and per /24 subnet), reset at UTC midnight, enforced with Redis
-counters.
-
-**HTTP 402 flow** — Satelink's machine onboarding: over-limit or unfunded
+**HTTP 402 flow** — Satelink's machine onboarding: unfunded or unauthenticated
 calls receive `402 Payment Required` with a self-contained, machine-readable
-body (registration endpoint, deposit calldata, real minimum, working
+body (x402 payment requirements, registration endpoint, deposit calldata, real minimum, working
 examples).
 
 **Machine customer** — a non-human API consumer (agent, bot, service) that
-onboards and pays autonomously through the 402 flow.
+onboards and pays autonomously through the 402 flow or keyless x402 rail.
 
 **Metered rate** — the flat price per billed call: **$0.00003 USDT**
 ($30 per million calls).
 
-**Node operator** — a permissionless participant serving routed RPC traffic
-for 50% of the revenue it generates.
+**Node operator** — (program paused; onboarding and payouts not active) a
+participant designated to serve routed RPC capacity.
+
+**x402** — HTTP-native keyless payment protocol settling in USDC on Base
+(`eip155:8453`), where payment travels directly in the request.
 
 **Revenue event** — the immutable per-call billing record; the canonical
 source for every revenue figure. Test/phantom rows are flagged and excluded.

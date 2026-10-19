@@ -1,21 +1,25 @@
-# Satelink Dashboard
+# Satelink Web Frontend
 
-Next.js 14 dashboard for node operators and developers to monitor earnings, claim USDT, and manage API keys.
+Next.js 15 application for Satelink (`satelink.network`) — AI-agent assistance and machine-commerce infrastructure for software agents and machines to discover, evaluate, access, use, meter, and pay for supported digital services programmatically.
 
 ## Live URLs
 
-- **Production:** https://app.satelink.network
-- **Development:** http://localhost:3000
+- **Production:** https://satelink.network
+- **Documentation:** https://docs.satelink.network
 
 ## Key Pages
 
 | Route | Purpose |
 |-------|---------|
-| `/satelink/os/overview` | Network stats, revenue metrics |
-| `/satelink/os/withdraw` | Claim USDT earnings to wallet |
-| `/satelink/os/plans` | API key tiers, deposit USDT |
-| `/satelink/os/nodes` | Node operator dashboard |
-| `/satelink/os/settings` | Wallet connection, preferences |
+| `/` | Platform overview & agent procurement loop |
+| `/products/machine-commerce` | Machine-commerce infrastructure & payment rails |
+| `/products/rpc` | Metered Polygon PoS RPC capability |
+| `/products/x402` | Keyless pay-per-call in USDC on Base |
+| `/pricing` | Flat rate card & x402 bundle pricing |
+| `/docs` | Developer documentation & guides |
+| `/trading-agent` | Satelink Trading AI application (paper beta) |
+| `/satelink/os/keys` | API key management & MetaMask binding |
+| `/satelink/os/deposit` | Permissionless USDT credit deposits |
 
 ## Development
 

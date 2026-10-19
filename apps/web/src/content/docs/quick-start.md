@@ -1,58 +1,43 @@
-## 1. Make a call with no key at all
+## 1. Discover services
 
-The fastest way to understand Satelink is to call it. The free tier is gated
-by IP, not by account:
+The fastest way to understand Satelink is to query its public machine discovery catalogue:
 
 ```bash
-curl -X POST https://rpc.satelink.network/rpc \
+curl https://api.satelink.network/.well-known/satelink.json
+```
+
+This returns machine-readable endpoints, capabilities, and pricing specifications for all supported platform services before authentication.
+
+## 2. Inspect payment requirements (HTTP 402)
+
+Unauthenticated calls to protected endpoints return self-contained HTTP 402 responses with exact payment terms:
+
+```bash
+curl -i -X POST https://rpc.satelink.network/rpc \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
 ```
 
-You get a normal JSON-RPC response. Free tier: **500 calls per day per IP**
-(also capped per /24 subnet). When you exceed it, the gateway answers with
-**HTTP 402 Payment Required** — and the 402 body is self-contained: it tells
-you (or your machine) exactly how to register and deposit to continue. See
-[Machine Customers](/docs/machine-customers).
+The response includes the required payment terms: you can pay per call keylessly via x402 (USDC on Base), or create an API key funded with prepaid USDT credits. See [Machine Customers](/docs/machine-customers).
 
-## 2. Create an API key
+## 3. Create an API key
 
-An API key gives you your own metered quota and a usage dashboard. One call,
-no signup form:
+An API key gives you your own metered quota and a usage dashboard. One call, no signup form:
 
 ```bash
 curl -X POST https://rpc.satelink.network/api/keys \
   -H "Content-Type: application/json" \
-  -d '{"label":"my-first-key","tier":"free"}'
+  -d '{"label":"my-first-key"}'
 ```
 
 The response contains your `api_key` (shown once — store it). Prefer a UI?
 The [developer console](/satelink/os/keys) creates a wallet-bound key from a
 single MetaMask signature.
 
-## 3. Call with your key
-
-```bash
-curl -X POST https://rpc.satelink.network/rpc \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: YOUR_API_KEY" \
-  -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
-```
-
-## 4. Check your usage
-
-```bash
-curl https://rpc.satelink.network/api/keys/usage \
-  -H "X-API-Key: YOUR_API_KEY"
-```
-
-Returns your tier, daily limit, requests today, credits spent, and credits
-remaining.
-
-## 5. Add credits (optional, for volume beyond the free tier)
+## 4. Add prepaid credits
 
 Deposit USDT on Polygon PoS to the RevenueVault — permissionless, from any
-wallet. $1 buys ≈ 33,333 calls at the flat metered rate of $0.00003/call:
+wallet. At the flat metered rate of $0.00003/call, $1 buys ≈ 33,333 calls:
 
 ```bash
 curl "https://rpc.satelink.network/credits/initiate?amount=10"
@@ -61,6 +46,24 @@ curl "https://rpc.satelink.network/credits/initiate?amount=10"
 The response contains the vault address, the USDT contract address, and
 ready-to-send `approve` + `deposit` calldata. Credits appear after ~25 block
 confirmations (about 5 minutes). Full detail: [Billing & Credits](/docs/billing).
+
+## 5. Call with your key & check usage
+
+Call with your authenticated key:
+
+```bash
+curl -X POST https://rpc.satelink.network/rpc \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
+```
+
+Check your usage and remaining credits:
+
+```bash
+curl https://rpc.satelink.network/api/keys/usage \
+  -H "X-API-Key: YOUR_API_KEY"
+```
 
 ## Supported chains
 

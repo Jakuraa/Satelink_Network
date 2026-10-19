@@ -6,12 +6,12 @@ import { docsByCategory } from "@/lib/docs";
 export const metadata: Metadata = {
   title: "Satelink Documentation",
   description:
-    "Everything you need to build on Satelink: quick start, API reference, billing and credits, node operation, machine onboarding, and the on-chain revenue model.",
+    "Technical documentation for the Satelink AI-agent & machine-commerce platform, including HTTP 402 machine payments, API reference, Polygon PoS RPC gateway, and Trading AI paper beta docs.",
   alternates: { canonical: "https://docs.satelink.network" },
   openGraph: {
     title: "Satelink Documentation",
     description:
-      "Docs for Satelink Trading AI and the legacy Satelink RPC gateway on Polygon PoS.",
+      "Technical documentation for the Satelink AI-agent & machine-commerce platform, Polygon PoS RPC gateway, and Trading AI paper beta docs.",
     url: "https://docs.satelink.network",
     siteName: "Satelink Docs",
     type: "website",
@@ -26,7 +26,7 @@ export default function DocsIndexPage() {
     name: "Satelink Documentation",
     url: "https://docs.satelink.network",
     description:
-      "Documentation for Satelink Trading AI and the legacy Satelink RPC gateway on Polygon PoS: pay-per-call USDT metering, permissionless deposits and machine onboarding.",
+      "Technical documentation for the Satelink AI-agent & machine-commerce platform, Polygon PoS RPC gateway, and Trading AI paper beta docs.",
     publisher: {
       "@type": "Organization",
       name: "Satelink Network",
@@ -42,10 +42,11 @@ export default function DocsIndexPage() {
       />
       <h1>Satelink Documentation</h1>
       <p className="docs-lede">
-        Satelink Trading AI is an AI trading operating system for people, AI
-        agents and machines. Its documentation is at{" "}
+        Satelink provides software infrastructure for AI agents and automated
+        systems to programmatically discover, procure, and settle digital services.
+        Trading AI documentation (in paper-trading beta) is available at{" "}
         <a href="/trading-agent/docs">/trading-agent/docs</a>. The pages below
-        document the legacy Satelink RPC gateway on Polygon PoS, where developers
+        document the Satelink RPC gateway on Polygon PoS, where developers
         and machines pay <strong>$0.00003 per call</strong> in USDT.{" "}
         {OPERATOR_PROGRAM_PAUSED}
       </p>

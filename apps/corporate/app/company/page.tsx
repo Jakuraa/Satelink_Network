@@ -17,8 +17,8 @@ export default function CompanyPage() {
         lede={
           <p>
             {company.legalName} (formerly {company.formerName}) was incorporated in Coimbatore on {company.incorporatedDisplay}.
-            Today it builds Satelink, whose flagship product is Satelink Trading AI, and holds registrations for trade,
-            international trade and industrial manufacturing.
+            Today it operates Satelink as its flagship technology platform, developing software infrastructure for an agent-driven
+            economy, and holds registrations for trade, international trade, and industrial manufacturing.
           </p>
         }
       />

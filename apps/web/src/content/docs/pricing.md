@@ -1,27 +1,39 @@
-Satelink has exactly two prices, and one of them is zero.
+Satelink provides predictable, machine-metered pricing with no subscriptions, seats, or hidden fees.
 
-## Free tier
-
-| | |
-|---|---|
-| Price | $0 |
-| Limit | **500 calls/day per IP** (also capped per /24 subnet) |
-| Chains | All supported chains |
-| Requirements | None — no account, no credit card |
-
-The free tier is metered by source IP. When you exceed it, the gateway
-returns HTTP 402 with self-contained instructions to continue as a paying
-customer.
-
-## Metered (pay-as-you-go)
+## Service Discovery
 
 | | |
 |---|---|
-| Price | **$0.00003 per call**, flat |
+| Price | $0 (Free) |
+| Endpoint | `/.well-known/satelink.json` |
+| Requirements | None — public machine-readable catalogue |
+
+Public endpoints can be queried by agents and automated systems before authentication.
+
+## Metered RPC (Pay-as-you-go)
+
+| | |
+|---|---|
+| Price | **$0.00003 per call**, flat ($30 / million calls) |
 | Billing | Deducted from a prepaid USDT credit balance |
-| Deposits | Permissionless, on-chain (Polygon PoS 137) |
+| Deposits | Permissionless on-chain (Polygon PoS 137) to RevenueVaultV2 |
 | Expiry | Credits never expire |
-| Minimum | The real current minimum is returned by `GET /credits/initiate` — we don't hardcode it in docs |
+| Minimum | Returned live by `GET /credits/initiate` |
+
+## x402 Keyless Payments (Base)
+
+| | |
+|---|---|
+| Price | **$0.10 per 1,000 calls** |
+| Asset & Network | USDC on Base (`eip155:8453`) |
+| Auth | Keyless — payment travels in the HTTP request (`X-Payment`) |
+
+## Trading Intelligence
+
+| | |
+|---|---|
+| Per-call | $0.01 per call on crypto rails |
+| Starter Pack | $9.99 one-time purchase via card / UPI (Dodo) |
 
 That works out to **$30 per million calls**, always, at any volume. There are
 no plans, no tiers, no rate negotiations, and no "contact sales."

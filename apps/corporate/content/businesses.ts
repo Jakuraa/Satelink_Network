@@ -28,12 +28,12 @@ export const businesses: Business[] = [
     status: "Operating",
     basis: "MOA object 3(b)(6): to develop, publish and license software and websites.",
     summary:
-      "Machine-commerce infrastructure: software agents and machines pay per call for blockchain data and settle on-chain.",
+      "AI-agent and machine-commerce infrastructure: software agents and automated systems discover, evaluate, access, meter, pay for, and settle digital services programmatically.",
     body: [
-      "Satelink is the company's technology business. It is a pay-per-call gateway: an autonomous agent or machine sends a request, pays for exactly that request, and receives the result without a sales contract or a monthly commitment.",
-      "Payments run on two rails: x402, where a machine pays in USDC on Base inside the HTTP request itself, and prepaid USDT credits deposited to a vault contract on Polygon.",
+      "Satelink is Jakuraa's flagship technology platform. It provides programmatic infrastructure for AI agents and automated systems to discover digital services, evaluate options, and access APIs through controlled machine-readable workflows.",
+      "Supported platform capabilities include metered Polygon PoS RPC at flat $0.00003/call, keyless x402 micropayments in USDC on Base, prepaid USDT credit vaults on Polygon PoS, and the Trading Intelligence analytics API. Satelink Trading AI is an application built on the platform in controlled paper-trading beta.",
     ],
-    scope: ["Blockchain RPC access", "Machine payments over HTTP 402 (x402)", "Usage metering and on-chain settlement"],
+    scope: ["Agent procurement & machine commerce", "Polygon PoS RPC gateway", "Keyless x402 micropayments (Base)", "Usage metering and on-chain settlement"],
     illustration: "network",
     externalUrl: "https://satelink.network",
   },

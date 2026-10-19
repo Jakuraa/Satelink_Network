@@ -15,17 +15,17 @@ const SITE = company.site;
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),
   title: {
-    default: "Jakuraa - a technology and trading company, established 2019",
+    default: "Jakuraa Commercial Private Limited — Corporate Technology Institution, Established 2019",
     template: "%s - Jakuraa",
   },
   description:
-    "Jakuraa Commercial Private Limited is a Coimbatore-based company established in 2019. It operates Satelink, machine-commerce infrastructure, and holds registrations for trading, international trade and industrial manufacturing.",
+    "Jakuraa Commercial Private Limited is the corporate technology company behind Satelink (flagship AI-agent and machine-commerce infrastructure), established in 2019 in Coimbatore, India.",
   openGraph: {
     type: "website",
     url: SITE,
     siteName: "Jakuraa",
-    title: "Jakuraa",
-    description: "A technology and trading company, established 2019. Operator of Satelink.",
+    title: "Jakuraa Commercial Private Limited",
+    description: "Corporate technology institution, established 2019. Operator of Satelink.",
   },
   robots: { index: true, follow: true },
   icons: {

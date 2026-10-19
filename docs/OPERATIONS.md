@@ -34,14 +34,14 @@ SELECT COUNT(*) FILTER (WHERE NOT is_test_data) real_events,
 FROM revenue_events_v2;          -- currently 1 / $0.00003
 ```
 
-## Restart Paperclip agents
-`Satelink_Paperclip` Railway service is **FAILED** (agents.satelink.network offline). Restart
-from the Railway dashboard (service → Redeploy/Restart). The 12 Paperclip agents use the
-`claude_local` adapter and need `ANTHROPIC_API_KEY` set in the container to run autonomously.
+## Paperclip agents (DECOMMISSIONED)
+The Paperclip service (`Satelink_Paperclip` / `agents.satelink.network`) has been permanently
+decommissioned. Do not attempt to redeploy or restart it. Active Railway services are:
+`Satelink-api`, `Postgres-iQeW`, `satelink-reconciler`, and `Redis`.
 
 ## Incident response checklist
 1. `curl /health` — is the API up? (`db:ok`?)
-2. Check Railway service status (`Satelink-api`, `Postgres-iQeW`, `Satelink_Paperclip`).
+2. Check Railway service status (`Satelink-api`, `Postgres-iQeW`, `satelink-reconciler`, `Redis`).
 3. `GET /admin/observability/metrics` — cpu/mem/uptime/db/redis.
 4. `GET /admin/settlement/status` — confirm `dryRun:true` (settlement not broadcasting).
 5. Inspect `automation_logs` / `gas_alerts` for recent alerts.

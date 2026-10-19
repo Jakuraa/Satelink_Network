@@ -161,7 +161,7 @@ export default function MonitoringPage() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <KPICard label="Active IPs" icon={Wifi} value={num(freeTier.activeIPs)} caption="today (UTC)" />
           <KPICard label="Near Limit" value={num(freeTier.nearLimitIPs)} caption={`limit ${freeTier.limit}/day`} />
-          <KPICard label="Total Calls" icon={Activity} value={num(freeTier.totalCalls)} caption="free tier, today (UTC)" />
+          <KPICard label="Total Calls" icon={Activity} value={num(freeTier.totalCalls)} caption="gateway requests, today (UTC)" />
           <KPICard label="Deposited" icon={DollarSign} value={treasury ? `$${treasury.total_deposited_usdt}` : "—"} caption="USDT lifetime" />
         </div>
       ) : null}

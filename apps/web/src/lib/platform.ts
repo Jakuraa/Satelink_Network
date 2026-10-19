@@ -160,17 +160,17 @@ export const PLATFORM: Record<PlatformSlug, PlatformFacts> = {
     href: "/platform/settlement",
     name: "Settlement",
     definition:
-      "Settlement is how per-call revenue reaches operators on-chain: usage aggregates per epoch and settles to RevenueVaultV2 on Polygon (chain 137), split 50% operators / 30% platform / 20% distribution.",
+      "Settlement is how per-call revenue settles on-chain: usage aggregates per epoch and settles to RevenueVaultV2 on Polygon (chain 137). Third-party node operator payouts are currently paused.",
     tagline: "Per-epoch, on-chain settlement to a verifiable vault.",
     sections: [
       { title: "Epoch aggregation", body: "Metered revenue is aggregated per epoch rather than paid per call, to keep on-chain costs bounded." },
       { title: "RevenueVaultV2", body: "Settlement lands in a permissionless vault on Polygon (chain 137) anyone can verify on Polygonscan." },
-      { title: "The split", body: "50% to node operators, 30% to the platform, 20% to the distribution pool." },
+      { title: "Operator program status", body: "Third-party node operator distributions are currently paused while contract architecture upgrades proceed." },
     ],
     controlCost: [
       "Settlement is aggregated, not per-call, so overhead stays low.",
       "The vault address is public and verifiable.",
-      "The split is fixed and transparent.",
+      "Settlement records reconcile with cryptographic certainty.",
     ],
     resources: [
       { label: "RevenueVaultV2 on Polygonscan", href: "https://polygonscan.com/address/0x577D3716d6Ad5b676d230f5409deF9838FABaCEF" },

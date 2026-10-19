@@ -858,13 +858,13 @@ export function createAdminRouter(pool, redis) {
     } catch (e) { fail(res, e); }
   });
 
-  // OBSERVER — Agents Status (Satelink_Paperclip service is FAILED — honest report)
+  // OBSERVER — Agents Status (Paperclip decommissioned)
   router.get('/agents/status', async (req, res) => {
     ok(res, {
-      agents_service: 'FAILED',
-      url: 'agents.satelink.network',
+      agents_service: 'DECOMMISSIONED',
+      url: null,
       agents: [],
-      note: 'Satelink_Paperclip service is offline — restart required in Railway dashboard. Endpoint reports Railway service status; it does not call the down service.',
+      note: 'Paperclip service has been permanently decommissioned. No active external agent orchestration service.',
     });
   });
 

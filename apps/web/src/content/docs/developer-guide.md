@@ -19,7 +19,7 @@ Practical guidance for integrating Satelink into an application.
 ## Handle the two billing statuses
 
 ```text
-402 Payment Required  → free tier exhausted or zero credits.
+402 Payment Required  → zero credit balance or unauthenticated request.
                         The body contains exact remediation steps + calldata.
 429 Too Many Requests → abuse limiter for automated non-developer traffic.
                         Honor Retry-After.

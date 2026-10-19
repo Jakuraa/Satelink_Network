@@ -69,7 +69,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const supportArticles = ARTICLES.map((a) => e(`/support/${a.collection}/${a.slug}`, 0.5));
   // LEGAL_ORDER now includes terms/privacy/refund (P4), so no manual concat.
   const legal = LEGAL_ORDER.map((s) => e(`/${s}`, 0.5));
-  const tradingAi = TA_PAGES.filter((p) => p.href !== "/trading-agent" && !p.href.endsWith("/login")).map((p) => e(p.href, 0.85, "weekly"));
+  const tradingAi = TA_PAGES.filter((p) => p.href !== "/trading-agent" && p.href !== "/trading-agent/product" && !p.href.endsWith("/login")).map((p) => e(p.href, 0.85, "weekly"));
   const docs = DOCS.map((d) => e(`/docs/${d.slug}`, 0.7, "weekly"));
 
   return [

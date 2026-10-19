@@ -8,7 +8,7 @@
  * Usage:
  *   node scripts/track_conversions.mjs [--api-url <url>]
  *
- * Run daily (e.g. via cron or Paperclip routine) to build a trend log.
+ * Run daily (e.g. via cron or scheduled routine) to build a trend log.
  */
 
 import fs from 'fs';

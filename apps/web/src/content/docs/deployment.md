@@ -22,12 +22,10 @@ boring:
 | status.satelink.network | Public status page |
 | node.satelink.network | Node operator portal |
 
-## Deploying a node (operators)
+## Deploying a node (operators — paused)
 
-Node onboarding is guided end-to-end in the
-[node portal](https://satelink.network/node/setup): provision a VPS (2 GB
-RAM, 50 GB disk, public IP), run the edge agent, and register via
-`POST /api/nodes/register`. Requirements and economics:
+The node operator program is paused. Operator payouts are not active, and new
+node registrations are not currently accepted. See
 [Node Operators](/docs/node-operators).
 
 ## Self-hosting the stack

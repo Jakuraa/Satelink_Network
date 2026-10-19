@@ -67,11 +67,6 @@ const HEADERS: Record<string, { title: string; subtitle: string; crumb: string }
     subtitle: "Live platform health and embedded Grafana observability",
     crumb: "Monitoring",
   },
-  "agent-fleet": {
-    title: "Paperclip Fleet Control",
-    subtitle: "AI Agent active worker topology and telemetry",
-    crumb: "Paperclip Fleet",
-  },
   "customer-zero": {
     title: "Customer Zero Tracker",
     subtitle: "Track visitor-to-settlement conversion funnel and first customer revenue",

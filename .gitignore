@@ -117,6 +117,7 @@ playwright-report/
 .railway/
 *.zip
 *.tar.gz
+*.tgz
 
 # ── AI TOOLS ─────────────────────────
 .aider*

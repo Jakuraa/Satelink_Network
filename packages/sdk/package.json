@@ -1,7 +1,7 @@
 {
   "name": "@satelink/sdk",
   "version": "0.2.0",
-  "description": "Official SDK for the Satelink DePIN network — RPC, MEV relay, AI inference, and blockchain tools",
+  "description": "Official SDK for the Satelink machine-commerce network — RPC gateway, x402 payments, and agent tools",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
@@ -35,7 +35,7 @@
   },
   "keywords": [
     "satelink",
-    "depin",
+    "machine-commerce",
     "rpc",
     "ethereum",
     "polygon",
