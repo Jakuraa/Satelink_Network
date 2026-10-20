@@ -3,6 +3,7 @@ import { ethers } from 'ethers';
 import { verifyJWT } from '../gateway/routes/auth_v2.js';
 import { requireAdminAuth } from '../admin/admin_router.js';
 import { generateClaimSignature } from '../services/claims/claim_processor.js';
+import { CONSUMED_USAGE_PREDICATE } from '../services/financial/truth.js';
 import { broadcaster } from '../realtime/broadcaster-instance.js';
 import { discord } from '../services/discord_notify.mjs';
 
@@ -104,9 +105,14 @@ export function createClaimsRouter(pool) {
           )
         `);
 
-        // Calculate total revenue attributed to this node
+        // Calculate total revenue attributed to this node: real consumed usage only — never
+        // test data, deposits, refund reversals, unbilled rows or x402 bundle purchases
+        // (same rule as /api/financial/truth, S6). These amounts become signed payouts.
         const revenueResult = await client.query(
-          `SELECT COALESCE(SUM(amount_usdt), 0) as total FROM revenue_events_v2 WHERE node_id = $1`,
+          `SELECT COALESCE(SUM(e.amount_usdt), 0) as total FROM revenue_events_v2 e
+            WHERE e.node_id = $1
+              AND (e.is_test_data = false OR e.is_test_data IS NULL)
+              AND (${CONSUMED_USAGE_PREDICATE})`,
           [nodeId]
         );
         const totalRevenue = parseFloat(revenueResult.rows[0]?.total || 0);
@@ -118,10 +124,13 @@ export function createClaimsRouter(pool) {
         // Calculate node's share (50%)
         const nodeShare = totalRevenue * 0.50;
 
-        // Check if earnings already exist for this node
+        // Everything already allocated for this node, under either id it may have been
+        // written with (rows go to walletAddress when given) and in any status — counting only
+        // UNPAID re-allocated the same share after a claim, or on every call with a wallet.
         const existingResult = await client.query(
-          `SELECT COALESCE(SUM(amount_usdt), 0) as existing FROM epoch_earnings WHERE wallet_or_node_id = $1 AND status = 'UNPAID'`,
-          [nodeId]
+          `SELECT COALESCE(SUM(amount_usdt), 0) as existing FROM epoch_earnings
+            WHERE wallet_or_node_id = ANY($1::text[])`,
+          [[nodeId, walletAddress].filter(Boolean)]
         );
         const existingEarnings = parseFloat(existingResult.rows[0]?.existing || 0);
 
@@ -129,8 +138,10 @@ export function createClaimsRouter(pool) {
         const toAllocate = nodeShare - existingEarnings;
 
         if (toAllocate > 0) {
-          // Use wallet address if provided, otherwise use nodeId
-          const earningsId = walletAddress || nodeId;
+          // Always keyed by nodeId: a row keyed by a wallet cannot be tied back to the node, so
+          // a later call without walletAddress allocated the share again. Claims still find it
+          // (claim_processor matches node OR wallet); legacy wallet-keyed rows count above.
+          const earningsId = nodeId;
 
           await client.query(
             `INSERT INTO epoch_earnings (epoch_id, role, wallet_or_node_id, amount_usdt, status, created_at)
