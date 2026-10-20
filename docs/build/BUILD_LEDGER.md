@@ -5,6 +5,55 @@ categories only (R14); details in `docs/build/evidence/private/` on the build ma
 
 ---
 
+## Session 2 — 2026-10-20 P0 close-out (Opus 5.5, background job)
+
+Scope: founder session prompt "P0 CLOSE-OUT (security + money PRs)". Founder answers A1–A3 were
+left as unfilled brackets → treated as NOT SURE and verified from evidence.
+
+### Founder answers vs evidence (Step 1) — `evidence/SIGNER_AND_FOUNDER_ANSWERS_2026-10-20.md`
+| Q | Evidence | Result |
+|---|---|---|
+| A1 settlement signer in F1 rotation | `ClaimsContract` `0x6987…1CC9` `platformSigner` = `0x966E…7Ad4` at every sampled block since deploy (86,985,310, 2026-05-16); holds 4.281768 USDT; admin = EOA `0x3b32…667A` | **On-chain signer not rotated** → F21 OPEN-CRITICAL |
+| A2 `DATABASE_URL` uses `satelink_app` | username part = `postgres` | **NO** (F1 follow-up open) |
+| A3 `ADMIN_API_KEY` set | name absent from 104 Satelink-api variables | **NO** (routes using it fail closed 503 after #553) |
+Legacy push-model contract `0xE475…3fb0` holds 4.930838 USDT (no withdraw path).
+
+### Merges (Step 2) — each: update on main · fresh-subagent review · regression test fails on old / passes on new · CI green with counts · blast radius · R7 before/after · prod probe
+| PR | Squash SHA | Review fixes applied | Old→new test | CI api tests (tests/pass/fail/pending) | Prod probe after deploy |
+|---|---|---|---|---|---|
+| #549 claims signing | `7581f207` | signer-level dry-run refusal; wallet validation; token-unset/recovery/refusal tests | 4/4 fail → 7/7 pass | 648/478/2/168 (main 641/471/2/168) | anon, non-staff Bearer, wrong x-admin-token → 401 |
+| #553 fail-closed admin | `d051e4df` | parity gate `app.use` (all methods + sub-paths); order-independent dodo test | 5 fail → 21 pass | 669/499/2/168 | parity GET/POST 401 (was 200); node-token 404; reputation 503; PATCH node 403 |
+| #559 SEC-4 money reads | `839e3497` | + `/system/settlement-anchor`, `/system/epoch-scheduler`; HEAD test | 11/11 fail → 14 pass | 683/513/2/168 | 10 money routes 401 (were 200); `/system/free-tier`, `/api/nodes` 200 |
+| #561 secret-scan placeholder | `fc20d858` | — (Step 3) | 6 node:test | required green | R7 OK after 19:39 deploy |
+| #555 S6 truth | `d214ec62` | predicate also feeds admin `consumed_usage`; parens; real-SQL test (local PG, mutation-checked) | old lacks predicate → 2+1 pass | 686/515/2/169 (+1 = new real-SQL test, skips without PG in CI) | tests only (no prod DB); `/api/financial/truth` + `/admin/financial/metrics` stay 401 |
+| #551 S4 public revenue | `b1d6f5f7` | `/api/diagnostics` fixed error string | 5/8 fail → 8 pass | 691/521/2/168 | `/api/economics/summary` money fields null (was 20.52582); `/api/diagnostics` `totalRevenueUsdt` null (was 20.18); `/api/revenue`, `/revenue/events`, `/epochs` 401 (were 200) |
+
+All R7 checks green before and after every merge. No revert needed.
+Failures in every run = the two allowlisted x402 t2/t9. The 165–169 pending tests are DB-backed
+suites that skip without Postgres (console_accounts 25, console_onboarding 18, console_alerts 17,
+pricing_v2_lifecycle 13, s1_wallet_binding_security 12, legacy_dodo_subscription_bucket 10,
+x402_rail 10, x402_session_key 10, pricing_v2_metering 8, x402_recover_hardening 7, +10 smaller) → Step 5.2.
+
+Vercel: all three projects report "Deployment rate limited — retry in 24 hours" since ~16:10 IST.
+Web-side changes in #559/#551 reach production only after the limit resets; until then the internal
+monitoring page shows `$undefined` for vault balance (cosmetic, internal page).
+
+### Review follow-ups not fixed (tracked)
+- Claims: same UNPAID balance can be signed repeatedly (no reservation); `allocate-earnings` sums without `is_test_data=false`; float amounts. **Must fix before `SETTLEMENT_DRY_RUN=0`.**
+- `node_operator` JWTs minted by the removed node-token route stay valid up to 7 days → founder decides `JWT_SECRET` rotation (F18).
+- SEC-4b: `GET /api/nodes/:nodeId` exposes payout wallet + endpoint IP (no frontend callers); gate needs care because `:nodeId` patterns also match sibling GETs.
+- S6: denylist predicate is fragile (x402 bundles share `op_type='rpc_call'`); `SUM(real)` drift if `amount_usdt` is REAL (F16).
+- `/api/diagnostics` handler test is source-scan only.
+
+### Process incident (this session)
+A zsh word-splitting bug in a helper loop ran `git merge origin/main` in the shared main checkout
+(conflict in `packages/sdk/README.md`) and created one stray symlink. Detected immediately:
+the other session's unstaged `apps/mcp-server/package.json` change was backed up, verified untouched
+by the merge, `git merge --abort` restored the exact prior state, symlink removed. Helpers now run
+under bash with an explicit `cd`/`pwd` guard.
+
+---
+
 ## Session 1 — 2026-10-20 (Opus 5.5, background job)
 
 ### Environment (Step 0.1)
@@ -107,7 +156,7 @@ Merge policy: self-merge only non-`founder-review` PRs, CI green under the real 
 ### Founder actions (F-list, cumulative; F1–F14 canonical from `AUDIT_2026-10-20.md` Part D)
 | F | Action | State |
 |---|---|---|
-| F1 | Rotations (Discord webhook, Railway `ADMIN_SECRET_TOKEN`, Vercel admin token, Paperclip `ANTHROPIC_API_KEY`, Alchemy key); API `DATABASE_URL` → `satelink_app` role | **Reported cleared by founder 2026-10-20.** Confirm: did the set include the settlement signer (see F21), and has `DATABASE_URL` moved to `satelink_app`? |
+| F1 | Rotations (Discord webhook, Railway `ADMIN_SECRET_TOKEN`, Vercel admin token, Paperclip `ANTHROPIC_API_KEY`, Alchemy key); API `DATABASE_URL` → `satelink_app` role | Reported cleared by founder 2026-10-20. **Session 2 evidence: `DATABASE_URL` user is still `postgres` (not `satelink_app`) → open.** On-chain claims signer not rotated → F21. |
 | F2 | Decommission Paperclip service + Paperclip-DB (dump first) | **Reported cleared by founder 2026-10-20** → unblocks Paperclip file removal (W10) and B-04 |
 | F3 | Staging environment (Railway env + Postgres + Vercel preview) | open (B-06) |
 | F4 | Managed KMS + isolated signer + static egress IP | open (B-08) |
@@ -123,11 +172,11 @@ Merge policy: self-merge only non-`founder-review` PRs, CI green under the real 
 | F14 | Apply reviewed production migrations | as needed |
 | F15 | GitHub branch protection: `enforce_admins` + 1 required review | open (B-10) |
 | F16 | `\d revenue_events_v2` via sat-db → paste `amount_usdt` type | open (B-07) |
-| F17 | Review + merge founder-review PRs #549 (first), #551, #553, #555, #559. After #553, `POST /rpc/keys` and node reputation update return 503 until `ADMIN_API_KEY` is set (intended) | open |
-| F18 | Confirm production `JWT_SECRET` ≠ the fallback literal in git history (deleted `node_auth_route.mjs`) | open |
+| F17 | Review + merge founder-review PRs #549 (first), #551, #553, #555, #559. After #553, `POST /rpc/keys` and node reputation update return 503 until `ADMIN_API_KEY` is set (intended) | **Merged under founder session authorization (session 2)**: #549 `7581f207`, #553 `d051e4df`, #559 `839e3497` #555 `d214ec62`, #551 `b1d6f5f7`. `ADMIN_API_KEY` confirmed absent → those two routes 503 (verified) |
+| F18 | Confirm production `JWT_SECRET` ≠ the fallback literal in git history (deleted `node_auth_route.mjs`) | open. `JWT_SECRET` is set (name only). Node-token route now 404 (#553); tokens it minted stay valid ≤7 days → rotate `JWT_SECRET` if any were issued (logs older than ~15 min are not retained) |
 | F19 | Docker Desktop on the build machine (or a CI DB) for integration suites | open |
 | F20 | RPC upstreams: Alchemy + Ankr resale terms; approve keyed Ankr as paid fallback, then drop free public endpoints from billed traffic (`evidence/RPC_UPSTREAMS.md`) | open |
-| F21 | Settlement signer: rotate if not in F1's set (it was reachable via SEC-1 until #549 merges); check on-chain whether the claims contract holds funds | open |
+| F21 | Settlement signer: rotate if not in F1's set (it was reachable via SEC-1 until #549 merges); check on-chain whether the claims contract holds funds | **OPEN-CRITICAL.** `0x6987…1CC9` still accepts `platformSigner` `0x966E…7Ad4` (= treasury/x402 payTo), unchanged since deploy; holds 4.281768 USDT; admin is EOA `0x3b32…`. Runbook prepared: `runbooks/SIGNER_ROTATION.md` (not executed). #549 now refuses signing (staff + dry-run) |
 
 ### Next actions (in order)
 1. Verify the first lockfile-based API deploy (#557): Railway status success + R7 + `/health` uptime reset.
