@@ -84,3 +84,15 @@ Neither directory is executed automatically; leave as is.
 ## Verification
 
 See the PR description (build of apps/api, web, console, corporate + API baseline) and `docs/trading-agent/EXECUTION_LOG.md` (Phase 4).
+
+---
+
+# Addendum — 2026-10-20 hygiene pass
+
+Base: `origin/main` @ `1102d2b1`. Recovery tag **`archive/pre-cleanup-2026-10-20`** (pushed) — `git checkout archive/pre-cleanup-2026-10-20 -- <path>`.
+Full inventory: `docs/build/evidence/REPOSITORY_HYGIENE_INVENTORY.md`. Report: `docs/build/REPOSITORY_CLEANUP_REPORT.md`.
+
+| Path | WHAT | WHY | EVIDENCE | ACTION | ROLLBACK |
+|---|---|---|---|---|---|
+| 14 root reports from #547 (`FULL_SURFACE_*`, `GITHUB_AND_DEVELOPER_ECOSYSTEM_POSITIONING.md`, `IMPLEMENTATION_AND_VERIFICATION_REPORT.md`, `INFRASTRUCTURE_COST_REDUCTION_*`, `PREVIEW_DEPLOYMENT_AND_VERIFICATION_REPORT.md`, `PRODUCT_CAPABILITY_AND_CLAIM_REGISTER.md`, `REFERENCE_SITE_RESEARCH.md`, `REMAINING_FOUNDER_DECISIONS.md`, `SEO_GEO_*`, `WEBSITE_*`) | agent-written reports, 2026-10-20 | root clutter; not evidence (R2); mandate §10 target layout | `git grep`: referenced only by each other, `docs/build/evidence/REPO_MAP.md` (paths updated), `AUDIT_2026-10-20.md` / `MASTER_BUILD_PROMPT.md` (by name only), one absolute path in a historical research note. No code, config, CI, package or site link | **MOVE** → `docs/archive/2026-10/` (+ README index) | `git mv` back, or restore from the tag |
+| `Dockerfile.paperclip`, `railway.paperclip.json`, `start-cloud.sh` | Paperclip agent deploy files | service decommissioned (F2, founder 2026-10-20); the 2026-10-07 row above said DELETE but the files were **never removed** on `main` (`git log --diff-filter=D` empty) | Railway project services (names only, 2026-10-20): `Postgres-iQeW`, `Satelink-api`, `satelink-reconciler`, `Redis` — no Paperclip service or DB. No CI/Docker/Railway/Vercel config references them; only `agent/memory` notes and historical audits | **DELETE** | restore from the tag |

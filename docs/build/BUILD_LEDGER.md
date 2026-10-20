@@ -45,6 +45,16 @@ monitoring page shows `$undefined` for vault balance (cosmetic, internal page).
 - S6: denylist predicate is fragile (x402 bundles share `op_type='rpc_call'`); `SUM(real)` drift if `amount_usdt` is REAL (F16).
 - `/api/diagnostics` handler test is source-scan only.
 
+### Step 3 / Step 5 / hygiene (same session)
+| Item | PR | State | Evidence |
+|---|---|---|---|
+| Secret-scanner masked-placeholder allowlist + tests (no more `--no-verify`) | #561 | merged `fc20d858` | 6 node:test; E2E: placeholder passes, real-format key + PEM blocked |
+| Docs: F21 evidence, A1–A3, merge ledger, signer-rotation runbook | #562 | merged `38d04d58` | docs only |
+| 5.1 TI prices withheld from machine-readable surfaces until F8 | #563 | merged `ca1b0e14` | API `/v1/pricing`, `/.well-known/x402`, `/.well-known/satelink.json`: 0 TI-price hits after deploy. Web half (llms.txt, pricing.json, JSON-LD) ships when the Vercel rate limit resets |
+| 5.2 DB-backed API tests in CI (Postgres service) + unexpected-skip gate | #564 | merged `1102d2b1` | CI: 694 tests, 687 pass, 4 listed failures, 3 listed skips (was 168 silent skips). Gate caught 3 real skips on first run (fixed) |
+| 5.3 Refund on upstream failure for paid RPC (legacy gate pre-deduct; post-charge isolation) | #565 | **open, founder-review (money path)** | 10 tests (5/6 original fail on main); fresh-subagent review: no blockers, fixes applied |
+| Repository hygiene: 14 #547 root reports → `docs/archive/2026-10/`; Paperclip deploy files deleted | #566 | open | `REPOSITORY_CLEANUP_REPORT.md`, tag `archive/pre-cleanup-2026-10-20` |
+
 ### Process incident (this session)
 A zsh word-splitting bug in a helper loop ran `git merge origin/main` in the shared main checkout
 (conflict in `packages/sdk/README.md`) and created one stray symlink. Detected immediately:
