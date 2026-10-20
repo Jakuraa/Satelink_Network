@@ -4,12 +4,7 @@
     "allow": [
       "Read",
       "Glob",
-      "Grep",
-      "Bash(git status:*)",
-      "Bash(git diff:*)",
-      "Bash(git log:*)",
-      "Bash(gh pr list:*)",
-      "Bash(gh pr view:*)"
+      "Grep"
     ],
     "deny": [
       "Bash(git add -A:*)",
