@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { verifyJWT } from '../gateway/routes/auth_v2.js';
+import { requireAdminAuth } from '../admin/admin_router.js';
 import { generateClaimSignature } from '../services/claims/claim_processor.js';
 import { broadcaster } from '../realtime/broadcaster-instance.js';
 import { discord } from '../services/discord_notify.mjs';
@@ -321,7 +322,17 @@ export function createClaimsRouter(pool) {
     }
   });
 
-  router.post('/:nodeId/claim', verifyJWT, async (req, res) => {
+  // Claim signing produces a production-signer EIP-712 payout authorization, so it is
+  // staff-only and fails closed while settlement is in dry-run (W1, 2026-10-20). A
+  // self-registered JWT is not proof of node ownership.
+  function refuseWhileDryRun(req, res, next) {
+    if (process.env.SETTLEMENT_DRY_RUN !== '0') {
+      return res.status(503).json({ success: false, error: 'settlement_dry_run' });
+    }
+    next();
+  }
+
+  router.post('/:nodeId/claim', requireAdminAuth, refuseWhileDryRun, verifyJWT, async (req, res) => {
     try {
       const { nodeId } = req.params;
       const { walletAddress } = req.body;
