@@ -139,20 +139,20 @@ Migrations: `apps/api/migrations` (27 files) **and** root `database/migrations` 
 | `SATELINK_OPS_RUNBOOK.md` | 2026-10-15 | Authoritative ops runbook (reconciler worker) |
 | `AUDIT_REPORT_2026_06.md` | 2026-06-26 | Historical report (listed as canonical in CLAUDE.md) |
 | `SECURITY_HOTFIX.md` | 2026-10-07 | Historical report (Gate 0 B-02/B-03 hotfix) |
-| `FULL_SURFACE_CONTENT_CHANGE_MATRIX.md` | 2026-10-20 (#547) | Historical report (repositioning batch) |
-| `FULL_SURFACE_REPOSITIONING_AUDIT.md` | 2026-10-20 (#547) | Historical report (repositioning batch) |
-| `GITHUB_AND_DEVELOPER_ECOSYSTEM_POSITIONING.md` | 2026-10-20 (#547) | Historical report (repositioning batch) |
-| `IMPLEMENTATION_AND_VERIFICATION_REPORT.md` | 2026-10-20 (#547) | Historical report (repositioning batch) |
-| `INFRASTRUCTURE_COST_REDUCTION_EXECUTION.md` | 2026-10-20 (#547) | Historical report (authored by "Antigravity CLI + Gemini") |
-| `INFRASTRUCTURE_COST_REDUCTION_REPORT.md` | 2026-10-20 (#547) | Historical report (same author) |
-| `PREVIEW_DEPLOYMENT_AND_VERIFICATION_REPORT.md` | 2026-10-20 (#547) | Historical report (repositioning batch) |
-| `PRODUCT_CAPABILITY_AND_CLAIM_REGISTER.md` | 2026-10-20 (#547) | Report with authoritative intent (claim register) — unverified |
-| `REFERENCE_SITE_RESEARCH.md` | 2026-10-20 (#547) | Historical report (claude.com/anthropic.com IA research) |
-| `REMAINING_FOUNDER_DECISIONS.md` | 2026-10-20 (#547) | Open-decision list (time-bound) |
-| `SEO_GEO_AND_MACHINE_DISCOVERY_AUDIT.md` | 2026-10-20 (#547) | Historical report (repositioning batch) |
-| `SEO_GEO_IMPLEMENTATION_REPORT.md` | 2026-10-20 (#547) | Historical report (repositioning batch) |
-| `WEBSITE_CONTENT_CHANGE_MATRIX.md` | 2026-10-20 (#547) | Historical report (repositioning batch) |
-| `WEBSITE_REPOSITIONING_AUDIT.md` | 2026-10-20 (#547) | Historical report (repositioning batch) |
+| `docs/archive/2026-10/FULL_SURFACE_CONTENT_CHANGE_MATRIX.md` (moved from root 2026-10-20) | 2026-10-20 (#547) | Historical report (repositioning batch) |
+| `docs/archive/2026-10/FULL_SURFACE_REPOSITIONING_AUDIT.md` (moved from root 2026-10-20) | 2026-10-20 (#547) | Historical report (repositioning batch) |
+| `docs/archive/2026-10/GITHUB_AND_DEVELOPER_ECOSYSTEM_POSITIONING.md` (moved from root 2026-10-20) | 2026-10-20 (#547) | Historical report (repositioning batch) |
+| `docs/archive/2026-10/IMPLEMENTATION_AND_VERIFICATION_REPORT.md` (moved from root 2026-10-20) | 2026-10-20 (#547) | Historical report (repositioning batch) |
+| `docs/archive/2026-10/INFRASTRUCTURE_COST_REDUCTION_EXECUTION.md` (moved from root 2026-10-20) | 2026-10-20 (#547) | Historical report (authored by "Antigravity CLI + Gemini") |
+| `docs/archive/2026-10/INFRASTRUCTURE_COST_REDUCTION_REPORT.md` (moved from root 2026-10-20) | 2026-10-20 (#547) | Historical report (same author) |
+| `docs/archive/2026-10/PREVIEW_DEPLOYMENT_AND_VERIFICATION_REPORT.md` (moved from root 2026-10-20) | 2026-10-20 (#547) | Historical report (repositioning batch) |
+| `docs/archive/2026-10/PRODUCT_CAPABILITY_AND_CLAIM_REGISTER.md` (moved from root 2026-10-20) | 2026-10-20 (#547) | Report with authoritative intent (claim register) — unverified |
+| `docs/archive/2026-10/REFERENCE_SITE_RESEARCH.md` (moved from root 2026-10-20) | 2026-10-20 (#547) | Historical report (claude.com/anthropic.com IA research) |
+| `docs/archive/2026-10/REMAINING_FOUNDER_DECISIONS.md` (moved from root 2026-10-20) | 2026-10-20 (#547) | Open-decision list (time-bound) |
+| `docs/archive/2026-10/SEO_GEO_AND_MACHINE_DISCOVERY_AUDIT.md` (moved from root 2026-10-20) | 2026-10-20 (#547) | Historical report (repositioning batch) |
+| `docs/archive/2026-10/SEO_GEO_IMPLEMENTATION_REPORT.md` (moved from root 2026-10-20) | 2026-10-20 (#547) | Historical report (repositioning batch) |
+| `docs/archive/2026-10/WEBSITE_CONTENT_CHANGE_MATRIX.md` (moved from root 2026-10-20) | 2026-10-20 (#547) | Historical report (repositioning batch) |
+| `docs/archive/2026-10/WEBSITE_REPOSITIONING_AUDIT.md` (moved from root 2026-10-20) | 2026-10-20 (#547) | Historical report (repositioning batch) |
 
 14 are dated 2026-10-20 (PR #547 `8679dd61`): README plus 13 repositioning/cost reports.
 
