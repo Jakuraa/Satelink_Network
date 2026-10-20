@@ -39,6 +39,9 @@ export const PUBLIC_RULES = [
   ["PERFORMANCE", /\bearn(s|ed|ing|ings)?\b|\bincome\b|\byield\b|\bapy\b|\broi\b|\bprofit(s|able)?\b|\bwin rate\b|\bbeat the market\b|\boutperform|\bguaranteed (returns?|profits?|income|earnings|payouts?)\b|\brisk[- ]free\b|\bpassive income\b|\bget rich\b|\b(annual|monthly|daily|high|investment|expected|trading) returns\b/i],
   ["AVAILABILITY", /\bstart trading\b|\btrade now\b|\bsign up to trade\b|\blive trading is (on|open|available)\b/i],
   ["AI_OVERCLAIM", RULES[4][1]],
+  // Mandate §9 (2026-10-20): unmeasured performance/status claims and implied endorsements that
+  // were live on jakuraa.com / satelink.network. Allowed again only with a shown measurement.
+  ["UNMEASURED_CLAIM", /\bsub-?second\b|\bsub-?\d+\s?ms\b|\bmainnet operational\b|\bverifiable oracle\b|\bzero[- ](external )?(sdk )?dependenc|\bsoc ?2[- ]compliant\b|\b(claude|anthropic)\b[^.<]{0,20}\bcompatible\b|\bx402: a standard for\b/i],
 ];
 const NUMBER = /\d[\d,.]*\s?%|[$₹€£]\s?\d|\b\d[\d,.]*\s?(USDT|USD|INR|USDC)\b/i;
 

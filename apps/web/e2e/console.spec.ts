@@ -24,7 +24,7 @@ for (const path of PAGES) {
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     // Truth rule: never a bare em-dash as a value.
     await expect(page.getByText("—", { exact: true })).toHaveCount(0);
-    const results = await new AxeBuilder({ page }).analyze();
+    const results = await new AxeBuilder({ page: page as unknown as ConstructorParameters<typeof AxeBuilder>[0]["page"] }).analyze();
     const serious = results.violations.filter((v) => v.impact === "critical" || v.impact === "serious");
     expect(serious.map((v) => `${v.id} (${v.nodes.length})`), `axe ${path}`).toEqual([]);
   });

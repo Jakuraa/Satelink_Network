@@ -1,4 +1,16 @@
 # Satelink — AI Agent Master Context
+
+> **START HERE (2026-10-20): the build is governed by the master mandate.**
+> Every session reads, in order:
+> 1. [`docs/build/MASTER_BUILD_PROMPT.md`](../docs/build/MASTER_BUILD_PROMPT.md) — the authoritative implementation mandate (scope, rules R1–R20, workstreams W0–W12).
+> 2. [`docs/build/BUILD_LEDGER.md`](../docs/build/BUILD_LEDGER.md) — exact state, branches, PRs, evidence and next action.
+> 3. [`docs/build/AUDIT_2026-10-20.md`](../docs/build/AUDIT_2026-10-20.md) — founder audit (decisions D1–D14, AD-1–AD-9, canonical F1–F14) with session-1 reconciliation.
+> 4. [`docs/build/STATUS_MATRIX.md`](../docs/build/STATUS_MATRIX.md) — one status per capability, with evidence.
+> 5. [`docs/decisions/`](../docs/decisions/) — locked decisions (D14 product identity: **Satelink AI Assistance**).
+> 6. [`libs/CLAUDE.md`](../libs/CLAUDE.md) — Financial OS standing rules (frozen architecture, money invariants).
+>
+> Where this file conflicts with the mandate or the ledger, the mandate and ledger win. The
+> sections below are older context; rows carry their own verification dates.
 Last verified: 2026-07-16 (consolidation session — git rescue + docs truth pass).
 Every agent reads this FIRST. Rows marked (2026-07-16) are curl/railway-verified live;
 older rows retain their original verification date.
@@ -148,7 +160,7 @@ NOT done (high-risk, unreviewable) — see `docs/SECURITY.md`.
 
 ## Production URLs / IDs
 - API: `https://api.satelink.network` (== `rpc.` == `admin.`)
-- Frontend: `https://app.satelink.network`
+- Frontend: `https://satelink.network` (app.satelink.network is dead — verified again 2026-10-20)
 - Railway project: `0312ce4a-fb7b-41be-b7c7-0d3dcfdc0f89` · API service `Satelink-api`
 - Vercel project: `satelinkinternet-collabs-projects/web`
 

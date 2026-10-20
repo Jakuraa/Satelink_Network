@@ -17,7 +17,7 @@ export default function DocsPage() {
 
       <Panel title="Your API key">
         <p className="text-sm text-sl-text-muted">
-          Your key is shown in full only once, when you create it. After that it's masked:
+          Your key is shown in full only once, when you create it. After that it&apos;s masked:
         </p>
         <p className="mt-2 font-sl-mono text-sm text-sl-text">{MASKED_KEY}</p>
         <Link href="/console/agents" className="mt-3 inline-block text-sm font-semibold text-sl-accent hover:underline">

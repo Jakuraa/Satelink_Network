@@ -173,7 +173,7 @@ export function CheckoutForm({
                 </p>
               )}
               <p className="mt-3 text-center text-xs text-sl-text-subtle">
-                Payments are processed by Dodo Payments. You'll complete payment on their secure page.
+                Payments are processed by Dodo Payments. You&apos;ll complete payment on their secure page.
               </p>
             </div>
           )}

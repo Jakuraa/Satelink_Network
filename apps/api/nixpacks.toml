@@ -7,8 +7,9 @@
 # auth (see apps/api/src/bootstrap/webcrypto_global.js).
 #
 # Only the Node version is pinned here — install/build/start stay on
-# Nixpacks' auto-detection, which already builds this service correctly
-# today (this directory has no committed package-lock.json; `npm ci`
-# would fail here, unlike the root nixpacks.toml's copy-pasted command).
+# Nixpacks' auto-detection. Since 2026-10-20 (W0, docs/decisions/D15) this
+# directory has its own committed package-lock.json, so auto-detection runs
+# `npm ci` from it: deploys are reproducible instead of re-resolving every
+# dependency range (an unlocked install broke all API deploys on 2026-10-15).
 [phases.setup]
 nixPkgs = ["nodejs_20"]
