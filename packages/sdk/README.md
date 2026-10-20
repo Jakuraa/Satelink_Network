@@ -166,25 +166,6 @@ const blockNumber = await rpc('eth_blockNumber', [], 'polygon');
 const balance = await rpc('eth_getBalance', ['0x...', 'latest'], 'ethereum');
 ```
 
-## AI Usage
-
-```typescript
-import { SatelinkAI } from '@satelink/sdk';
-
-const ai = new SatelinkAI({ apiKey: 'sk_your_api_key' });
-
-// Chat completion (OpenAI-compatible)
-const chatResponse = await ai.chat([
-  { role: 'system', content: 'You are a helpful assistant.' },
-  { role: 'user', content: 'What is machine commerce?' }
-], {
-  model: 'gpt-4o',
-  max_tokens: 500
-});
-
-console.log(chatResponse.choices[0].message.content);
-```
-
 ## EIP-1193 Provider
 
 Full EIP-1193 compatible provider with event support:

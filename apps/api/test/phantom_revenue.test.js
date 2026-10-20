@@ -19,7 +19,6 @@ import { fileURLToPath } from 'url';
 const SRC = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
 
 const PHANTOM_WRITERS = {
-  'workloads/ai_gateway/index.js': 1,
   'workloads/bandwidth_proxy/index.js': 2,
   'workloads/oracle/index.js': 1,
   'workloads/mev_relay/index.js': 1,
