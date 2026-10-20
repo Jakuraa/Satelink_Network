@@ -14,7 +14,7 @@
 // 402 challenge on this path) — see /v1/intelligence for discovery instead.
 
 import { Router } from 'express';
-import { railPrices, bundlePriceText } from '../pricing_v2/rails.mjs';
+import { publicRailPrices, bundlePriceText } from '../pricing_v2/rails.mjs';
 
 const API_BASE = () => process.env.API_BASE_URL || 'https://rpc.satelink.network';
 const X402_NETWORK = () => process.env.X402_NETWORK || 'eip155:8453';
@@ -25,7 +25,7 @@ function listing() {
   const network = X402_NETWORK();
   const payTo = X402_PAY_TO();
   // Prices from the PlanCatalog (railPrices; x402 env overrides honoured, as enforcement does).
-  const rails = railPrices();
+  const rails = publicRailPrices();
   const bundle = rails.rpc_x402_bundle;
   return {
     schema_version: '1.0',

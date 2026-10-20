@@ -93,20 +93,7 @@ const INTELLIGENCE_PRODUCT_JSON_LD = {
   description:
     "Derived trading intelligence - funding-rate heatmaps, open-interest shifts, liquidation clusters, market microstructure - computed from public market data. Raw exchange feeds are never redistributed.",
   url: "https://satelink.network/trading-agent/product",
-  offers: {
-    "@type": "Offer",
-    price: "0.01",
-    priceCurrency: "USD",
-    priceSpecification: {
-      "@type": "UnitPriceSpecification",
-      price: "0.01",
-      priceCurrency: "USD",
-      unitText: "per call",
-    },
-    description:
-      "One-time USD credit pack (non-recurring), spent per call at $0.01/call. See /pricing.",
-    availability: "https://schema.org/InStock",
-  },
+  // No Offer: Trading Intelligence prices are withheld from machine-readable surfaces until F8.
 };
 
 // Secondary - the infrastructure the intelligence product runs on, also sold
