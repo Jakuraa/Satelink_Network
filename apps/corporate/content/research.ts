@@ -1,7 +1,7 @@
 /**
- * Structured data for the Research & Technology section.
- * Real items are based on existing news regarding x402 and RevenueVaultV2.
- * Placeholders are generated for layout purposes and clearly marked.
+ * Research & technology items for jakuraa.com.
+ * Only real, verifiable artifacts with real dates (mandate §9, 2026-10-20). x402 is Coinbase's
+ * open protocol (2025, now governed by the x402 Foundation); Jakuraa did not author it.
  */
 
 export type ResearchItem = {
@@ -11,63 +11,33 @@ export type ResearchItem = {
   date: string | null;
   status: 'published' | 'in-progress' | 'planned';
   summary: string;
+  /** Where the artifact can be inspected. */
+  url?: string;
   placeholder?: boolean;
 };
 
 export const researchItems: readonly ResearchItem[] = [
   {
-    slug: 'x402-machine-payments',
-    category: 'Protocol',
-    title: 'x402: A Standard for Machine-to-Machine Payments',
-    date: '2023-11-15',
+    slug: 'x402-kit',
+    category: 'Open source',
+    title: 'x402-kit: per-call USDC paywall middleware for Express',
+    date: '2026-07-15',
     status: 'published',
-    summary: 'Proposing a standardized HTTP status code for machine payments.',
+    summary:
+      'Public repository (github.com/Jakuraa/x402-kit). Express middleware that charges USDC per API call using the x402 protocol, verified and settled through the Coinbase CDP facilitator.',
+    url: 'https://github.com/Jakuraa/x402-kit',
     placeholder: false,
   },
   {
     slug: 'revenue-vault-v2',
-    category: 'Smart Contracts',
-    title: 'RevenueVaultV2: Secure On-Chain Settlement',
-    date: '2023-12-01',
+    category: 'Smart contracts',
+    title: 'RevenueVaultV2 on Polygon PoS',
+    date: '2026-07-05',
     status: 'published',
-    summary: 'Architecture details of the upgraded revenue vault contract.',
+    summary:
+      'Permissionless USDT deposit vault at 0x577D3716d6Ad5b676d230f5409deF9838FABaCEF that backs Satelink prepaid credits. Source in the Satelink_Network repository (contracts/).',
+    url: 'https://polygonscan.com/address/0x577D3716d6Ad5b676d230f5409deF9838FABaCEF',
     placeholder: false,
-  },
-  {
-    slug: 'machine-economics',
-    category: 'Economics',
-    title: 'The Future of Machine Economics and Agent Commerce',
-    date: null,
-    status: 'planned',
-    summary: 'Exploring economic models where agents transact autonomously.',
-    placeholder: true,
-  },
-  {
-    slug: 'autonomous-settlement',
-    category: 'Infrastructure',
-    title: 'Scaling Autonomous Settlement on Layer 2 Networks',
-    date: null,
-    status: 'in-progress',
-    summary: 'Analyzing throughput of autonomous settlement mechanisms.',
-    placeholder: true,
-  },
-  {
-    slug: 'market-intelligence-agents',
-    category: 'Data',
-    title: 'Market Intelligence via Decentralized Agent Networks',
-    date: null,
-    status: 'planned',
-    summary: 'Using swarms of agents to gather and verify market data.',
-    placeholder: true,
-  },
-  {
-    slug: 'distributed-infrastructure',
-    category: 'Systems',
-    title: 'Resilient Distributed Infrastructure for AI Agents',
-    date: null,
-    status: 'planned',
-    summary: 'Building fault-tolerant systems for continuous agent operation.',
-    placeholder: true,
   },
 ] as const;
 

@@ -33,7 +33,7 @@ export default async function CheckoutSuccessPage({
       </span>
       <h1 className="mt-5 text-2xl font-semibold tracking-tight text-sl-text">Payment received</h1>
       <p className="mt-3 text-sm leading-relaxed text-sl-text-muted">
-        Thanks — Dodo has your payment and we're confirming it. Card payments usually confirm in a few
+        Thanks — Dodo has your payment and we&apos;re confirming it. Card payments usually confirm in a few
         seconds; UPI can take up to ~48 hours. Your API key and credits appear only after the payment is
         confirmed. Check the receipt email Dodo sent you for your claim link.
       </p>
@@ -41,7 +41,7 @@ export default async function CheckoutSuccessPage({
       <div className="mt-6">
         <Disclosure title="No credits are granted until confirmed">
           We never display or grant credits before the payment is confirmed by the backend. If your
-          balance hasn't updated after confirmation,{" "}
+          balance hasn&apos;t updated after confirmation,{" "}
           <Link href="/contact">contact us</Link> with your payment receipt.
         </Disclosure>
       </div>

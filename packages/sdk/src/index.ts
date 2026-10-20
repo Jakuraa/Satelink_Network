@@ -4,9 +4,6 @@ export { SatelinkRPC, createProvider } from './rpc.js';
 // EIP-1193 Provider
 export { SatelinkProvider, createSatelinkProvider } from './provider.js';
 
-// AI inference client
-export { SatelinkAI } from './ai.js';
-
 // MEV relay client
 export { SatelinkMEV, createMevClient } from './mev.js';
 
@@ -23,13 +20,8 @@ export {
 // Types
 export type {
   SatelinkRPCOptions,
-  SatelinkAIOptions,
   JsonRpcRequest,
   JsonRpcResponse,
-  ChatMessage,
-  ChatCompletionOptions,
-  ChatCompletionResponse,
-  Model,
   TransactionRequest
 } from './types.js';
 export type { EIP1193Provider } from './rpc.js';

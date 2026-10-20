@@ -718,7 +718,7 @@ function AdminCommandCenter() {
             )}
             {treasStatus && treasStatus.blocked_unfunded_batches > 0 && (
               <p className="mx-1 text-xs text-muted-foreground">
-                <strong className="text-foreground">What "blocked unfunded" means:</strong>{" "}
+                <strong className="text-foreground">What &quot;blocked unfunded&quot; means:</strong>{" "}
                 epochs were aggregated into payable settlement batches, but the signer wallet{" "}
                 <span className="font-mono">{fmt.addr(treasStatus.signer_address)}</span> has no POL
                 for gas, so none can broadcast — funding the signer releases all{" "}
