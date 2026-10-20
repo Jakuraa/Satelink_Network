@@ -4,6 +4,7 @@ import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import { ethers } from 'ethers';
 import { createClaimsRouter } from '../src/routes/claims_route.mjs';
+import { generateClaimSignature } from '../src/services/claims/claim_processor.js';
 
 // W1 (2026-10-20): POST /api/nodes/:nodeId/claim signs a payout authorization with the
 // production signer. It must require staff auth and refuse while SETTLEMENT_DRY_RUN is
@@ -92,5 +93,48 @@ describe('claims signing gate (W1)', () => {
     expect(res.body.signature.amount).to.equal(2.5);
     expect(res.body.signature.signature).to.match(/^0x[0-9a-f]+$/i);
     expect(writes).to.have.length(1);
+    // The signature must recover to the configured signer for the contract's EIP-712 domain.
+    const sig = res.body.signature;
+    const recovered = ethers.verifyTypedData(
+      { name: 'SatelinkClaims', version: '1', chainId: 137, verifyingContract: process.env.CLAIMS_CONTRACT_ADDRESS },
+      { Claim: [{ name: 'nodeId', type: 'string' }, { name: 'wallet', type: 'address' }, { name: 'amount', type: 'uint256' }, { name: 'nonce', type: 'uint256' }, { name: 'expiry', type: 'uint256' }] },
+      { nodeId: 'node-1', wallet: body.walletAddress, amount: sig.amountWei, nonce: sig.nonce, expiry: sig.expiry },
+      sig.signature,
+    );
+    expect(recovered).to.equal(signer.address);
+  });
+
+  it('ADMIN_SECRET_TOKEN unset → 503 before the DB, even with SETTLEMENT_DRY_RUN=0', async () => {
+    process.env.SETTLEMENT_DRY_RUN = '0';
+    delete process.env.ADMIN_SECRET_TOKEN;
+    try {
+      const pool = trapPool();
+      const res = await request(app(pool)).post('/api/nodes/any-node/claim')
+        .set('x-admin-token', ADMIN).send(body);
+      expect(res.status).to.equal(503);
+      expect(pool.hits.n).to.equal(0);
+    } finally {
+      process.env.ADMIN_SECRET_TOKEN = ADMIN;
+    }
+  });
+
+  it('an invalid walletAddress is rejected (400) before the DB', async () => {
+    process.env.SETTLEMENT_DRY_RUN = '0';
+    const pool = trapPool();
+    const res = await request(app(pool)).post('/api/nodes/any-node/claim')
+      .set('x-admin-token', ADMIN).send({ walletAddress: 'not-an-address' });
+    expect(res.status).to.equal(400);
+    expect(pool.hits.n).to.equal(0);
+  });
+
+  it('generateClaimSignature itself refuses while SETTLEMENT_DRY_RUN is not "0" (unmounted callers too)', async () => {
+    for (const v of [undefined, '1', 'false', ' 0']) {
+      if (v === undefined) delete process.env.SETTLEMENT_DRY_RUN; else process.env.SETTLEMENT_DRY_RUN = v;
+      const pool = trapPool();
+      let err;
+      try { await generateClaimSignature('node-1', body.walletAddress, pool); } catch (e) { err = e; }
+      expect(err?.message, `SETTLEMENT_DRY_RUN=${JSON.stringify(v)}`).to.match(/settlement_dry_run/);
+      expect(pool.hits.n).to.equal(0);
+    }
   });
 });

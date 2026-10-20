@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { ethers } from 'ethers';
 import { verifyJWT } from '../gateway/routes/auth_v2.js';
 import { requireAdminAuth } from '../admin/admin_router.js';
 import { generateClaimSignature } from '../services/claims/claim_processor.js';
@@ -337,14 +338,14 @@ export function createClaimsRouter(pool) {
       const { nodeId } = req.params;
       const { walletAddress } = req.body;
 
-      if (!walletAddress) {
+      if (typeof walletAddress !== 'string' || !ethers.isAddress(walletAddress)) {
         return res.status(400).json({
           success: false,
-          error: 'walletAddress is required in request body'
+          error: 'a valid walletAddress is required in request body'
         });
       }
 
-      const result = await generateClaimSignature(nodeId, walletAddress, pool);
+      const result = await generateClaimSignature(nodeId, ethers.getAddress(walletAddress), pool);
 
       broadcaster.publish('claim:generated', {
         node_id: nodeId,
