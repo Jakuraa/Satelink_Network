@@ -24,6 +24,8 @@ describe('S6 — financial truth counts consumed usage only', () => {
     for (const t of ["'subscription_payment'", "'pack_purchase'", "'refund_reversal'"]) expect(CONSUMED_USAGE_PREDICATE).to.include(t);
     expect(CONSUMED_USAGE_PREDICATE).to.match(/NOT IN/);
     expect(CONSUMED_USAGE_PREDICATE).to.match(/COALESCE\(e\.is_billable, true\)/);
+    expect(CONSUMED_USAGE_PREDICATE).to.match(/COALESCE\(e\.op_type, ''\) NOT IN/);
+    expect(CONSUMED_USAGE_PREDICATE).to.include("NOT LIKE 'x402:%'");
   });
 
   it('every revenue_events_v2 sum in /truth applies the predicate', async () => {

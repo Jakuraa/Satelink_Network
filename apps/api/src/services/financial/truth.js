@@ -27,9 +27,14 @@ export const INTERNAL_PREDICATE =
 // - deposits ('subscription_payment', 'pack_purchase') are money coming IN, counted when
 //   the credits they bought are consumed — summing them here double-counts;
 // - 'refund_reversal' belongs in a refunded bucket, not consumed usage;
-// - is_billable = false rows were never charged (phantom workload rows).
+// - is_billable = false rows were never charged (phantom workload rows);
+// - an x402 settlement row (request_id 'x402:<tx>', written by payments/x402/settlement.js)
+//   is a bundle PURCHASE that credits api_credits; the calls it pays for are written per call.
+// op_type is nullable in the bootstrap schema, so NULL must not drop a row out of the sum.
 export const CONSUMED_USAGE_PREDICATE =
-  `e.op_type NOT IN ('subscription_payment', 'pack_purchase', 'refund_reversal') AND COALESCE(e.is_billable, true)`;
+  `COALESCE(e.op_type, '') NOT IN ('subscription_payment', 'pack_purchase', 'refund_reversal')`
+  + ` AND COALESCE(e.is_billable, true)`
+  + ` AND COALESCE(e.request_id, '') NOT LIKE 'x402:%'`;
 
 export function createFinancialTruthRouter(pool) {
   const router = Router();

@@ -38,7 +38,11 @@ SELECT COUNT(*) AS events, SUM(e.amount_usdt) AS metered_usdt
   FROM revenue_events_v2 e
   LEFT JOIN api_credits t ON t.api_key = e.client_id
  WHERE (e.is_test_data = false OR e.is_test_data IS NULL)
-   AND e.op_type NOT IN ('subscription_payment', 'pack_purchase', 'refund_reversal')
+   -- 2026-10-20 (S6): aligned with truth.js CONSUMED_USAGE_PREDICATE — also excludes
+   -- never-charged rows (is_billable = false) and x402 bundle purchases ('x402:<tx>').
+   AND COALESCE(e.op_type, '') NOT IN ('subscription_payment', 'pack_purchase', 'refund_reversal')
+   AND COALESCE(e.is_billable, true)
+   AND COALESCE(e.request_id, '') NOT LIKE 'x402:%'
    AND NOT COALESCE(lower(e.client_id) = ANY (:'founders'::text[])
                  OR lower(t.wallet_address) = ANY (:'founders'::text[]), false);
 
