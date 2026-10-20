@@ -3,7 +3,6 @@
 // shaped by the API's own publicCatalog(). One source, one formula — parity by
 // construction (guarded by test/plan-catalog-parity.test.ts).
 import catalogJson from "../../../api/config/plan_catalog.v2.json";
-// @ts-expect-error — plain ESM module from apps/api, no type declarations.
 import { publicCatalog as apiPublicCatalog } from "../../../api/src/pricing_v2/catalog.mjs";
 
 export type PublicPlan = {

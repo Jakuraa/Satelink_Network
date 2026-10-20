@@ -5,7 +5,6 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { planCatalog } from "../src/lib/plan-catalog";
-// @ts-expect-error — plain ESM from apps/api
 import { publicCatalog } from "../../api/src/pricing_v2/catalog.mjs";
 
 const json = JSON.parse(readFileSync(resolve(__dirname, "..", "..", "api", "config", "plan_catalog.v2.json"), "utf8"));

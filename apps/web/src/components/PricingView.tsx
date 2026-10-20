@@ -27,6 +27,7 @@ import {
 import { PlanCards } from "@/components/PlanCards";
 import { TwoRailsDiagram } from "@satelink/web-ui";
 import { AGENT_RATE_CARD } from "@/lib/plans";
+import { X402_BUNDLE } from "@/lib/products";
 import type { PublicCatalog } from "@/lib/plan-catalog";
 
 const CONSOLE = "https://console.satelink.network";
