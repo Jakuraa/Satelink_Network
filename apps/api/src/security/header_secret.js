@@ -1,4 +1,12 @@
-import { timingSafeEqual } from 'crypto';
+import { createHash, timingSafeEqual } from 'crypto';
+
+/** Constant-time string equality that does not leak length (compares SHA-256 digests). */
+export function secretEquals(got, expected) {
+  if (typeof got !== 'string' || typeof expected !== 'string' || got.length === 0 || expected.length === 0) return false;
+  const a = createHash('sha256').update(got).digest();
+  const b = createHash('sha256').update(expected).digest();
+  return timingSafeEqual(a, b);
+}
 
 /**
  * Fail-closed, constant-time shared-secret check for a request header (W1, 2026-10-20).
@@ -16,13 +24,9 @@ export function requireHeaderSecret(header, envNames) {
       return res.status(503).json({ ok: false, error: 'admin_secret_not_configured' });
     }
     const got = req.headers[name];
-    if (typeof got === 'string' && got.length > 0) {
-      const a = Buffer.from(got);
-      for (const s of secrets) {
-        const b = Buffer.from(s);
-        if (a.length === b.length && timingSafeEqual(a, b)) return next();
-      }
-    }
+    let ok = false;
+    for (const s of secrets) ok = secretEquals(got, s) || ok; // check every secret; no early exit
+    if (ok) return next();
     return res.status(403).json({ ok: false, error: 'Admin access required' });
   };
 }
