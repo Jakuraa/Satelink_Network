@@ -61,7 +61,7 @@ Not done yet: Cloudflare WAF read, Vercel production SHA vs main.
 ### Security findings (categories only)
 | ID | Category | State |
 |---|---|---|
-| SEC-1 | Payout-signing route reachable with a weaker credential than staff auth | Fix PR #549 (founder-review). F1: rotation decision for the signer |
+| SEC-1 | Payout-signing route reachable with a weaker credential than staff auth | Fix PR #549 (founder-review). F21: signer rotation decision |
 | SEC-2 | Unauthenticated outbound-fetch workload | Removed in PR #548 |
 | SEC-3 | Relabelled-model inference surface (R4) | Removed in PR #548 |
 | SEC-4 | Public revenue figures (S4) and sibling public money reads | #551 (revenue routes + diagnostics); treasury, settlement history, node earnings, `/os/events`, `/system/*` reads still open → W1 next |
@@ -104,24 +104,30 @@ All fixed in #552; `ignoreBuildErrors` removed; console/corporate typecheck + li
 Code review (§12) ran over #549/#551/#553/#555; every BLOCKER/SHOULD-FIX was applied and summarised as a PR comment.
 Merge policy: self-merge only non-`founder-review` PRs, CI green under the real gate, R7 before and after each merge.
 
-### Founder actions (F-list, cumulative)
-| F | Action | Why |
+### Founder actions (F-list, cumulative; F1–F14 canonical from `AUDIT_2026-10-20.md` Part D)
+| F | Action | State |
 |---|---|---|
-| F1 | Decide on rotating the settlement signer key; check whether the claims contract holds funds (on-chain) | SEC-1 exposure window |
-| F3 | Provision staging (Railway env + Vercel preview + demo tenant) | B-06, W8/W9 |
-| F4 | KMS + isolated signer + static egress IP | B-08, M12 |
-| F5 | Approve refund policy #525 + CA/lawyer review | W4 enablement |
-| F6 | Licence choice (MIT vs BSL) | B-11 |
-| F7 | Invoice Safe address | W4 |
-| F8 | Confirm prices (Pro yearly $120 vs $190; INR FX; Max tier ladder; TI status) | DU §2 contradictions |
-| F12 | `npm publish satelink-mcp` | Not on npm; docs tell users to `npx` it |
-| F14 | Apply production migrations when asked | R11 |
-| F15 | GitHub branch protection: `enforce_admins` + 1 required review | B-10 |
-| F16 | Run `\d revenue_events_v2` via sat-db and paste the `amount_usdt` type | B-07 |
-| F17 | Review + merge #549, #551, #553, #555 (founder-review: auth / revenue reporting). After #553: `POST /rpc/keys` and node reputation update return 503 until `ADMIN_API_KEY` is set (intended) | SEC-1, S4, S6, SEC-6/7 |
-| F18 | Confirm production `JWT_SECRET` ≠ the fallback literal in git history (deleted file `node_auth_route.mjs`); rotate if it ever matched | SEC-7 |
-| F20 | RPC upstreams: confirm Alchemy + Ankr plan terms allow resale; approve enabling keyed Ankr as the paid fallback, then removing free public endpoints (PublicNode, dRPC) from billed traffic. See `evidence/RPC_UPSTREAMS.md` | W1 ToS gap |
-| F19 | Start Docker Desktop on the build machine (or provide a CI DB) so integration suites can run locally | BASELINE |
+| F1 | Rotations (Discord webhook, Railway `ADMIN_SECRET_TOKEN`, Vercel admin token, Paperclip `ANTHROPIC_API_KEY`, Alchemy key); API `DATABASE_URL` → `satelink_app` role | **Reported cleared by founder 2026-10-20.** Confirm: did the set include the settlement signer (see F21), and has `DATABASE_URL` moved to `satelink_app`? |
+| F2 | Decommission Paperclip service + Paperclip-DB (dump first) | **Reported cleared by founder 2026-10-20** → unblocks Paperclip file removal (W10) and B-04 |
+| F3 | Staging environment (Railway env + Postgres + Vercel preview) | open (B-06) |
+| F4 | Managed KMS + isolated signer + static egress IP | open (B-08) |
+| F5 | Legal/CA opinion: VDA execution (FIU-IND/PMLA), GST, FEMA, refund policy L1–L10 | open (#525) |
+| F6 | Licence: MIT vs BSL | open (B-11) |
+| F7 | Invoice Safe address | open |
+| F8 | Confirm prices (D13 vs Pricing V2 vs per-call). Specific conflicts: Pro yearly $120 (catalog) vs $190 (docs/test); INR rates ₹52.6–₹84; Max $79 below Max 5× allowance; TI Starter Pack | open |
+| F9 | Fiat provider approval with an accurate business description | open |
+| F10 | Google OAuth verification (+ Gmail security assessment) | open |
+| F11 | Model provider production keys + spend limits | open |
+| F12 | `npm publish satelink-mcp` | open (still E404) |
+| F13 | Binance eligibility / programme terms; testnet keys in `trading-testnet` env | open |
+| F14 | Apply reviewed production migrations | as needed |
+| F15 | GitHub branch protection: `enforce_admins` + 1 required review | open (B-10) |
+| F16 | `\d revenue_events_v2` via sat-db → paste `amount_usdt` type | open (B-07) |
+| F17 | Review + merge founder-review PRs #549 (first), #551, #553, #555, #559. After #553, `POST /rpc/keys` and node reputation update return 503 until `ADMIN_API_KEY` is set (intended) | open |
+| F18 | Confirm production `JWT_SECRET` ≠ the fallback literal in git history (deleted `node_auth_route.mjs`) | open |
+| F19 | Docker Desktop on the build machine (or a CI DB) for integration suites | open |
+| F20 | RPC upstreams: Alchemy + Ankr resale terms; approve keyed Ankr as paid fallback, then drop free public endpoints from billed traffic (`evidence/RPC_UPSTREAMS.md`) | open |
+| F21 | Settlement signer: rotate if not in F1's set (it was reachable via SEC-1 until #549 merges); check on-chain whether the claims contract holds funds | open |
 
 ### Next actions (in order)
 1. Verify the first lockfile-based API deploy (#557): Railway status success + R7 + `/health` uptime reset.
