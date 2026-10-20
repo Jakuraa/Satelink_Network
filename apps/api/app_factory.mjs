@@ -220,7 +220,8 @@ app.get("/api/mode", (req, res) => {
         responseTimeMs: Date.now() - t0
       });
     } catch (e) {
-      res.status(500).json({ ok: false, error: e.message });
+      console.error('[diagnostics] failed:', e.message);
+      res.status(500).json({ ok: false, error: 'diagnostics_unavailable' });
     }
   });
 

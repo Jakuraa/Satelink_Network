@@ -68,5 +68,7 @@ describe('S4 — no public revenue figures', () => {
     const handler = af.slice(a, af.indexOf('\n  });', a));
     expect(handler).to.not.match(/revenue_events_v2/);
     expect(handler).to.match(/totalRevenueUsdt:\s+null/);
+    // No raw error text in the public response (review follow-up).
+    expect(handler).to.not.match(/json\(\{[^}]*e\.message/);
   });
 });
