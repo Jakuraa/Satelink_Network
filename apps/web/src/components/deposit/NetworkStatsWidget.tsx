@@ -57,7 +57,7 @@ export function NetworkStatsWidget() {
         <div>
           <MetricRow
             label="Metered (Unbilled)"
-            value={`$${state.data.meteredUnbilledUsdt.toFixed(6)}`}
+            value={state.data.meteredUnbilledUsdt == null ? '—' : `$${state.data.meteredUnbilledUsdt.toFixed(6)}`}
             hint="accrued, not yet settled on-chain"
           />
           <MetricRow label="Settlement Epochs" value={state.data.epochCount.toLocaleString()} />
