@@ -13,6 +13,7 @@ import { secretEquals } from '../src/security/header_secret.js';
 // /internal/dodo keeps its own shared-secret auth.
 
 const ADMIN = 'test-only-admin-token-parity';
+const DODO = 'test-only-dodo-value';
 let saved;
 
 function build() {
@@ -51,9 +52,17 @@ describe('W1 — /internal parity reports are staff-only (real routing)', () => 
   });
 
   it('/internal/dodo/credit is not behind the admin guard (it keeps DODO_INTERNAL_SECRET)', async () => {
-    const res = await request(build()).post('/internal/dodo/credit').send({});
-    expect(res.status).to.not.equal(401);
-    expect(res.body?.error).to.not.equal('Unauthorized');
+    // Pin the dodo secret so the result does not depend on what other suites left in env:
+    // the dodo router's own check must answer (its error), never the admin guard's.
+    const prev = process.env.DODO_INTERNAL_SECRET;
+    process.env.DODO_INTERNAL_SECRET = DODO;
+    try {
+      const res = await request(build()).post('/internal/dodo/credit').send({});
+      expect(res.body?.error).to.equal('invalid_dodo_internal_secret');
+      expect(res.body?.error).to.not.equal('Unauthorized');
+    } finally {
+      if (prev === undefined) delete process.env.DODO_INTERNAL_SECRET; else process.env.DODO_INTERNAL_SECRET = prev;
+    }
   });
 
   it('secretEquals is digest-based: wrong lengths and empties are false, equal is true', () => {
