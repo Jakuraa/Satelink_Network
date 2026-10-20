@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 import express from 'express';
 import request from 'supertest';
 import { loadCatalog, __resetCatalog } from '../src/pricing_v2/catalog.mjs';
-import { railPrices, bundlePriceText } from '../src/pricing_v2/rails.mjs';
+import { railPrices, publicRailPrices, bundlePriceText } from '../src/pricing_v2/rails.mjs';
 import { PRICE_PER_CALL_USDT } from '../src/billing/credit_service.mjs';
 import { getX402Config } from '../src/payments/x402/config.js';
 import { METRICS } from '../src/intelligence/compute.js';
@@ -41,7 +41,9 @@ describe('Catalog consistency (C8): one price, every surface', () => {
   it('/.well-known/x402 shows the catalog prices, with rail + challenge labels (C5)', async () => {
     const app = express(); app.use('/.well-known', createWellKnownX402Router());
     const body = (await request(app).get('/.well-known/x402')).body;
-    const r = railPrices();
+    const r = publicRailPrices();
+    // F8: Trading Intelligence pricing is withheld from machine-readable listings.
+    assert.equal(body.rails?.intelligence_credits, undefined, 'no TI price on /.well-known/x402');
     const rpc = body.routes.find((x) => x.resource.endsWith('/rpc/polygon'));
     assert.equal(rpc.price, bundlePriceText(r));
     assert.deepEqual([rpc.rail, rpc.x402_challenge], ['x402', true]);
@@ -71,7 +73,7 @@ describe('Catalog consistency (C8): one price, every surface', () => {
   });
 
   it('/.well-known/satelink.json and /v1/pricing show the catalog prices', async () => {
-    const r = railPrices();
+    const r = publicRailPrices();
     const app = express();
     app.use('/.well-known', createWellKnownSatelinkRouter());
     app.use('/v1', createMachineV1Router({ query: async () => ({ rows: [], rowCount: 0 }) }));
@@ -87,6 +89,20 @@ describe('Catalog consistency (C8): one price, every surface', () => {
     // (checked above, C8) still carries the live price for the engine itself.
     assert.equal(p.intelligence, undefined, 'TI must not appear as a standalone catalog entry in /v1/pricing');
     assert.deepEqual(p.rails, r);
+    // F8: no Trading Intelligence price on either public surface.
+    for (const [name, b] of [['/.well-known/satelink.json', m], ['/v1/pricing', p]]) {
+      assert.equal(b.pricing?.rails?.intelligence_credits ?? b.rails?.intelligence_credits, undefined, `${name}: no TI rail`);
+      assert.doesNotMatch(JSON.stringify(b), /price_usd_per_request/, `${name}: no TI per-request price`);
+    }
+  });
+
+  it('publicRailPrices withholds only the TI rail (F8); railPrices keeps it for the engine', () => {
+    const all = railPrices(loadCatalog(), {});
+    const pub = publicRailPrices(loadCatalog(), {});
+    assert.ok(all.intelligence_credits, 'engine still has the TI price');
+    assert.equal(pub.intelligence_credits, undefined);
+    const { intelligence_credits: _ti, ...rest } = all;
+    assert.deepEqual(pub, rest);
   });
 
   it('/api/pricing lists the flat catalog price for every method (no per-method prices nobody is charged)', () => {

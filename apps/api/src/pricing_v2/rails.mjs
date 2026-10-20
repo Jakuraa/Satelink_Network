@@ -40,6 +40,17 @@ export function railPrices(c = loadCatalog(), env = process.env) {
   };
 }
 
+/**
+ * railPrices() for PUBLIC discovery surfaces (/v1/pricing, /.well-known/x402,
+ * /.well-known/satelink.json). Trading Intelligence pricing is withheld from
+ * machine-readable listings until the founder confirms the price list (F8);
+ * the TI engine and its own /v1/intelligence catalog still use railPrices().
+ */
+export function publicRailPrices(c = loadCatalog(), env = process.env) {
+  const { intelligence_credits: _withheld, ...rest } = railPrices(c, env);
+  return rest;
+}
+
 /** "$0.10 = 1,000 calls" — the one bundle wording every surface uses (never rounds an override). */
 export function bundlePriceText(r = railPrices()) {
   return `${usd(r.rpc_x402_bundle.price_usd)} = ${r.rpc_x402_bundle.calls.toLocaleString('en-US')} calls`;

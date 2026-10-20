@@ -40,26 +40,26 @@ export const POLYGON_RPC_TOOL = {
   },
 };
 
-// M7 (T-11): four intelligence tools, $0.01/call via x402 — same rail as
+// M7 (T-11): four intelligence tools, paid via x402 (price withheld from listings until F8) — same rail as
 // polygon_rpc, distinct endpoints. See src/intelligence.mjs's header comment
 // for why these may currently return `not_yet_available` (M3 not shipped).
 const INTELLIGENCE_TOOL_DEFS = [
   {
     name: 'funding_rate_heatmap',
     description:
-      'Funding-rate heatmap across perp markets — derived analytics, not raw quotes. $0.01/call via x402.',
+      'Funding-rate heatmap across perp markets — derived analytics, not raw quotes.',
   },
   {
     name: 'open_interest_shifts',
-    description: 'Recent shifts in open interest across markets — derived, not raw quotes. $0.01/call via x402.',
+    description: 'Recent shifts in open interest across markets — derived, not raw quotes.',
   },
   {
     name: 'liquidation_clusters',
-    description: 'Clustered liquidation levels/density — derived, not raw quotes. $0.01/call via x402.',
+    description: 'Clustered liquidation levels/density — derived, not raw quotes.',
   },
   {
     name: 'market_microstructure',
-    description: 'Market microstructure summary (spread, depth, imbalance) — derived, not raw quotes. $0.01/call via x402.',
+    description: 'Market microstructure summary (spread, depth, imbalance) — derived, not raw quotes.',
   },
 ].map((t) => ({
   ...t,
