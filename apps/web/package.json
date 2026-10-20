@@ -7,7 +7,7 @@
         "dev:frontend": "npm run dev",
         "build": "next build",
         "start": "next start",
-        "lint": "echo Skipped",
+        "lint": "eslint .",
         "lint:claims": "node scripts/claims-lint.mjs",
         "test": "vitest",
         "test:run": "vitest run",
