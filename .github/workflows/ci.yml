@@ -126,6 +126,7 @@ jobs:
           JWT_SECRET: test-secret-for-ci-only
           DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/ci_test
           CONSOLE_ACCOUNTS_TEST_DB: postgresql://ci:ci@127.0.0.1:5432/ci_test
+          RPC_TRAFFIC_TEST_PG: postgresql://ci:ci@127.0.0.1:5432/ci_test
           REQUIRE_DB_TESTS: '1'
 
   api-deploy-install:
