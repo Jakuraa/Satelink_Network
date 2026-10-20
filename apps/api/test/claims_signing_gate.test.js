@@ -2,6 +2,7 @@ import { expect } from 'chai';
 import express from 'express';
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
+import { ethers } from 'ethers';
 import { createClaimsRouter } from '../src/routes/claims_route.mjs';
 
 // W1 (2026-10-20): POST /api/nodes/:nodeId/claim signs a payout authorization with the
@@ -9,7 +10,7 @@ import { createClaimsRouter } from '../src/routes/claims_route.mjs';
 // anything but '0' — a self-registered JWT alone must never reach the signer.
 
 const SAVED = {};
-const KEYS = ['JWT_SECRET', 'ADMIN_SECRET_TOKEN', 'SETTLEMENT_DRY_RUN'];
+const KEYS = ['JWT_SECRET', 'ADMIN_SECRET_TOKEN', 'SETTLEMENT_DRY_RUN', 'SETTLEMENT_EVM_SIGNER_PRIVATE_KEY', 'CLAIMS_CONTRACT_ADDRESS'];
 const ADMIN = 'test-only-admin-token-claims-gate';
 
 function app(pool) {
@@ -68,5 +69,28 @@ describe('claims signing gate (W1)', () => {
       .set('x-admin-token', ADMIN).send(body);
     expect(res.status).to.equal(503);
     expect(pool.hits.n).to.equal(0);
+  });
+
+  it('staff auth (Bearer) with SETTLEMENT_DRY_RUN=0 reaches the signer and returns a signature', async () => {
+    process.env.SETTLEMENT_DRY_RUN = '0';
+    const signer = ethers.Wallet.createRandom(); // throwaway key, generated per run
+    process.env.SETTLEMENT_EVM_SIGNER_PRIVATE_KEY = signer.privateKey;
+    process.env.CLAIMS_CONTRACT_ADDRESS = '0x000000000000000000000000000000000000c1a1';
+    const writes = [];
+    const client = {
+      async query(sql, params) {
+        if (/FROM epoch_earnings/.test(sql)) return { rows: [{ claimable: '2.5' }] };
+        if (/INSERT INTO claims/.test(sql)) writes.push(params);
+        return { rows: [] };
+      },
+      release() {},
+    };
+    const pool = { async query() { return { rows: [] }; }, async connect() { return client; } };
+    const res = await request(app(pool)).post('/api/nodes/node-1/claim')
+      .set('Authorization', `Bearer ${ADMIN}`).send(body);
+    expect(res.status, JSON.stringify(res.body)).to.equal(200);
+    expect(res.body.signature.amount).to.equal(2.5);
+    expect(res.body.signature.signature).to.match(/^0x[0-9a-f]+$/i);
+    expect(writes).to.have.length(1);
   });
 });
