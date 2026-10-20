@@ -24,6 +24,7 @@ import {
 import { getNodeHealthSummary } from '../../scheduler/node_health_monitor.js';
 import { handleNodeComeback } from './offline_detector.js';
 import { getNodeEarnings } from './earnings_aggregator.js';
+import { requireHeaderSecret } from '../../security/header_secret.js';
 
 const VALID_REGIONS = ['ap-south-1', 'us-east-1', 'eu-west-1', 'ap-southeast-1'];
 const VALID_NODE_TYPES = ['rpc', 'bandwidth', 'compute'];
@@ -594,14 +595,9 @@ export function createNodeRegistryRouter(db, redis) {
   });
 
   // PATCH /api/nodes/:nodeId — Update node configuration (admin only)
-  router.patch('/:nodeId', async (req, res) => {
+  router.patch('/:nodeId', requireHeaderSecret('x-admin-key', ['MASTER_ADMIN_TOKEN', 'ADMIN_API_KEY']), async (req, res) => {
     try {
       const { nodeId } = req.params;
-      const adminKey = req.headers['x-admin-key'];
-
-      if (adminKey !== process.env.MASTER_ADMIN_TOKEN && adminKey !== process.env.ADMIN_API_KEY) {
-        return res.status(403).json({ ok: false, error: 'Admin access required' });
-      }
 
       if (!db || !db.query) {
         return res.status(503).json({ ok: false, error: 'Database unavailable' });
@@ -711,14 +707,9 @@ export function createNodeRegistryRouter(db, redis) {
     }
   });
 
-  router.post('/:nodeId/reputation/update', async (req, res) => {
+  router.post('/:nodeId/reputation/update', requireHeaderSecret('x-admin-key', ['ADMIN_API_KEY']), async (req, res) => {
     try {
       const { nodeId } = req.params;
-      const adminKey = req.headers['x-admin-key'];
-
-      if (adminKey !== process.env.ADMIN_API_KEY) {
-        return res.status(403).json({ ok: false, error: 'Admin access required' });
-      }
 
       if (!db || !db.query) {
         return res.status(503).json({ ok: false, error: 'Database unavailable' });

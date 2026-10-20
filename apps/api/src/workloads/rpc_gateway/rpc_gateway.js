@@ -11,6 +11,7 @@ import { createCreditGate } from '../../middleware/credit_gate.js';
 import { enforceCapacity, precheckCapacity } from '../../capacity/capacity_enforcement.js';
 import { paymentRequiredResponse } from '../../utils/payment_required.js';
 import { PRICE_PER_CALL_USDT } from '../../billing/credit_service.mjs';
+import { requireHeaderSecret } from '../../security/header_secret.js';
 
 // Customer Zero P0 recovery: when CREDIT_CANONICAL=true, authenticated callers
 // (X-API-Key or x-wallet-address) are authorized + metered + deducted against
@@ -133,12 +134,7 @@ export function createRpcGateway(db) {
         res.json({ ok: true, ...stats });
     });
 
-    router.post('/keys', async (req, res) => {
-        const adminKey = req.headers['x-admin-key'];
-        if (adminKey !== process.env.ADMIN_API_KEY) {
-            return res.status(403).json({ ok: false, error: 'Admin access required' });
-        }
-
+    router.post('/keys', requireHeaderSecret('x-admin-key', ['ADMIN_API_KEY']), async (req, res) => {
         const { tier, owner } = req.body || {};
         if (!tier) {
             return res.status(400).json({ ok: false, error: 'Tier required' });

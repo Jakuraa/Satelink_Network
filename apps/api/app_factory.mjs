@@ -40,7 +40,6 @@ import { bumpConversionStage } from "./src/middleware/upgrade_context.js";
 import { createX402Middleware } from "./src/payments/x402/middleware.js";
 import { createFunnelHandler } from "./src/payments/x402/funnel.js";
 import { createUnifiedAuthRouter as createUserAuthRouter } from "./src/gateway/routes/auth_v2.js";
-import { createUnifiedAuthRouter } from './src/routes/node_auth_route.mjs';
 import { createAuthController } from './src/auth/auth_controller.js';
 import { mountBetterAuth } from './src/auth/better_auth.mjs';
 import { isConsoleAccountsEnabled } from './src/console_accounts/flag.mjs';
@@ -349,8 +348,8 @@ app.get("/api/mode", (req, res) => {
     });
   });
 
-  // Node operator auth endpoint (public, rate-limited)
-  app.use("/api/auth", createUnifiedAuthRouter());
+  // POST /api/auth/node-token was removed (W1, 2026-10-20): it minted a node_operator JWT
+  // for a public node id and a caller-chosen wallet, with no proof of either.
 
   // Unified auth router — login, register, /me
   // Adapt pg pool to match the db interface expected by auth modules
@@ -543,6 +542,10 @@ app.get("/api/mode", (req, res) => {
 
   // M3 — ledger shadow: read-only parity measurement (nothing reads the ledger
   // for a decision). GET /internal/ledger-parity.
+  // Staff-only (W1): parity reports expose revenue and ledger sums. Path-scoped so the
+  // /internal/dodo routes below keep their own shared-secret auth.
+  // app.use (not app.get): every method and sub-path under these prefixes is gated too.
+  app.use(["/internal/ledger-parity", "/internal/draw-parity", "/internal/capacity-parity"], requireAdminAuth);
   app.use("/internal", createLedgerParityRouter(pool));
   app.use("/internal", createDrawParityRouter(pool));
   // M8 — capacity enforcement cutover: dual-evaluation parity + latency.

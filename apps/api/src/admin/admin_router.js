@@ -27,6 +27,7 @@ import {
 import { PRICE_PER_CALL_USDT } from '../billing/credit_service.mjs';
 import { betaFounderEmailStatus } from '../beta/beta_requests.mjs';
 import { getRpcTrafficReport } from '../analytics/rpc_traffic_report.mjs';
+import { secretEquals } from '../security/header_secret.js';
 
 // Mirrors BAD_ASNS in apps/api/src/middleware/free_tier_gate.js — kept as a
 // separate literal here rather than imported so the admin router has no
@@ -58,7 +59,7 @@ export function requireAdminAuth(req, res, next) {
   const authHeader = req.headers['authorization'] || '';
   const bearer = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
   const token = req.headers['x-admin-token'] || bearer;
-  if (!token || token !== expected) {
+  if (!secretEquals(token, expected)) {
     return res.status(401).json({ ok: false, error: 'Unauthorized' });
   }
   next();
