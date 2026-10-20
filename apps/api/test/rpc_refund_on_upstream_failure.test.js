@@ -11,6 +11,7 @@
 import { expect } from 'chai';
 import express from 'express';
 import request from 'supertest';
+import { refundCreditGateDeduction } from '../src/middleware/credit_gate.js';
 
 const KEY = 'sk_basic_rpcrefund_test_00000000000000000000000000000000';
 const WALLET = '0x00000000000000000000000000000000000abcde';
@@ -29,11 +30,12 @@ function fakePool({ balance = 1, refundFails = false } = {}) {
         if (state.balance + 1e-12 < cost) return { rowCount: 0, rows: [] };
         state.balance = +(state.balance - cost).toFixed(8); state.spent = +(state.spent + cost).toFixed(8);
         state.deductions.push(cost);
-        return { rowCount: 1, rows: [{ balance_usdt: String(state.balance) }] };
+        return { rowCount: 1, rows: [{ balance_usdt: String(state.balance), id: 42 }] };
       }
       if (/UPDATE credit_balances\s+SET balance_usdt = balance_usdt \+ \$1/.test(s)) {
         if (refundFails) throw new Error('db down');
-        const [cost, wallet] = params;
+        const [cost, id, wallet] = params;
+        expect(id, 'refund targets the deducted row').to.equal(42);
         expect(wallet).to.equal(WALLET);
         state.balance = +(state.balance + cost).toFixed(8); state.spent = Math.max(0, +(state.spent - cost).toFixed(8));
         state.refunds.push(cost);
@@ -115,5 +117,34 @@ describe('RPC refund-on-upstream-failure (legacy credit gate)', function () {
     expect(res.body.charged).to.equal(false);
     expect(res.body.refunded).to.equal(false);
     expect(pool.state.deductions).to.deep.equal([]);
+  });
+
+  for (const [name, path, payload] of [
+    ['unsupported chain → 400', '/rpc/notachain', { jsonrpc: '2.0', method: 'eth_blockNumber', params: [], id: 9 }],
+    ['JSON-RPC batch → 400', '/rpc/polygon', [{ jsonrpc: '2.0', method: 'eth_blockNumber', params: [], id: 9 }]],
+    ['invalid JSON-RPC payload → 400', '/rpc/polygon', { method: 'eth_blockNumber' }],
+  ]) {
+    it(`an unserved validation error refunds the gate deduction (${name})`, async () => {
+      const pool = fakePool({ balance: 1 });
+      let upstream = 0;
+      globalThis.fetch = async () => { upstream += 1; return new Response('{}', { status: 200 }); };
+      const res = await request(app(pool)).post(path).set('X-API-Key', KEY).send(payload);
+      expect(res.status, JSON.stringify(res.body)).to.equal(400);
+      expect(upstream).to.equal(0);
+      expect(pool.state.balance, 'balance restored').to.equal(1);
+      expect(pool.state.deductions, 'the gate deducted').to.deep.equal([PRICE]);
+      expect(pool.state.refunds, 'and it was refunded').to.deep.equal([PRICE]);
+      expect(res.headers['x-credit-refunded']).to.equal('true');
+    });
+  }
+
+  it('refundCreditGateDeduction refunds at most once and stays truthful on a repeat call', async () => {
+    const pool = fakePool({ balance: 0.99997 });
+    const req = { creditDeducted: PRICE, creditWallet: WALLET, creditRowId: 42 };
+    expect(await refundCreditGateDeduction(pool, req)).to.equal(true);
+    expect(await refundCreditGateDeduction(pool, req)).to.equal(true); // already refunded
+    expect(pool.state.refunds).to.deep.equal([PRICE]);
+    expect(await refundCreditGateDeduction(pool, { creditDeducted: 0 })).to.equal(false);
+    expect(await refundCreditGateDeduction(pool, { creditDeducted: PRICE, creditWallet: WALLET })).to.equal(false); // no row id → no refund
   });
 });

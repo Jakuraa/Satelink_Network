@@ -205,6 +205,17 @@ export function createRpcGateway(db) {
         const clientIp = getClientIp(req);
         const canonical = CREDIT_CANONICAL();
 
+        // Legacy mode only: creditGate (mounted before this handler) may already have
+        // deducted credit_balances. Every response that does NOT serve the call goes
+        // through here so that deduction is refunded first (no-op otherwise).
+        const sendUnserved = async (status, payload) => {
+            if (Number(req.creditDeducted) > 0) {
+                const refunded = await refundCreditGateDeduction(db, req, console);
+                res.set('X-Credit-Refunded', String(refunded));
+            }
+            return res.status(status).json(payload);
+        };
+
         // A bare x-wallet-address with no valid api_key and no settled x402
         // payment is an insufficient credential. Reject before any billing or
         // free-tier logic runs — never silently downgrade it to anonymous
@@ -240,7 +251,7 @@ export function createRpcGateway(db) {
         // Validate chain + JSON-RPC body BEFORE any billing so an invalid
         // request is never charged or metered.
         if (!SUPPORTED_CHAINS.has(chain)) {
-            return res.status(400).json({
+            return sendUnserved(400, {
                 ok: false,
                 error: `Unsupported chain: ${chain}. Supported: ${[...SUPPORTED_CHAINS].join(', ')}`
             });
@@ -250,7 +261,7 @@ export function createRpcGateway(db) {
 
         // JSON-RPC batch request handling: protocol-compatible response
         if (Array.isArray(body)) {
-            return res.status(400).json({
+            return sendUnserved(400, {
                 jsonrpc: '2.0',
                 id: null,
                 error: {
@@ -261,7 +272,7 @@ export function createRpcGateway(db) {
         }
 
         if (!body || body.jsonrpc !== '2.0' || !body.method) {
-            return res.status(400).json({
+            return sendUnserved(400, {
                 ok: false,
                 error: 'Invalid JSON-RPC 2.0 payload: requires jsonrpc="2.0" and method',
                 jsonrpc: '2.0',
@@ -274,7 +285,7 @@ export function createRpcGateway(db) {
         }
 
         if (typeof body.method !== 'string' || body.method.length === 0) {
-            return res.status(400).json({ ok: false, error: 'Invalid JSON-RPC method' });
+            return sendUnserved(400, { ok: false, error: 'Invalid JSON-RPC method' });
         }
 
         // ── AUTHORIZE → SERVE → CHARGE (fix/rpc-charge-after-success) ─────────
@@ -396,7 +407,7 @@ export function createRpcGateway(db) {
         // so this restores req.creditDeducted. Reports what the caller was charged.
         const refundUnserved = async () => {
             const refunded = await refundCreditGateDeduction(db, req, console);
-            const legacyKept = Number(req.creditDeducted) > 0 && !refunded;
+            const legacyKept = Number(req.creditDeducted) > 0 && req.creditRefunded !== true;
             return { charged: billedUsdt > 0 || legacyKept, refunded };
         };
 
@@ -443,7 +454,7 @@ export function createRpcGateway(db) {
 
             if (!rateCheck.allowed) {
                 res.set('X-RateLimit-Reset', rateCheck.resetAt);
-                return res.status(429).json({
+                return sendUnserved(429, {
                     error: 'rate_limit_exceeded',
                     upgrade_url: `${process.env.API_BASE_URL || 'https://rpc.satelink.network'}/credits/initiate?amount=10`,
                     deposit_address: process.env.REVENUE_VAULT_ADDRESS || '0x577D3716d6Ad5b676d230f5409deF9838FABaCEF',

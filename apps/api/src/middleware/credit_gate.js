@@ -106,7 +106,7 @@ export function createCreditGate(db, logger) {
              updated_at   = NOW()
          WHERE lower(wallet_address) = $2
            AND balance_usdt >= $1
-         RETURNING balance_usdt`,
+         RETURNING balance_usdt, id`,
         [cost, wallet]
       );
 
@@ -152,6 +152,7 @@ export function createCreditGate(db, logger) {
       // Attach metadata for downstream logging
       req.creditDeducted = cost;
       req.creditWallet = wallet;
+      req.creditRowId = result.rows[0].id; // the exact row a refund must restore
       req.creditBalanceAfter = parseFloat(result.rows[0].balance_usdt);
 
       next();
@@ -167,20 +168,23 @@ export function createCreditGate(db, logger) {
 // Refund-on-upstream-failure (F20 prerequisite, 2026-10-20). The legacy gate above
 // deducts BEFORE the upstream call, so a request that was not served (provider
 // error, timeout, exception) must get that exact deduction back. At most once per
-// request (req.creditRefunded); returns true only when the balance was restored.
+// request (req.creditRefunded); returns true when this request's deduction has been
+// restored (now or by an earlier call), false when nothing was deducted or it failed.
 export async function refundCreditGateDeduction(db, req, logger) {
   const log = logger || console;
   const cost = req.creditDeducted;
-  if (!(Number(cost) > 0) || !req.creditWallet || req.creditRefunded) return false;
+  if (!(Number(cost) > 0) || !req.creditWallet || req.creditRowId == null) return false;
+  if (req.creditRefunded) return true;
   req.creditRefunded = true;
   try {
+    // By row id (the row the gate deducted from), wallet as a cross-check.
     const result = await db.query(
       `UPDATE credit_balances
        SET balance_usdt = balance_usdt + $1,
            total_spent  = GREATEST(total_spent - $1, 0),
            updated_at   = NOW()
-       WHERE lower(wallet_address) = $2`,
-      [cost, req.creditWallet]
+       WHERE id = $2 AND lower(wallet_address) = $3`,
+      [cost, req.creditRowId, req.creditWallet]
     );
     if (result.rowCount === 1) return true;
     log.error(`${LOG_PREFIX} refund matched ${result.rowCount} rows for wallet=${req.creditWallet} cost=${cost}`);
