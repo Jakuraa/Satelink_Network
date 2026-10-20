@@ -4,7 +4,6 @@ import { attachBaseMiddleware } from "./src/security/middleware.js";
 import revenueRoutes from "./src/routes/revenue.js";
 import { createRpcGateway } from "./src/workloads/rpc_gateway/rpc_gateway.js";
 import { createMevRelayRouter } from "./src/workloads/mev_relay/index.js";
-import { createBandwidthRouter } from "./src/workloads/bandwidth_proxy/index.js";
 import { createLangChainAdapterRouter } from "./src/workloads/ai_gateway/langchain_adapter.js";
 import { createPluginManifestRouter, createOpenApiRouter } from "./src/workloads/ai_gateway/plugin_manifest.js";
 import { createSimpleApiKeysRouter } from "./src/billing/api_keys_route.mjs";
@@ -464,7 +463,9 @@ app.get("/api/mode", (req, res) => {
   // Groq Llama under gpt-4o/Claude model ids (relabelling, R4). Satelink inference returns
   // through the Response API (/v1/responses) with truthful served_by, not this path.
 
-  app.use("/api/bandwidth", createBandwidthRouter(pool, redis));
+  // The /api/bandwidth proxy workload was removed (2026-10-20, W1): unauthenticated
+  // outbound fetch with phantom (non-billable) revenue rows and no product behind it.
+
   // LangChain Tool Adapter (S3-004) — RPC tool definitions for agents
   app.use("/v1/tools", createLangChainAdapterRouter(pool, redis));
 

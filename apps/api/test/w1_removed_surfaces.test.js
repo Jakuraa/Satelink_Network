@@ -45,3 +45,11 @@ describe('R4 — no model relabelling', () => {
     expect(src).to.not.match(/createAiGatewayRouter/);
   });
 });
+
+describe('W1 — removed unauthenticated workload surfaces stay removed', () => {
+  it('app_factory does not mount the bandwidth proxy', () => {
+    const src = readFileSync(join(API, 'app_factory.mjs'), 'utf8');
+    expect(src).to.not.match(/createBandwidthRouter/);
+    expect(src).to.not.match(/["']\/api\/bandwidth["']/);
+  });
+});
