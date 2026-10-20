@@ -1,17 +1,28 @@
 {
   "model": "claude-opus-5-5",
-  "smallModel": "claude-opus-5-5",
-  "allowedTools": [
-    "Bash",
-    "Read",
-    "Write",
-    "Edit",
-    "Glob",
-    "Grep",
-    "LS",
-    "WebFetch",
-    "TodoRead",
-    "TodoWrite"
-  ],
-  "autoApprove": true
+  "permissions": {
+    "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr view:*)"
+    ],
+    "deny": [
+      "Bash(git add -A:*)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git push origin main:*)",
+      "Bash(railway variables --set:*)",
+      "Bash(railway up:*)",
+      "Bash(npm publish:*)",
+      "Read(./.env)",
+      "Read(./apps/*/.env)",
+      "Read(./.env.local)",
+      "Read(./.env.production)"
+    ]
+  }
 }
