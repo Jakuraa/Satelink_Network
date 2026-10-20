@@ -18,7 +18,7 @@ Evidence keys: **P** = production probe 2026-10-20 (curl transcript in the ledge
 | Better Auth (console, `/api/identity`) | DEPLOYED BUT NOT VERIFIED | RW `AUTH_ENABLED=true`; RT flag-gated mount | End-to-end sign-in not re-verified this session |
 | Tenants / organizations (`tenant_id`) | DOCUMENTED BUT NOT IMPLEMENTED | R: no tenant model on main | W3 |
 | RBAC roles map | DOCUMENTED BUT NOT IMPLEMENTED | R: role checks are ad hoc middleware | W3 |
-| Staff/admin auth | PARTIALLY IMPLEMENTED | P `/admin/*` → 401; RT: 3 separate admin-secret mechanisms, non-constant-time compare, some header-vs-env checks that open when the env var is unset | W1/W3: one staff-auth path, constant-time compare, fail closed |
+| Staff/admin auth | PARTIALLY IMPLEMENTED | P `/admin/*` → 401; #553 (`d051e4df`): digest compare incl. `requireAdminAuth`, header secrets fail closed (503 when unset), parity routes 401 (P 2026-10-20) | Still 3 mechanisms (W3: one staff-auth path) |
 | Human identity systems | BROKEN OR CONTRADICTORY | DU §4: four identity systems, two on the same `/auth` prefix | W3 consolidation |
 
 ## M2 Capability Registry
@@ -75,8 +75,8 @@ Evidence keys: **P** = production probe 2026-10-20 (curl transcript in the ledge
 |---|---|---|---|
 | Financial OS libs (`libs/kernel`, `services/financial`, reconciler) | IMPLEMENTED BUT NOT FULLY INTEGRATION-VERIFIED | R: not imported by live API code except one integration test | W4 |
 | Shadow ledger (`LEDGER_SHADOW_WRITE`) | DEPLOYED BUT NOT VERIFIED | RW `LEDGER_SHADOW_WRITE=1` (mandate listed it as UNVERIFIED; flag is on) | Parity endpoints exist; verify drift via admin endpoint (W4) |
-| Revenue truth (S6) | BROKEN OR CONTRADICTORY | MP: `truth.js` sums `revenue_events_v2` without op_type/`is_billable` filters; the epoch split uses the same sum; phantom workload rows and double-count paths flow in | W1 fix (founder-review) |
-| `/api/economics/summary` public revenue (S4) | BROKEN OR CONTRADICTORY | P 200 `totalRevenueUsdt: 20.52582` (founder test data shown as revenue); RT: sibling public revenue reads | W1 fix |
+| Revenue truth (S6) | IMPLEMENTED AND VERIFIED IN A TEST ENVIRONMENT | #555 (`d214ec62`): consumed-usage predicate in `truth.js` + admin `consumed_usage`; real-SQL test on local PG | Epoch split (S6b) still uses the unfiltered sum → W1 next |
+| `/api/economics/summary` public revenue (S4) | COMPLETED AND VERIFIED IN PRODUCTION | #551 (`b1d6f5f7`) + #559 (`839e3497`): P money fields null, `/api/revenue*`, `/api/epochs`, treasury/settlement/`/system` money reads 401 | SEC-4b `GET /api/nodes/:nodeId` wallet exposure open |
 | `/api/financial/truth` admin-only, `/api/public/stats` sanitized | COMPLETED AND VERIFIED IN PRODUCTION | P 401 / 200 (6 fields, no money) | — |
 | PaymentAdapter + single-tx ingest (#520) | TESTED BUT NOT DEPLOYED | PR #520 draft; 266/266 per PR | W4 rebase |
 | Dodo V2 webhook | BROKEN OR CONTRADICTORY | RT: global JSON parser runs before the raw-body parser, so signature verification likely always fails (fails closed); RW flag absent | W4/W5 |
@@ -116,8 +116,8 @@ Evidence keys: **P** = production probe 2026-10-20 (curl transcript in the ledge
 
 | Capability | Status | Evidence | Disagreement → resolution |
 |---|---|---|---|
-| Node claim signing route | BROKEN OR CONTRADICTORY | RT + RW (signer + claims contract configured) | Fixed in PR #549 (founder-review). Rotation decision → F1 |
-| Other unauthenticated money-adjacent reads/writes | BROKEN OR CONTRADICTORY | RT: several public money reads, unauthenticated parity and deposit-notify endpoints, open node register/heartbeat | W1 sequence of fix PRs |
+| Node claim signing route | COMPLETED AND VERIFIED IN PRODUCTION | #549 (`7581f207`): staff-only + dry-run refusal in route and signer; P anon/non-staff → 401 | On-chain signer unrotated → F21 OPEN-CRITICAL (`runbooks/SIGNER_ROTATION.md`) |
+| Other unauthenticated money-adjacent reads/writes | PARTIALLY IMPLEMENTED | Fixed: public money reads (#551, #559), parity (#553), node-token (#553). Open: deposit-notify, node register/heartbeat, `GET /api/nodes/:nodeId` wallet | W1 |
 | KMS / KeyProvider | DOCUMENTED BUT NOT IMPLEMENTED | R | W7 (F4) |
 | Outbox + worker | PARTIALLY IMPLEMENTED | DU §5: interval jobs + node-cron live; ~12 orphaned queue files; `worker.js` / reconciler deploy status unknown | W6 decision record |
 | Kill switches (`platform_flags`) | PARTIALLY IMPLEMENTED | R | W3 |
