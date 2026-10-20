@@ -33,6 +33,10 @@ describe("claims lint — public tier catches money claims but not technical cop
   for (const [src, rule] of [
     ["<p>Run a node and earn a share</p>", "PERFORMANCE"], ["<p>12% APY</p>", "PERFORMANCE"], ["<p>Guaranteed payouts</p>", "PERFORMANCE"],
     ["<p>Official partner of Binance</p>", "PARTNERSHIP"], ["<p>Backed by top funds</p>", "PARTNERSHIP"], ["<p>Start trading today</p>", "AVAILABILITY"],
+    ["<p>Sub-50ms endpoint response</p>", "UNMEASURED_CLAIM"], ["<p>sub-second micro-settlement</p>", "UNMEASURED_CLAIM"],
+    ["<span>Mainnet Operational</span>", "UNMEASURED_CLAIM"], ["<p>Verifiable oracle feeds</p>", "UNMEASURED_CLAIM"],
+    ["<p>Zero external SDK dependency</p>", "UNMEASURED_CLAIM"], ["<p>SOC2-compliant audit export</p>", "UNMEASURED_CLAIM"],
+    ["<p>Claude & Anthropic MCP compatible</p>", "UNMEASURED_CLAIM"], ["title: 'x402: A Standard for Machine-to-Machine Payments'", "UNMEASURED_CLAIM"],
   ] as [string, string][]) it(`flags ${rule}: ${src}`, () => expect(pub(src)).toContain(rule));
   it("markdown lines are copy", () => expect(pub("# Node operators\n\nOperators earn 50%.", "x.md")).toContain("PERFORMANCE"));
   for (const ok of ["<p>Unpaid calls return HTTP 402</p>", "<p>The MIT-licensed x402-kit</p>", "<p>Attempting to gain unauthorized access</p>", "<p>$0.00003 per call</p>", "<p>It is not yet approved by counsel.</p>"]) {

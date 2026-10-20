@@ -53,7 +53,7 @@ export function WalletBalanceCard({ wallet }: { wallet: string | null }) {
 
       {wallet && state.status === 'error' && (
         <ErrorNote>
-          Couldn't load balance for this wallet ({state.message}). The deposit/approve
+          Couldn&apos;t load balance for this wallet ({state.message}). The deposit/approve
           flow below still works independently — balance lookup is read-only.
         </ErrorNote>
       )}

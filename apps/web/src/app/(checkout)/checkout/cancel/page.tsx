@@ -18,7 +18,7 @@ export default function CheckoutCancelPage() {
       </span>
       <h1 className="mt-5 text-2xl font-semibold tracking-tight text-sl-text">Payment not completed</h1>
       <p className="mt-3 text-sm leading-relaxed text-sl-text-muted">
-        You haven't been charged. You can pick up where you left off, or explore the free discovery tier
+        You haven&apos;t been charged. You can pick up where you left off, or explore the free discovery tier
         first — no signup required.
       </p>
       <div className="mt-8 flex flex-wrap gap-3">

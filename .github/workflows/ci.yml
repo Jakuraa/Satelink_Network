@@ -109,6 +109,29 @@ jobs:
           # and are covered by the baseline allowlist.
           DATABASE_URL: postgresql://ci:ci@127.0.0.1:54329/ci_test
 
+  api-deploy-install:
+    name: API deploy install (apps/api lockfile)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Railway builds apps/api in isolation (rootDirectory=/apps/api) with `npm ci` from
+    # apps/api/package-lock.json (D15). Reproduce that install outside the workspace:
+    # npm ci fails if the lock is out of sync with package.json; then import the app.
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '20'
+      - name: Isolated npm ci + import smoke
+        run: |
+          set -euo pipefail
+          D="$RUNNER_TEMP/api"
+          mkdir -p "$D"
+          rsync -a --exclude node_modules apps/api/ "$D/"
+          cd "$D"
+          npm ci --ignore-scripts --no-audit --no-fund
+          DATABASE_URL=postgres://none:none@127.0.0.1:1/none JWT_SECRET=ci-only-dummy-secret-0123456789abcdef NODE_ENV=test \
+            node -e "setTimeout(()=>process.exit(2),60000);import('./app_factory.mjs').then(()=>{console.log('import ok');process.exit(0)}).catch(e=>{console.error(e);process.exit(1)})"
+
   security:
     name: Secret Scan
     runs-on: ubuntu-latest

@@ -163,7 +163,7 @@ export default function LeadershipPage() {
                 Autonomous Settlement Rails
               </h4>
               <p className="mt-2 font-sans text-sm leading-relaxed text-stone-4">
-                Human-mediated commerce creates settlement bottlenecks and credit float drag. Autonomous software systems require sub-second, programmatic payment clearing directly inside HTTP requests.
+                Human-mediated commerce creates settlement bottlenecks and credit float drag. Autonomous software systems require programmatic payment clearing directly inside HTTP requests.
               </p>
             </div>
 
