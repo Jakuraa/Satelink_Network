@@ -30,7 +30,8 @@ const API_BASE =
 // ---- Types -----------------------------------------------------------------
 
 export interface NetworkStats {
-  meteredUnbilledUsdt: number;
+  /** null when unavailable to this caller (settlement history is staff-only, SEC-4). Never 0 for unknown. */
+  meteredUnbilledUsdt: number | null;
   epochCount: number;
   requests24h: number;
   activeIps: number;
@@ -113,10 +114,9 @@ export async function getNetworkStats(): Promise<{ data: NetworkStats | null; er
   }
 
   const epochs = settlement.data?.epochs ?? [];
-  const meteredUnbilledUsdt = epochs.reduce(
-    (sum, e) => sum + (parseFloat(e.totalRevenue) || 0),
-    0
-  );
+  const meteredUnbilledUsdt = settlement.data
+    ? epochs.reduce((sum, e) => sum + (parseFloat(e.totalRevenue) || 0), 0)
+    : null;
   const lastEpochStatus: NetworkStats['lastEpochStatus'] =
     epochs.length === 0 ? 'UNKNOWN' : epochs[0].txHash ? 'SETTLED' : 'PENDING';
 
