@@ -64,6 +64,8 @@ export const STAFF_ONLY_MONEY_READS = [
   "/system/treasury-settlement",
   "/system/revenue-anomalies",
   "/system/economy",
+  "/system/settlement-anchor",
+  "/system/epoch-scheduler",
 ];
 
 export function createApp(pool, redis) {

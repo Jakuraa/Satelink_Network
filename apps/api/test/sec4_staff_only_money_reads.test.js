@@ -30,6 +30,7 @@ describe('SEC-4 — staff-only money reads', () => {
     expect(listFromSource()).to.include.members([
       '/api/treasury/status', '/api/settlement/history', '/api/settlement/epoch/:id', '/api/nodes/:nodeId/earnings',
       '/os/events', '/system/treasury', '/system/treasury-settlement', '/system/revenue-anomalies', '/system/economy',
+      '/system/settlement-anchor', '/system/epoch-scheduler',
     ]);
   });
 
@@ -55,6 +56,16 @@ describe('SEC-4 — staff-only money reads', () => {
       expect((await request(build()).get(path)).status).to.equal(401);
     });
   }
+
+  for (const path of ['/system/settlement-anchor', '/system/epoch-scheduler']) {
+    it(`${path} (unsettled revenue figures) without a token → 401`, async () => {
+      expect((await request(build()).get(path)).status).to.equal(401);
+    });
+  }
+
+  it('HEAD is gated like GET', async () => {
+    expect((await request(build()).head('/api/settlement/history')).status).to.equal(401);
+  });
 
   it('with a staff token the real routers answer', async () => {
     const res = await request(build()).get('/api/settlement/history').set('x-admin-token', ADMIN);
