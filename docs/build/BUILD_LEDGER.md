@@ -64,9 +64,9 @@ Not done yet: Cloudflare WAF read, Vercel production SHA vs main.
 | SEC-1 | Payout-signing route reachable with a weaker credential than staff auth | Fix PR #549 (founder-review). F1: rotation decision for the signer |
 | SEC-2 | Unauthenticated outbound-fetch workload | Removed in PR #548 |
 | SEC-3 | Relabelled-model inference surface (R4) | Removed in PR #548 |
-| SEC-4 | Public revenue figures (S4) and sibling public money reads | #551 (revenue routes); other public money reads (diagnostics, treasury, settlement history, earnings, /os/events, /system) still open → W1 |
+| SEC-4 | Public revenue figures (S4) and sibling public money reads | #551 (revenue routes + diagnostics); treasury, settlement history, node earnings, `/os/events`, `/system/*` reads still open → W1 next |
 | SEC-5 | Unauthenticated internal parity / deposit-notify / node register-heartbeat endpoints | parity → #553; deposit-notify, node register/heartbeat still open → W1 |
-| SEC-6 | Admin checks that open when an env var is unset; non-constant-time admin compare | env-compare routes → #553 (confirmed open live); `requireAdminAuth` constant-time → W3 |
+| SEC-6 | Admin checks that open when an env var is unset; non-constant-time admin compare | #553 (both, incl. `requireAdminAuth`) |
 | SEC-7 | Unproven node-token minting with hard-coded fallback secret | #553 (unmounted). F18 |
 | SEC-8 | Settings allow-list escapable by prefix-matched Bash rules (background review) | fixed in #550 |
 
@@ -87,17 +87,22 @@ formatted admin table column rendering raw values), lint never actually running 
 console/corporate stuck at the ESLint setup prompt), and install-layout issues (`next` is per-app, not root).
 All fixed in #552; `ignoreBuildErrors` removed; console/corporate typecheck + lint added.
 
-### PRs this session
-| PR | Branch | What | State |
+### PRs this session (state at checkpoint 2026-10-20 ~14:35 IST)
+| PR | What | State | Production evidence |
 |---|---|---|---|
-| #548 | `fix/w1-remove-ai-gateway` | Remove relabelling AI gateway + bandwidth proxy; guard test (mutation-verified) | green; merge after #552 |
-| #549 | `fix/w1-claims-auth` | Staff-only, dry-run-aware claim signing (mutation-verified) | green, `founder-review` |
-| #550 | `chore/mandate-w0-foundation` | Mandate, ledger, matrix, D14, CLAUDE.md pointer, settings tightening, gitignore, baseline | green |
-| #551 | `fix/w1-s4-public-revenue` | S4: no public revenue figures (mutation-verified) | green, `founder-review` |
-| #552 | `ci/w0-real-gate` | Unmask CI; fix 63 TS errors; real lint; remove ignoreBuildErrors | CI running |
-| #553 | `fix/w1-fail-open-admin` | Fail-closed admin secrets; unmount node-token; staff-gate parity (mutation-verified) | `founder-review` |
+| #548 | Remove relabelling AI gateway + bandwidth proxy; guard test | **merged** c12e1960 | `/v1/models`, `/v1/chat/completions`, `/v1/ai/status`, `/api/bandwidth/proxy` → 404; `/v1/pricing`, `/v1/capabilities`, `/v1/tools/langchain`, `/v1/plans` → 200; R7 OK |
+| #550 | W0 foundation: mandate, ledger, matrix, D14, CLAUDE.md pointer, settings, baseline | **merged** 8453eaf0 | docs only |
+| #552 | CI as a real gate; 63 TS errors fixed; real lint; `ignoreBuildErrors` removed | **merged** 5577460a | all 5 deploys success; R7 OK |
+| #554 | Remove false/unmeasured site claims; claims-lint `UNMEASURED_CLAIM` rule | **merged** 4b13844f | jakuraa.com: 0 hits for each removed claim; "Payments live" 1; /research lists x402-kit; satelink.network media section gone |
+| #556 | Real lint for apps/web (`no-explicit-any` warn in web only: 184 `any`s = debt) | **merged** 2b066328 | build green |
+| #557 | `apps/api/package-lock.json` + CI "API deploy install" job (D15) | **merged** 58d5996b | first lockfile deploy: see next session check |
+| #549 | Claim signing staff-only + dry-run-aware; review fixes (no JWT, success-path test) | open, `founder-review` | — |
+| #551 | S4 public revenue routes + `/api/diagnostics` revenue leak (review BLOCKER fixed) | open, `founder-review` | — |
+| #553 | Fail-closed admin secrets; digest compare incl. `requireAdminAuth`; node-token unmounted; parity staff-only (real routing tests) | open, `founder-review` | — |
+| #555 | S6 consumed-usage predicate (+x402 bundle purchases, NULL-safe op_type); Q5 aligned | open, `founder-review` | — |
 
-Merge policy applied: no self-merge until #552 makes CI a real gate (mandate §13 "real (unmasked) checks").
+Code review (§12) ran over #549/#551/#553/#555; every BLOCKER/SHOULD-FIX was applied and summarised as a PR comment.
+Merge policy: self-merge only non-`founder-review` PRs, CI green under the real gate, R7 before and after each merge.
 
 ### Founder actions (F-list, cumulative)
 | F | Action | Why |
@@ -113,12 +118,14 @@ Merge policy applied: no self-merge until #552 makes CI a real gate (mandate §1
 | F14 | Apply production migrations when asked | R11 |
 | F15 | GitHub branch protection: `enforce_admins` + 1 required review | B-10 |
 | F16 | Run `\d revenue_events_v2` via sat-db and paste the `amount_usdt` type | B-07 |
-| F17 | Merge #549, #551, #553 (founder-review: auth / revenue reporting) | SEC-1, S4, SEC-6/7 |
+| F17 | Review + merge #549, #551, #553, #555 (founder-review: auth / revenue reporting). After #553: `POST /rpc/keys` and node reputation update return 503 until `ADMIN_API_KEY` is set (intended) | SEC-1, S4, S6, SEC-6/7 |
 | F18 | Confirm production `JWT_SECRET` ≠ the fallback literal in git history (deleted file `node_auth_route.mjs`); rotate if it ever matched | SEC-7 |
+| F20 | RPC upstreams: confirm Alchemy + Ankr plan terms allow resale; approve enabling keyed Ankr as the paid fallback, then removing free public endpoints (PublicNode, dRPC) from billed traffic. See `evidence/RPC_UPSTREAMS.md` | W1 ToS gap |
 | F19 | Start Docker Desktop on the build machine (or provide a CI DB) so integration suites can run locally | BASELINE |
 
 ### Next actions (in order)
-1. Merge #548 when CI is green (pre-approved: not money/auth), with R7 health checks before and after.
-2. W1: S4 + sibling public money reads (SEC-4); unauthenticated parity/notify/register endpoints (SEC-5); node-token fallback secret (SEC-7).
-3. W1: S6 truth.js filter fix (founder-review); jakuraa.com false claims removal; RPC upstream free-endpoint inventory.
-4. W0: CI hardening per BASELINE.md (unmask, lint blocking, integration blocking, typecheck), `apps/web` ignoreBuildErrors + TS errors, API lockfile decision.
+1. Verify the first lockfile-based API deploy (#557): Railway status success + R7 + `/health` uptime reset.
+2. W1: remaining public money reads (SEC-4) and unauthenticated deposit-notify / node register-heartbeat (SEC-5) — check the self-heartbeat caller before gating heartbeat. founder-review.
+3. W1: S6b epoch_scheduler split filter (settlement path; founder-review); RPC upstream inventory DONE (`evidence/RPC_UPSTREAMS.md`, F20) → refund-on-upstream-error fix; Cloudflare WAF read + proposal; `satelink-mcp` publish prep (F12).
+4. W0: Dependabot #546 after real-gate CI; DB-backed API test job in CI (165 silently skipped tests); packages/content + packages/seo typecheck; prune stale allowlist entries.
+5. W2: Capability Registry v3 (after F8 price decisions are requested in one founder brief).
