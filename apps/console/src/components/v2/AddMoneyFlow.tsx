@@ -21,7 +21,7 @@ export function AddMoneyFlow({ catalog, keys, plan, returned }: { catalog: PlanC
   const [err, setErr] = useState<string | null>(null);
   const [claimed, setClaimed] = useState<string | null>(null);
 
-  if (!catalog) return <FlowCard title="Add money"><p className="text-sl-text-muted">Prices couldn't be loaded. Refresh in a moment.</p></FlowCard>;
+  if (!catalog) return <FlowCard title="Add money"><p className="text-sl-text-muted">Prices couldn&apos;t be loaded. Refresh in a moment.</p></FlowCard>;
   const plans = catalog.plans.filter((p) => p.kind === "subscription");
   const current = plan?.plan.id;
 
@@ -136,7 +136,7 @@ export function AddMoneyFlow({ catalog, keys, plan, returned }: { catalog: PlanC
             const k = catalog.packs.find((x) => x.id === item);
             return (
               <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-[15px]">
-                <dt className="text-sl-text-muted">You're buying</dt><dd className="text-sl-text">{p ? `${p.name} plan` : `Credit pack $${k?.priceUsd}`}</dd>
+                <dt className="text-sl-text-muted">You&apos;re buying</dt><dd className="text-sl-text">{p ? `${p.name} plan` : `Credit pack $${k?.priceUsd}`}</dd>
                 <dt className="text-sl-text-muted">Today</dt><dd className="text-sl-text">${p?.intro ? p.intro.amountUsd : (p?.priceUsd ?? k?.priceUsd)}</dd>
                 {p && <><dt className="text-sl-text-muted">Then</dt><dd className="text-sl-text">${p.priceUsd} every month until you cancel</dd></>}
               </dl>

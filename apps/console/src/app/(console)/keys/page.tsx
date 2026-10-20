@@ -53,7 +53,7 @@ export default async function KeysPage() {
         <ul className="list-disc space-y-1 pl-5 text-sl-text-muted">
           <li>Connected keys are stored in a Secure, httpOnly cookie on this console only — page scripts cannot read them.</li>
           <li>Disconnecting removes a key from this console. It does not revoke the key on the API; bulk revoke and rotation arrive with server-side account linking.</li>
-          <li>Rate limits come from the key's tier today. Scopes, spend caps and per-key limits arrive with account linking.</li>
+          <li>Rate limits come from the key&apos;s tier today. Scopes, spend caps and per-key limits arrive with account linking.</li>
         </ul>
       </Panel>
     </>
