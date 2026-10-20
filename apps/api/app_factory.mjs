@@ -210,11 +210,11 @@ app.get("/api/mode", (req, res) => {
   app.get("/api/diagnostics", async (req, res) => {
     const t0 = Date.now();
     try {
-      const [dbPing, nodeCount, epochCount, revenueSum] = await Promise.all([
-        pool.query('SELECT 1').then(() => ({ ok: true, latencyMs: Date.now() - t0 })).catch(e => ({ ok: false, error: e.message })),
+      // S4 (W1): public, so no revenue figures and no raw DB error text.
+      const [dbPing, nodeCount, epochCount] = await Promise.all([
+        pool.query('SELECT 1').then(() => ({ ok: true, latencyMs: Date.now() - t0 })).catch(() => ({ ok: false })),
         pool.query(`SELECT COUNT(*) AS cnt FROM registered_nodes WHERE status = 'active'`).catch(() => ({ rows: [{ cnt: 0 }] })),
-        pool.query(`SELECT COUNT(*) AS cnt FROM epochs`).catch(() => ({ rows: [{ cnt: 0 }] })),
-        pool.query(`SELECT COALESCE(SUM(amount_usdt), 0) AS total FROM revenue_events_v2 WHERE is_test_data = false`).catch(() => ({ rows: [{ total: 0 }] }))
+        pool.query(`SELECT COUNT(*) AS cnt FROM epochs`).catch(() => ({ rows: [{ cnt: 0 }] }))
       ]);
 
       res.json({
@@ -229,7 +229,7 @@ app.get("/api/mode", (req, res) => {
         counts: {
           activeNodes:        parseInt(nodeCount.rows[0]?.cnt  || 0),
           epochs:             parseInt(epochCount.rows[0]?.cnt || 0),
-          totalRevenueUsdt:   parseFloat(revenueSum.rows[0]?.total || 0)
+          totalRevenueUsdt:   null
         },
         health: {
           database:   dbPing.ok ? 'healthy' : 'degraded',
@@ -238,7 +238,8 @@ app.get("/api/mode", (req, res) => {
         responseTimeMs: Date.now() - t0
       });
     } catch (e) {
-      res.status(500).json({ ok: false, error: e.message });
+      console.error('[diagnostics] failed:', e.message);
+      res.status(500).json({ ok: false, error: 'diagnostics_unavailable' });
     }
   });
 

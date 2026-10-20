@@ -1,9 +1,10 @@
 import express from "express";
+import { requireAdminAuth } from "../admin/admin_router.js";
 
 export default function revenueRoutes(pool) {
   const router = express.Router();
 
-  router.get("/revenue", async (req, res) => {
+  router.get("/revenue", requireAdminAuth, async (req, res) => {
     try {
       const result = await pool.query(`
         SELECT COALESCE(SUM(amount_usdt), 0) AS total
@@ -17,7 +18,7 @@ export default function revenueRoutes(pool) {
     }
   });
 
-  router.get("/revenue/events", async (req, res) => {
+  router.get("/revenue/events", requireAdminAuth, async (req, res) => {
     try {
       const result = await pool.query(`
         SELECT id, amount_usdt, created_at
@@ -33,7 +34,7 @@ export default function revenueRoutes(pool) {
     }
   });
 
-  router.get("/epochs", async (req, res) => {
+  router.get("/epochs", requireAdminAuth, async (req, res) => {
     try {
       // Query actual epochs table (status is 'OPEN' or 'CLOSED')
       const result = await pool.query(`
@@ -65,50 +66,34 @@ export default function revenueRoutes(pool) {
     }
   });
 
+  // S4 (W1, 2026-10-20): public, so it carries NO money figures. Revenue totals live
+  // behind staff auth (/admin/revenue/summary, /api/financial/truth). Money fields stay
+  // in the shape as null — unknown to this caller, never 0.
   router.get("/economics/summary", async (req, res) => {
     try {
-      // 1. Total Allocations (All Closed/Finalized Epochs)
-      const totalsResult = await pool.query(`
-        SELECT
-          SUM(total_revenue_usdt) as totalrevenueusdt,
-          SUM(node_pool_usdt) as totalnodepoolusdt,
-          SUM(platform_share_usdt) as totalplatformshareusdt,
-          SUM(distributor_share_usdt) as totaldistributorshareusdt
-        FROM epochs
-        WHERE status IN ('CLOSED', 'FINALIZED') AND (is_phantom = false OR is_phantom IS NULL)
-      `);
-      const totals = totalsResult.rows[0] || {};
-
-      const coalesce = (val) => val === null || val === undefined ? 0 : Number(val);
-
-      const totalRevenueUsdt = coalesce(totals.totalrevenueusdt);
-      const totalNodePoolUsdt = coalesce(totals.totalnodepoolusdt);
-      const totalPlatformShareUsdt = coalesce(totals.totalplatformshareusdt);
-      const totalDistributorShareUsdt = coalesce(totals.totaldistributorshareusdt);
-
-      // 2. Last Closed Epoch Properties
       const lastEpochResult = await pool.query(`
-        SELECT id, total_revenue_usdt, closed_at
+        SELECT id, closed_at
         FROM epochs
         WHERE status IN ('CLOSED', 'FINALIZED') AND (is_phantom = false OR is_phantom IS NULL)
         ORDER BY id DESC
         LIMIT 1
       `);
-      const lastEpoch = lastEpochResult.rows[0] || { id: 0, total_revenue_usdt: 0, closed_at: null };
+      const lastEpoch = lastEpochResult.rows[0] || { id: 0, closed_at: null };
 
       res.json({
         ok: true,
-        totalRevenueUsdt,
-        totalNodePoolUsdt,
-        totalPlatformShareUsdt,
-        totalDistributorShareUsdt,
+        revenueVisibility: "staff_only",
+        totalRevenueUsdt: null,
+        totalNodePoolUsdt: null,
+        totalPlatformShareUsdt: null,
+        totalDistributorShareUsdt: null,
         splitRatio: {
           nodeOperators: 50,
           platform: 30,
           distributors: 20
         },
         lastEpochId: lastEpoch.id || 0,
-        lastEpochRevenueUsdt: coalesce(lastEpoch.total_revenue_usdt),
+        lastEpochRevenueUsdt: null,
         lastEpochClosedAt: lastEpoch.closed_at || null
       });
     } catch (err) {

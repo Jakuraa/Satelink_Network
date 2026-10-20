@@ -77,10 +77,10 @@ interface PublicStats {
 
 interface EconomicsSummary {
   ok: boolean;
-  totalRevenueUsdt: number;
+  totalRevenueUsdt: number | null;
   splitRatio: { nodeOperators: number; platform: number; distributors: number };
   lastEpochId: number;
-  lastEpochRevenueUsdt: number;
+  lastEpochRevenueUsdt: number | null;
   lastEpochClosedAt: string | null;
 }
 
@@ -148,7 +148,7 @@ function circuitLabel(raw: string): string {
 // Formatters
 // ---------------------------------------------------------------------------
 const usd5 = (n: number | null | undefined) =>
-  `$${(n ?? 0).toLocaleString(undefined, {
+  n == null ? "—" : `$${n.toLocaleString(undefined, {
     minimumFractionDigits: 5,
     maximumFractionDigits: 5,
   })}`;
