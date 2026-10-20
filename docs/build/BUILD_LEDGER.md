@@ -120,11 +120,12 @@ Merge policy: self-merge only non-`founder-review` PRs, CI green under the real 
 | F16 | Run `\d revenue_events_v2` via sat-db and paste the `amount_usdt` type | B-07 |
 | F17 | Review + merge #549, #551, #553, #555 (founder-review: auth / revenue reporting). After #553: `POST /rpc/keys` and node reputation update return 503 until `ADMIN_API_KEY` is set (intended) | SEC-1, S4, S6, SEC-6/7 |
 | F18 | Confirm production `JWT_SECRET` ≠ the fallback literal in git history (deleted file `node_auth_route.mjs`); rotate if it ever matched | SEC-7 |
+| F20 | RPC upstreams: confirm Alchemy + Ankr plan terms allow resale; approve enabling keyed Ankr as the paid fallback, then removing free public endpoints (PublicNode, dRPC) from billed traffic. See `evidence/RPC_UPSTREAMS.md` | W1 ToS gap |
 | F19 | Start Docker Desktop on the build machine (or provide a CI DB) so integration suites can run locally | BASELINE |
 
 ### Next actions (in order)
 1. Verify the first lockfile-based API deploy (#557): Railway status success + R7 + `/health` uptime reset.
 2. W1: remaining public money reads (SEC-4) and unauthenticated deposit-notify / node register-heartbeat (SEC-5) — check the self-heartbeat caller before gating heartbeat. founder-review.
-3. W1: S6b epoch_scheduler split filter (settlement path; founder-review); RPC upstream free-endpoint inventory; Cloudflare WAF read + proposal; `satelink-mcp` publish prep (F12).
+3. W1: S6b epoch_scheduler split filter (settlement path; founder-review); RPC upstream inventory DONE (`evidence/RPC_UPSTREAMS.md`, F20) → refund-on-upstream-error fix; Cloudflare WAF read + proposal; `satelink-mcp` publish prep (F12).
 4. W0: Dependabot #546 after real-gate CI; DB-backed API test job in CI (165 silently skipped tests); packages/content + packages/seo typecheck; prune stale allowlist entries.
 5. W2: Capability Registry v3 (after F8 price decisions are requested in one founder brief).
