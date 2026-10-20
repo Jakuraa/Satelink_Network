@@ -32,6 +32,14 @@ jobs:
           set -o pipefail
           cd apps/web && npx tsc --noEmit 2>&1 | tail -60
 
+      - name: TypeScript check (console)
+        working-directory: apps/console
+        run: npx tsc --noEmit -p .
+
+      - name: TypeScript check (corporate)
+        working-directory: apps/corporate
+        run: npx tsc --noEmit -p .
+
       - name: Lint
         run: |
           set -o pipefail
