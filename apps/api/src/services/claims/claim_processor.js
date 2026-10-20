@@ -19,6 +19,11 @@ const MIN_CLAIM_THRESHOLD_USDT = 1.0;
  * @returns {Promise<object>} Signed claim data
  */
 export async function generateClaimSignature(nodeId, walletAddress, pool) {
+    // Defence in depth (W1): every caller, mounted or not, refuses while settlement is in
+    // dry-run. Anything other than the exact string '0' counts as dry-run.
+    if (process.env.SETTLEMENT_DRY_RUN !== '0') {
+        throw new Error('settlement_dry_run: claim signing is disabled');
+    }
     const client = await pool.connect();
 
     try {
