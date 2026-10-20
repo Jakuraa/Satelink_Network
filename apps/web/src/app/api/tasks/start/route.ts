@@ -19,7 +19,6 @@ import { randomUUID } from "node:crypto";
 import { createPendingOrder } from "@/lib/task-orders/db";
 import { isTasksProductEnabled } from "@/lib/tasks-product";
 import { getDodoEnvironment } from "@/lib/dodo/environment";
-// @ts-expect-error — plain ESM module from apps/api (one allowlist rule for both services).
 import { checkoutAllowed } from "../../../../../../api/src/pricing_v2/test_checkout_guard.mjs";
 
 export const runtime = "nodejs";

@@ -17,7 +17,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { createCheckoutSession } from "@dodopayments/core/checkout";
 import { getDodoClientConfig } from "@/lib/dodo/environment";
 import { findCreditPack } from "@/lib/dodo/credit-packs";
-// @ts-expect-error — plain ESM module from apps/api (one allowlist rule for both services).
 import { checkoutAllowed } from "../../../../../api/src/pricing_v2/test_checkout_guard.mjs";
 
 export const runtime = "nodejs";

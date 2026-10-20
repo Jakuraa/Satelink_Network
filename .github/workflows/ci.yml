@@ -29,12 +29,21 @@ jobs:
 
       - name: TypeScript check
         run: |
-          cd apps/web && npx tsc --noEmit 2>&1 | head -20
-          echo "TypeScript check complete"
+          set -o pipefail
+          cd apps/web && npx tsc --noEmit 2>&1 | tail -60
+
+      - name: TypeScript check (console)
+        working-directory: apps/console
+        run: npx tsc --noEmit -p .
+
+      - name: TypeScript check (corporate)
+        working-directory: apps/corporate
+        run: npx tsc --noEmit -p .
 
       - name: Lint
-        run: npm run lint --if-present 2>&1 | tail -5
-        continue-on-error: true
+        run: |
+          set -o pipefail
+          npm run lint --if-present 2>&1 | tail -60
 
       # Honest-positioning gate (Phase 7): fails the job on any finding. Deliberately NOT piped
       # through tail/head, so the script's exit code is the step's exit code.
@@ -64,7 +73,9 @@ jobs:
         run: npm ci --prefer-offline
 
       - name: Run tests
-        run: npm test --if-present 2>&1 | tail -20
+        run: |
+          set -o pipefail
+          npm test --if-present 2>&1 | tail -80
         env:
           NODE_ENV: test
           JWT_SECRET: test-secret-for-ci-only
@@ -144,8 +155,9 @@ jobs:
 
       - name: Build frontend
         run: |
+          set -o pipefail
           cd apps/web
-          NODE_ENV=production npm run build 2>&1 | tail -15
+          NODE_ENV=production npm run build 2>&1 | tail -60
         env:
           NEXT_PUBLIC_WALLETCONNECT_ID: ${{ secrets.NEXT_PUBLIC_WALLETCONNECT_ID }}
 
