@@ -54,6 +54,18 @@ import { createRpcTrafficRecorder } from './src/analytics/rpc_traffic_recorder.m
 import { ensureAdminTables } from './src/admin/ensure_admin_tables.js';
 import { createVnextKernelRouter } from './src/vnext/http/kernel_router.js';
 
+export const STAFF_ONLY_MONEY_READS = [
+  "/api/treasury/status",
+  "/api/settlement/history",
+  "/api/settlement/epoch/:id",
+  "/api/nodes/:nodeId/earnings",
+  "/os/events",
+  "/system/treasury",
+  "/system/treasury-settlement",
+  "/system/revenue-anomalies",
+  "/system/economy",
+];
+
 export function createApp(pool, redis) {
   // Initialize the payment gate. Free RPC removed (Phase 2, 2026-09): with
   // FREE_TIER_DAILY_LIMIT / FREE_TIER_ANON_CALLS at 0 (prod default) this gate
@@ -67,6 +79,11 @@ export function createApp(pool, redis) {
   // Attach base middleware (CORS, helmet, security headers)
   attachBaseMiddleware(app);
   app.use(compression({ level: 6, threshold: 1024 }));
+
+  // SEC-4 (W1, 2026-10-20): reads that expose money figures, payout wallets or treasury
+  // state are staff-only. Registered first so it also covers routes defined later in this
+  // file and in server.js (/system/*). Path-scoped: nothing else under these prefixes changes.
+  app.get(STAFF_ONLY_MONEY_READS, requireAdminAuth);
 
   // Ensure Admin Command Center tables exist before routes are mounted.
   // IF NOT EXISTS — safe on every boot. Fire-and-forget with a logged catch
