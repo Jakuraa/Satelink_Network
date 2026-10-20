@@ -24,7 +24,7 @@ import {
 import { getNodeHealthSummary } from '../../scheduler/node_health_monitor.js';
 import { handleNodeComeback } from './offline_detector.js';
 import { getNodeEarnings } from './earnings_aggregator.js';
-import { requireHeaderSecret } from '../../security/header_secret.js';
+import { requireHeaderSecret, isStaffRequest } from '../../security/header_secret.js';
 
 const VALID_REGIONS = ['ap-south-1', 'us-east-1', 'eu-west-1', 'ap-southeast-1'];
 const VALID_NODE_TYPES = ['rpc', 'bandwidth', 'compute'];
@@ -369,17 +369,23 @@ export function createNodeRegistryRouter(db, redis) {
       }
 
       const row = result.rows[0];
+      // SEC-4b (W1 follow-up): the payout wallet, the raw endpoint (IP:port), hardware and
+      // failure text are staff-only. Public callers get the operational summary.
+      const staff = isStaffRequest(req);
 
       res.json({
         ok: true,
         node: {
           nodeId: row.node_id,
-          wallet: row.wallet,
+          ...(staff ? {
+            wallet: row.wallet,
+            endpointUrl: row.endpoint_url,
+            hardware: row.hardware_json,
+            lastFailureReason: row.last_failure_reason || null,
+          } : {}),
           nodeType: row.node_type,
-          endpointUrl: row.endpoint_url,
           region: row.region,
           chainIds: row.chain_ids,
-          hardware: row.hardware_json,
           status: row.status,
           tier: row.tier,
           reputationScore: row.reputation_score,
@@ -390,8 +396,7 @@ export function createNodeRegistryRouter(db, redis) {
           consecutiveFailures: row.consecutive_failures || 0,
           totalRequestsServed: row.total_requests_served || 0,
           avgLatencyMs: row.avg_latency_ms || null,
-          lastFailureAt: row.last_failure_at || null,
-          lastFailureReason: row.last_failure_reason || null
+          lastFailureAt: row.last_failure_at || null
         }
       });
     } catch (err) {
