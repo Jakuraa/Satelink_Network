@@ -64,17 +64,40 @@ Not done yet: Cloudflare WAF read, Vercel production SHA vs main.
 | SEC-1 | Payout-signing route reachable with a weaker credential than staff auth | Fix PR #549 (founder-review). F1: rotation decision for the signer |
 | SEC-2 | Unauthenticated outbound-fetch workload | Removed in PR #548 |
 | SEC-3 | Relabelled-model inference surface (R4) | Removed in PR #548 |
-| SEC-4 | Public revenue figures (S4) and sibling public money reads | W1 next |
-| SEC-5 | Unauthenticated internal parity / deposit-notify / node register-heartbeat endpoints | W1 next |
-| SEC-6 | Admin checks that open when an env var is unset; non-constant-time admin compare | W1/W3 |
-| SEC-7 | Hard-coded fallback secrets in node-token minting | W1 next |
+| SEC-4 | Public revenue figures (S4) and sibling public money reads | #551 (revenue routes); other public money reads (diagnostics, treasury, settlement history, earnings, /os/events, /system) still open → W1 |
+| SEC-5 | Unauthenticated internal parity / deposit-notify / node register-heartbeat endpoints | parity → #553; deposit-notify, node register/heartbeat still open → W1 |
+| SEC-6 | Admin checks that open when an env var is unset; non-constant-time admin compare | env-compare routes → #553 (confirmed open live); `requireAdminAuth` constant-time → W3 |
+| SEC-7 | Unproven node-token minting with hard-coded fallback secret | #553 (unmounted). F18 |
+| SEC-8 | Settings allow-list escapable by prefix-matched Bash rules (background review) | fixed in #550 |
+
+### Baselines (Step 0.8) — `evidence/BASELINE.md`
+- apps/api mocha, CI mode: 639 tests, ~471 pass, 2 fail (allowlisted x402 t2/t9), **165 skip silently** (no DB).
+  `ci-baseline-check.sh` is green partly because DB tests skip; 19/21 allowlist entries are stale.
+- apps/api with a full local DB: 632 pass / 4 fail / 3 skip. Real drift: console-onboarding test expects Pro yearly 190,
+  catalog gives 120 → founder price decision (F8), not allowlisted.
+- Flaky: identity rate-limit burst tests (~1 in 5 on macOS). Latent: migration-035 BIGSERIAL id string-vs-number.
+- Root vitest: libs 274/274, tools 9/9, workers 16/16, packages 9/9. apps/web vitest 257/257. mcp-server 2/2.
+- `database/runner.ts migrate` stops at 014 on an empty DB (`revenue_events_v2` is created by API boot, not a migration).
+- Integration suites (testcontainers) need Docker; not run locally (16/20 files could not start a container).
+- CI never runs: DB-backed api tests, Playwright e2e, packages/content + packages/seo typechecks (both red), mcp-server tests on PRs.
+
+### CI as a real gate (W0, PR #552)
+Unmasking found: 63 hidden `apps/web` TS errors (several live UI bugs, incl. a pricing-page ReferenceError and every
+formatted admin table column rendering raw values), lint never actually running for any app (web `echo Skipped`;
+console/corporate stuck at the ESLint setup prompt), and install-layout issues (`next` is per-app, not root).
+All fixed in #552; `ignoreBuildErrors` removed; console/corporate typecheck + lint added.
 
 ### PRs this session
 | PR | Branch | What | State |
 |---|---|---|---|
-| #548 | `fix/w1-remove-ai-gateway` | Remove relabelling AI gateway + bandwidth proxy; guard test (mutation-verified) | open, CI running |
-| #549 | `fix/w1-claims-auth` | Staff-only, dry-run-aware claim signing (mutation-verified) | open, `founder-review` |
-| W0 | `chore/mandate-w0-foundation` | Mandate, ledger, matrix, D14, CLAUDE.md pointer, settings tightening, gitignore | see below |
+| #548 | `fix/w1-remove-ai-gateway` | Remove relabelling AI gateway + bandwidth proxy; guard test (mutation-verified) | green; merge after #552 |
+| #549 | `fix/w1-claims-auth` | Staff-only, dry-run-aware claim signing (mutation-verified) | green, `founder-review` |
+| #550 | `chore/mandate-w0-foundation` | Mandate, ledger, matrix, D14, CLAUDE.md pointer, settings tightening, gitignore, baseline | green |
+| #551 | `fix/w1-s4-public-revenue` | S4: no public revenue figures (mutation-verified) | green, `founder-review` |
+| #552 | `ci/w0-real-gate` | Unmask CI; fix 63 TS errors; real lint; remove ignoreBuildErrors | CI running |
+| #553 | `fix/w1-fail-open-admin` | Fail-closed admin secrets; unmount node-token; staff-gate parity (mutation-verified) | `founder-review` |
+
+Merge policy applied: no self-merge until #552 makes CI a real gate (mandate §13 "real (unmasked) checks").
 
 ### Founder actions (F-list, cumulative)
 | F | Action | Why |
@@ -90,7 +113,9 @@ Not done yet: Cloudflare WAF read, Vercel production SHA vs main.
 | F14 | Apply production migrations when asked | R11 |
 | F15 | GitHub branch protection: `enforce_admins` + 1 required review | B-10 |
 | F16 | Run `\d revenue_events_v2` via sat-db and paste the `amount_usdt` type | B-07 |
-| F17 | Merge #549 (auth change, founder-review) | SEC-1 |
+| F17 | Merge #549, #551, #553 (founder-review: auth / revenue reporting) | SEC-1, S4, SEC-6/7 |
+| F18 | Confirm production `JWT_SECRET` ≠ the fallback literal in git history (deleted file `node_auth_route.mjs`); rotate if it ever matched | SEC-7 |
+| F19 | Start Docker Desktop on the build machine (or provide a CI DB) so integration suites can run locally | BASELINE |
 
 ### Next actions (in order)
 1. Merge #548 when CI is green (pre-approved: not money/auth), with R7 health checks before and after.
