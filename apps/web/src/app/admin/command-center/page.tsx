@@ -372,7 +372,7 @@ function AdminCommandCenter() {
       subtitle={H.subtitle}
       headerRight={
         <div className="flex items-center gap-2">
-          <Button size="sm" onClick={() => { refreshAll(); loadExec(); loadDemStats(); }} className="flex items-center gap-1">
+          <Button size="sm" onClick={() => { refreshAll(); loadExec(); loadDemStats(); }}>
             <RefreshCw className="h-3 w-3" /> Refresh All
           </Button>
         </div>
@@ -622,7 +622,7 @@ function AdminCommandCenter() {
             {demLoading && !demStats ? (
               <div className="px-6 text-xs text-zinc-500">Loading demand stats…</div>
             ) : !demStats ? (
-              <div className="px-6"><EmptyState title="No demand data" description="No classified IPs for this period." /></div>
+              <div className="px-6"><EmptyState label="No demand data" message="No classified IPs for this period." /></div>
             ) : (
               <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
                 <KPICard label="Active IPs" value={fmt.num(demStats.total_active_ips)} caption={demStats.total_tracked_ips ? `${fmt.num(demStats.total_tracked_ips)} tracked all-time` : undefined} />
@@ -652,10 +652,10 @@ function AdminCommandCenter() {
                   </FilterGroup>
                 </Panel>
                 <Panel title="Classifier & Actions">
-                  <Stack gap="xs">
-                    <Button tone="primary" size="sm" disabled={busy.classify} onClick={classify} style={{ width: "100%" }}>{busy.classify ? "Classifying..." : "Run IP Classifier"}</Button>
+                  <Stack gap="sm">
+                    <Button tone="primary" size="sm" disabled={busy.classify} onClick={classify}>{busy.classify ? "Classifying..." : "Run IP Classifier"}</Button>
                     {TEMPLATES.map((t) => (
-                      <Button key={t.id} tone="info" size="sm" disabled={busy[`outreach:${t.id}`]} onClick={() => outreach(t.id)} style={{ width: "100%", marginTop: "4px" }}>{busy[`outreach:${t.id}`] ? "Sending..." : `Send: ${t.label}`}</Button>
+                      <Button key={t.id} tone="info" size="sm" disabled={busy[`outreach:${t.id}`]} onClick={() => outreach(t.id)}>{busy[`outreach:${t.id}`] ? "Sending..." : `Send: ${t.label}`}</Button>
                     ))}
                   </Stack>
                 </Panel>
@@ -798,10 +798,10 @@ function AdminCommandCenter() {
                   { key: "op_type", header: "Type" },
                   { key: "node_id", header: "Node ID", mono: true },
                   { key: "client_id", header: "Client Wallet", mono: true },
-                  { key: "amount_usdt", header: "Amount (USDT)", mono: true, cell: (r: any) => <span>${fmt.bal(r.amount_usdt)}</span> },
+                  { key: "amount_usdt", header: "Amount (USDT)", mono: true, render: (r: any) => <span>${fmt.bal(r.amount_usdt)}</span> },
                   { key: "status", header: "Status" },
-                  { key: "is_test_data", header: "Simulation", cell: (r: any) => <StatusBadge label={r.is_test_data ? "MOCK" : "REAL"} tone={r.is_test_data ? "muted" : "success"} /> },
-                  { key: "created_at", header: "Timestamp", mono: true, cell: (r: any) => <span>{fmt.time(r.created_at)}</span> }
+                  { key: "is_test_data", header: "Simulation", render: (r: any) => <StatusBadge label={r.is_test_data ? "MOCK" : "REAL"} tone={r.is_test_data ? "muted" : "success"} /> },
+                  { key: "created_at", header: "Timestamp", mono: true, render: (r: any) => <span>{fmt.time(r.created_at)}</span> }
                 ]}
                 rows={revEvents}
                 error={revEventsErr}
@@ -835,8 +835,8 @@ function AdminCommandCenter() {
                   columns={[
                     { key: "name", header: "Network Name" },
                     { key: "chain_id", header: "Chain ID", mono: true },
-                    { key: "status", header: "SLA status", cell: (c: any) => <StatusBadge label={c.status?.toUpperCase() ?? ''} tone={c.status === "operational" ? "success" : "danger"} /> },
-                    { key: "requests_24h", header: "Bridge Requests Served", mono: true, cell: (c: any) => fmt.num(c.requests_24h) }
+                    { key: "status", header: "SLA status", render: (c: any) => <StatusBadge label={c.status?.toUpperCase() ?? ''} tone={c.status === "operational" ? "success" : "danger"} /> },
+                    { key: "requests_24h", header: "Bridge Requests Served", mono: true, render: (c: any) => fmt.num(c.requests_24h) }
                   ]}
                   rows={netHealth.chain_status}
                   emptyLabel="chains"
@@ -850,11 +850,11 @@ function AdminCommandCenter() {
                   { key: "id", header: "Node UUID", mono: true, muted: true },
                   { key: "region", header: "Region" },
                   { key: "tier", header: "Tier", mono: true },
-                  { key: "uptime_pct", header: "Uptime SLA", mono: true, cell: (n: any) => <span>{n.uptime_pct}%</span> },
+                  { key: "uptime_pct", header: "Uptime SLA", mono: true, render: (n: any) => <span>{n.uptime_pct}%</span> },
                   { key: "reputation_score", header: "Reputation", mono: true },
-                  { key: "avg_latency_ms", header: "Avg Latency", mono: true, cell: (n: any) => <span>{n.avg_latency_ms}ms</span> },
-                  { key: "jobs_executed", header: "Cumulative Requests", mono: true, cell: (n: any) => fmt.num(n.jobs_executed) },
-                  { key: "status", header: "Status", cell: (n: any) => <StatusBadge label={n.status?.toUpperCase() ?? ''} tone={n.status === "active" ? "success" : "muted"} /> }
+                  { key: "avg_latency_ms", header: "Avg Latency", mono: true, render: (n: any) => <span>{n.avg_latency_ms}ms</span> },
+                  { key: "jobs_executed", header: "Cumulative Requests", mono: true, render: (n: any) => fmt.num(n.jobs_executed) },
+                  { key: "status", header: "Status", render: (n: any) => <StatusBadge label={n.status?.toUpperCase() ?? ''} tone={n.status === "active" ? "success" : "muted"} /> }
                 ]}
                 rows={nodesList?.nodes}
                 error={nodesListErr}
@@ -884,10 +884,10 @@ function AdminCommandCenter() {
                       columns={[
                         { key: "name", header: "Network Name" },
                         { key: "chain_id", header: "Chain ID", mono: true },
-                        { key: "sla", header: "SLA Status", cell: (c: any) => <StatusBadge label={c.status?.toUpperCase() ?? ''} tone={c.status === "operational" ? "success" : "danger"} /> },
-                        { key: "requests_24h", header: "Requests Served", mono: true, cell: (c: any) => fmt.num(c.requests_24h) },
-                        { key: "latency", header: "Latency", mono: true, cell: () => <span>{fmt.num(netHealth.p50_latency_ms)}ms</span> },
-                        { key: "status", header: "Status", cell: (c: any) => <Inline gap="sm"><StatusDot tone={c.status === "operational" ? "success" : "danger"} /><span>{c.status === "operational" ? "Up" : "Down"}</span></Inline> }
+                        { key: "sla", header: "SLA Status", render: (c: any) => <StatusBadge label={c.status?.toUpperCase() ?? ''} tone={c.status === "operational" ? "success" : "danger"} /> },
+                        { key: "requests_24h", header: "Requests Served", mono: true, render: (c: any) => fmt.num(c.requests_24h) },
+                        { key: "latency", header: "Latency", mono: true, render: () => <span>{fmt.num(netHealth.p50_latency_ms)}ms</span> },
+                        { key: "status", header: "Status", render: (c: any) => <Inline gap="sm"><StatusDot tone={c.status === "operational" ? "success" : "danger"} /><span>{c.status === "operational" ? "Up" : "Down"}</span></Inline> }
                       ]}
                       rows={netHealth.chain_status}
                       emptyLabel="blockchain bridges"
@@ -926,11 +926,11 @@ function AdminCommandCenter() {
                         { key: "id", header: "Node UUID", mono: true, muted: true },
                         { key: "region", header: "Region" },
                         { key: "tier", header: "Tier", mono: true },
-                        { key: "uptime_pct", header: "Uptime SLA", mono: true, cell: (n: any) => <span>{n.uptime_pct}%</span> },
+                        { key: "uptime_pct", header: "Uptime SLA", mono: true, render: (n: any) => <span>{n.uptime_pct}%</span> },
                         { key: "reputation_score", header: "Reputation", mono: true },
-                        { key: "avg_latency_ms", header: "Avg Latency", mono: true, cell: (n: any) => <span>{n.avg_latency_ms == null ? "—" : `${n.avg_latency_ms}ms`}</span> },
-                        { key: "jobs_executed", header: "Cumulative Requests", mono: true, cell: (n: any) => fmt.num(Number(n.jobs_executed)) },
-                        { key: "status", header: "Status", cell: (n: any) => <StatusBadge label={n.status?.toUpperCase() ?? ''} tone={n.status === "active" ? "success" : "muted"} /> }
+                        { key: "avg_latency_ms", header: "Avg Latency", mono: true, render: (n: any) => <span>{n.avg_latency_ms == null ? "—" : `${n.avg_latency_ms}ms`}</span> },
+                        { key: "jobs_executed", header: "Cumulative Requests", mono: true, render: (n: any) => fmt.num(Number(n.jobs_executed)) },
+                        { key: "status", header: "Status", render: (n: any) => <StatusBadge label={n.status?.toUpperCase() ?? ''} tone={n.status === "active" ? "success" : "muted"} /> }
                       ]}
                       rows={nodes}
                       emptyLabel="registered nodes"
@@ -978,13 +978,13 @@ function AdminCommandCenter() {
                   <Panel title="Customer Accounts">
                     <DataTable
                       columns={[
-                        { key: "wallet", header: "Wallet", mono: true, cell: (c: any) => <span>{fmt.addr(c.wallet)}</span> },
-                        { key: "total_deposited", header: "Credits Deposited", mono: true, cell: (c: any) => <span>${fmt.bal(c.total_deposited)}</span> },
-                        { key: "total_spent", header: "Credits Spent", mono: true, cell: (c: any) => <span>${fmt.bal(c.total_spent)}</span> },
-                        { key: "credits_usdt", header: "Balance", mono: true, cell: (c: any) => <span>${fmt.bal(c.credits_usdt)}</span> },
-                        { key: "products", header: "Products Used", cell: () => <span className="text-muted-foreground">—</span> },
-                        { key: "last_activity", header: "Last Activity", mono: true, cell: () => <span className="text-muted-foreground">—</span> },
-                        { key: "status", header: "Status", cell: (c: any) => Number(c.total_spent) > 0 ? <StatusBadge label="PAYING" tone="success" /> : Number(c.total_deposited) > 0 ? <StatusBadge label="DEPOSITED" tone="info" /> : <StatusBadge label="FREE" tone="muted" /> }
+                        { key: "wallet", header: "Wallet", mono: true, render: (c: any) => <span>{fmt.addr(c.wallet)}</span> },
+                        { key: "total_deposited", header: "Credits Deposited", mono: true, render: (c: any) => <span>${fmt.bal(c.total_deposited)}</span> },
+                        { key: "total_spent", header: "Credits Spent", mono: true, render: (c: any) => <span>${fmt.bal(c.total_spent)}</span> },
+                        { key: "credits_usdt", header: "Balance", mono: true, render: (c: any) => <span>${fmt.bal(c.credits_usdt)}</span> },
+                        { key: "products", header: "Products Used", render: () => <span className="text-muted-foreground">—</span> },
+                        { key: "last_activity", header: "Last Activity", mono: true, render: () => <span className="text-muted-foreground">—</span> },
+                        { key: "status", header: "Status", render: (c: any) => Number(c.total_spent) > 0 ? <StatusBadge label="PAYING" tone="success" /> : Number(c.total_deposited) > 0 ? <StatusBadge label="DEPOSITED" tone="info" /> : <StatusBadge label="FREE" tone="muted" /> }
                       ]}
                       rows={paying}
                       error={custsListErr}
@@ -1099,10 +1099,10 @@ function AdminCommandCenter() {
                 <DataTable
                   columns={[
                     { key: "wallet_address", header: "Client Wallet", mono: true },
-                    { key: "amount_usdt", header: "Amount (USDT)", mono: true, cell: (d: any) => <span>${fmt.bal(d.amount_usdt)}</span> },
-                    { key: "chain_id", header: "Chain", mono: true, cell: (d: any) => <span>{d.chain_id === 137 ? "Polygon" : `chain-${d.chain_id}`}</span> },
-                    { key: "tx_hash", header: "On-Chain Transaction Hash", mono: true, cell: (d: any) => <span className="text-[10px]">{fmt.addr(d.tx_hash)}</span> },
-                    { key: "confirmed_at", header: "Settled At", mono: true, cell: (d: any) => <span>{fmt.time(d.confirmed_at)}</span> }
+                    { key: "amount_usdt", header: "Amount (USDT)", mono: true, render: (d: any) => <span>${fmt.bal(d.amount_usdt)}</span> },
+                    { key: "chain_id", header: "Chain", mono: true, render: (d: any) => <span>{d.chain_id === 137 ? "Polygon" : `chain-${d.chain_id}`}</span> },
+                    { key: "tx_hash", header: "On-Chain Transaction Hash", mono: true, render: (d: any) => <span className="text-[10px]">{fmt.addr(d.tx_hash)}</span> },
+                    { key: "confirmed_at", header: "Settled At", mono: true, render: (d: any) => <span>{fmt.time(d.confirmed_at)}</span> }
                   ]}
                   rows={billCredits.deposits}
                   emptyLabel="credit deposits"
@@ -1114,10 +1114,10 @@ function AdminCommandCenter() {
               <DataTable
                 columns={[
                   { key: "wallet", header: "Client Wallet Address", mono: true },
-                  { key: "total_deposited", header: "Deposited", mono: true, cell: (c: any) => <span>${fmt.bal(c.total_deposited)} USDT</span> },
-                  { key: "total_spent", header: "Spent", mono: true, cell: (c: any) => <span>${fmt.bal(c.total_spent)} USDT</span> },
-                  { key: "credits_usdt", header: "Outstanding Balance", mono: true, cell: (c: any) => <span>${fmt.bal(c.credits_usdt)} USDT</span> },
-                  { key: "created_at", header: "Onboarded", mono: true, cell: (c: any) => <span>{fmt.time(c.created_at)}</span> }
+                  { key: "total_deposited", header: "Deposited", mono: true, render: (c: any) => <span>${fmt.bal(c.total_deposited)} USDT</span> },
+                  { key: "total_spent", header: "Spent", mono: true, render: (c: any) => <span>${fmt.bal(c.total_spent)} USDT</span> },
+                  { key: "credits_usdt", header: "Outstanding Balance", mono: true, render: (c: any) => <span>${fmt.bal(c.credits_usdt)} USDT</span> },
+                  { key: "created_at", header: "Onboarded", mono: true, render: (c: any) => <span>{fmt.time(c.created_at)}</span> }
                 ]}
                 rows={custsList?.paying}
                 error={custsListErr}
@@ -1149,22 +1149,22 @@ function AdminCommandCenter() {
             </div>
 
             <Panel title="Background Scheduler Engines">
-              <Inline gap="sm" style={{ marginBottom: "12px" }}>
+              <div style={{ marginBottom: "12px" }}><Inline gap="sm">
                 {TRIGGERABLE_JOBS.map((j) => (
                   <Button key={j} tone="muted" disabled={busy[`job:${j}`]} onClick={() => trigger(j)}>{busy[`job:${j}`] ? "Executing…" : `Trigger ${j}`}</Button>
                 ))}
-              </Inline>
+              </Inline></div>
               <DataTable
                 columns={[
                   { key: "job_name", header: "Worker Task", mono: true },
                   { key: "action", header: "Last execution outcome" },
-                  { key: "created_at", header: "Timestamp", mono: true, cell: (j: any) => <span>{fmt.time(j.created_at)}</span> },
+                  { key: "created_at", header: "Timestamp", mono: true, render: (j: any) => <span>{fmt.time(j.created_at)}</span> },
                   {
                     // The last real outcome is already in automation_logs — show it
                     // verbatim. (A fake stack-trace generator lived here; audit.)
                     key: "result",
                     header: "Result",
-                    cell: (j: any) => <span className="font-mono text-[10px] text-muted-foreground">{typeof j.result === "string" ? j.result.slice(0, 120) : j.result ? JSON.stringify(j.result).slice(0, 120) : "—"}</span>
+                    render: (j: any) => <span className="font-mono text-[10px] text-muted-foreground">{typeof j.result === "string" ? j.result.slice(0, 120) : j.result ? JSON.stringify(j.result).slice(0, 120) : "—"}</span>
                   }
                 ]}
                 rows={jobs}
@@ -1225,14 +1225,14 @@ function AdminCommandCenter() {
               <DataTable
                 columns={[
                   { key: "ip", header: "IP Address", mono: true },
-                  { key: "classification", header: "Class", cell: (t: any) => <StatusBadge label={t.classification?.toUpperCase() ?? ''} tone={t.classification === "scanner" ? "danger" : "warn"} /> },
+                  { key: "classification", header: "Class", render: (t: any) => <StatusBadge label={t.classification?.toUpperCase() ?? ''} tone={t.classification === "scanner" ? "danger" : "warn"} /> },
                   { key: "score", header: "Abuse Score", mono: true },
-                  { key: "calls_today", header: "Calls Today", mono: true, cell: (t: any) => fmt.num(t.calls_today) },
-                  { key: "avg_daily_calls", header: "Daily Avg", mono: true, cell: (t: any) => fmt.num(t.avg_daily_calls) },
+                  { key: "calls_today", header: "Calls Today", mono: true, render: (t: any) => fmt.num(t.calls_today) },
+                  { key: "avg_daily_calls", header: "Daily Avg", mono: true, render: (t: any) => fmt.num(t.avg_daily_calls) },
                   { key: "country", header: "Geo IP", mono: true },
                   { key: "isp", header: "Carrier / ISP" },
                   { key: "asn", header: "ASN Index", mono: true },
-                  { key: "last_seen", header: "Last Anomaly", mono: true, cell: (t: any) => <span>{fmt.time(t.last_seen)}</span> }
+                  { key: "last_seen", header: "Last Anomaly", mono: true, render: (t: any) => <span>{fmt.time(t.last_seen)}</span> }
                 ]}
                 rows={secThreats}
                 error={secThreatsErr}
@@ -1253,8 +1253,8 @@ function AdminCommandCenter() {
                 columns={[
                   { key: "id", header: "Incident ID", mono: true, muted: true },
                   { key: "title", header: "Issue Title" },
-                  { key: "severity", header: "Severity", cell: (i: any) => <StatusBadge label={i.severity?.toUpperCase() ?? ''} tone={i.severity === "critical" ? "danger" : "warn"} /> },
-                  { key: "status", header: "Outcome", cell: (i: any) => <StatusBadge label={i.status?.toUpperCase() ?? ''} tone="success" /> },
+                  { key: "severity", header: "Severity", render: (i: any) => <StatusBadge label={i.severity?.toUpperCase() ?? ''} tone={i.severity === "critical" ? "danger" : "warn"} /> },
+                  { key: "status", header: "Outcome", render: (i: any) => <StatusBadge label={i.status?.toUpperCase() ?? ''} tone="success" /> },
                   { key: "owner", header: "Team Owner", mono: true },
                   { key: "note", header: "Postmortem Resolution Notes" }
                 ]}

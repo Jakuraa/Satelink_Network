@@ -248,7 +248,7 @@ function isTestModePayload(data: { metadata?: Record<string, string> }): boolean
 // secret (local dev, CI, a Vercel preview build for an unrelated PR). Deferred to
 // first request instead: identical verification behavior (still the official
 // standardWebhook.verify() over the same handlers), just constructed lazily.
-let _handler: ((req: NextRequest) => Promise<NextResponse<unknown>>) | null = null;
+let _handler: ReturnType<typeof Webhooks> | null = null;
 function getHandler() {
   if (!_handler) {
     _handler = Webhooks({
@@ -431,7 +431,7 @@ function getHandler() {
       onDisputeChallenged: (p: unknown) => forwardDispute("dispute.challenged", p),
     });
   }
-  return _handler;
+  return _handler!;
 }
 
 export async function POST(req: NextRequest) {

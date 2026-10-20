@@ -55,11 +55,11 @@ export function AlertsEditor({ initial, senderConfigured }: { initial: AlertPref
   return (
     <div className="space-y-4">
       <form onSubmit={save} className="grid gap-4 md:grid-cols-2">
-        <label className="block text-[13px]"><span className="mb-1 block text-sl-text-muted">Warn me when a key's RPC credits fall below (USD)</span>
+        <label className="block text-[13px]"><span className="mb-1 block text-sl-text-muted">Warn me when a key&apos;s RPC credits fall below (USD)</span>
           <input className={input} inputMode="decimal" value={floor} onChange={(e) => setFloor(e.target.value)} placeholder="Off" aria-describedby="floor-help" />
-          <span id="floor-help" className="mt-1 block text-[12px] text-sl-text-subtle">Only keys that were funded at least once. Card-funded value is for Trading Intelligence and isn't counted.</span>
+          <span id="floor-help" className="mt-1 block text-[12px] text-sl-text-subtle">Only keys that were funded at least once. Card-funded value is for Trading Intelligence and isn&apos;t counted.</span>
         </label>
-        <label className="block text-[13px]"><span className="mb-1 block text-sl-text-muted">Don't repeat a low-balance warning for</span>
+        <label className="block text-[13px]"><span className="mb-1 block text-sl-text-muted">Don&apos;t repeat a low-balance warning for</span>
           <select className={input} value={cooldown} onChange={(e) => setCooldown(Number(e.target.value))}>{cooldowns.map(([m, l]) => <option key={m} value={m}>{l}</option>)}</select>
         </label>
         <label className="flex items-center gap-2 text-[13px] text-sl-text">
@@ -68,7 +68,7 @@ export function AlertsEditor({ initial, senderConfigured }: { initial: AlertPref
         </label>
         <label className="block text-[13px]"><span className="mb-1 block text-sl-text-muted">Error-rate threshold (%)</span>
           <input className={input} inputMode="decimal" value={errPct} onChange={(e) => setErrPct(e.target.value)} placeholder="Off" aria-describedby="err-help" />
-          <span id="err-help" className="mt-1 block text-[12px] text-sl-text-subtle">Saved now, but not measured yet: failed calls aren't recorded per request, so no error-rate alert can be sent.</span>
+          <span id="err-help" className="mt-1 block text-[12px] text-sl-text-subtle">Saved now, but not measured yet: failed calls aren&apos;t recorded per request, so no error-rate alert can be sent.</span>
         </label>
         <div className="flex flex-wrap items-center gap-3 md:col-span-2">
           <button type="submit" disabled={state === "saving"} className="h-9 rounded-[var(--sl-radius-sm)] bg-sl-accent px-4 text-[13px] font-medium text-sl-accent-ink">{state === "saving" ? "Saving…" : "Save alerts"}</button>
@@ -80,7 +80,7 @@ export function AlertsEditor({ initial, senderConfigured }: { initial: AlertPref
         <button type="button" onClick={sendTest} disabled={test === "sending"} className="h-9 rounded-[var(--sl-radius-sm)] border border-sl-border px-4 text-[13px] font-medium text-sl-text">
           {test === "sending" ? "Sending…" : "Send test alert"}
         </button>
-        {!senderConfigured && test === "idle" && <span className="text-[13px] text-sl-text-muted">Email sending isn't configured yet.</span>}
+        {!senderConfigured && test === "idle" && <span className="text-[13px] text-sl-text-muted">Email sending isn&apos;t configured yet.</span>}
         {test === "done" && <span role="status" className="text-[13px] text-sl-text-muted">{testMsg}</span>}
         {test === "error" && <span role="alert" className="text-[13px] text-sl-down">{testMsg}</span>}
       </div>

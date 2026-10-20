@@ -24,21 +24,21 @@ describe("dodo environment resolution", () => {
   });
 
   it("throws in production when unset — never silently defaults to the SDK's live_mode default", async () => {
-    process.env.NODE_ENV = "production";
+    (process.env as Record<string, string>).NODE_ENV = "production";
     delete process.env.DODO_PAYMENTS_ENVIRONMENT;
     const { getDodoEnvironment } = await import("./environment");
     expect(() => getDodoEnvironment()).toThrow(/DODO_PAYMENTS_ENVIRONMENT/);
   });
 
   it("throws in production for a garbage value", async () => {
-    process.env.NODE_ENV = "production";
+    (process.env as Record<string, string>).NODE_ENV = "production";
     process.env.DODO_PAYMENTS_ENVIRONMENT = "prod";
     const { getDodoEnvironment } = await import("./environment");
     expect(() => getDodoEnvironment()).toThrow();
   });
 
   it("defaults to test_mode (never live) outside production when unset", async () => {
-    process.env.NODE_ENV = "development";
+    (process.env as Record<string, string>).NODE_ENV = "development";
     delete process.env.DODO_PAYMENTS_ENVIRONMENT;
     const { getDodoEnvironment } = await import("./environment");
     expect(getDodoEnvironment()).toBe("test_mode");
