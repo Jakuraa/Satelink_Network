@@ -8,9 +8,15 @@ import { PRODUCTS, PRODUCT_ORDER, FLAT_RATE_USD, X402_BUNDLE, type ProductSlug }
 
 const SITE = SITES.satelink.origin;
 
+// F8 (2026-10-20): Trading Intelligence prices are withheld from machine-readable
+// surfaces (llms.txt, /pricing.json, /products/*.json) until the founder confirms
+// the price list. Flip only with that decision (test/ti-pricing-withheld.test.ts).
+const PUBLISH_TI_PRICES = false;
+
 /** Live-or-documented price lines for a product. */
 function priceLinesFor(slug: ProductSlug, catalog: Catalog): PriceLine[] {
   if (slug === "trading-intelligence") {
+    if (!PUBLISH_TI_PRICES) return [];
     return catalog.metrics.map((m) => ({ metric: m.slug, unit: "call", price: m.priceUsd, currency: "USD" }));
   }
   if (slug === "x402") {
@@ -45,7 +51,7 @@ export function buildProductJson(slug: ProductSlug, catalog: Catalog): ProductJs
 export function buildPricingJson(catalog: Catalog): PricingJson {
   return {
     generatedAt: new Date().toISOString(),
-    source: DISCOVERY.catalog,
+    source: DISCOVERY.wellKnown,
     products: PRODUCT_ORDER.map((slug) => ({
       slug,
       label: PRODUCTS[slug].name,
@@ -62,7 +68,6 @@ export function buildWellKnown(catalog: Catalog) {
     site: SITE,
     services: PRODUCT_ORDER.map((slug) => ({ product: slug, url: `${SITE}${PRODUCTS[slug].href}`, spec: `${SITE}/products/${slug}.json` })),
     discovery: DISCOVERY.wellKnown,
-    catalog: DISCOVERY.catalog,
     pricing: `${SITE}/pricing.json`,
     payments: ["x402", "usdt", "credits"],
     generatedAt: new Date().toISOString(),

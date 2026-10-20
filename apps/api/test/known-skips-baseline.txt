@@ -1,0 +1,10 @@
+# Known-skipped tests (2026-10-20, Step 5.2).
+# With REQUIRE_DB_TESTS=1 (set in CI, which has a Postgres service), scripts/
+# ci-baseline-check.sh fails on any pending/skipped test NOT listed here, so a
+# DB-backed suite can never silently skip again. One exact mocha fullTitle per line.
+#
+# ── Withdrawal API: skips unconditionally (this.skip() in before()). /api/withdraw
+# is not mounted and the spec uses a sqlite-style API (docs/api/TEST_TRIAGE.md F). ──
+Withdrawal API should create a withdrawal successfully
+Withdrawal API should fail with invalid wallet
+Withdrawal API should fail with invalid amount

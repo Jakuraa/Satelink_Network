@@ -25,7 +25,7 @@ import {
 import { MIN_CONFIRMATIONS } from '../billing/deposit_validation.mjs';
 import { apiKeyCreateLimiter } from '../security/middleware/rate_limits.js';
 import { getIntelSummary, recordPricingView } from '../economics/pricing_intelligence/index.js';
-import { railPrices, bundlePriceText } from '../pricing_v2/rails.mjs';
+import { publicRailPrices, bundlePriceText } from '../pricing_v2/rails.mjs';
 import { publicProducts, PRODUCT_STATUSES } from '../pricing_v2/products.mjs';
 
 const API_BASE = () => process.env.API_BASE_URL || 'https://rpc.satelink.network';
@@ -52,7 +52,7 @@ export function registrationMessage(wallet) {
 const bundleText = (r) => bundlePriceText(r);
 
 function pricingBody() {
-  const rails = railPrices();
+  const rails = publicRailPrices();
   const perCall = rails.rpc_credits.price_usd_per_call;
   return {
     ok: true,
@@ -103,7 +103,7 @@ function pricingBody() {
 
 function manifestBody() {
   const base = API_BASE();
-  const rails = railPrices();
+  const rails = publicRailPrices();
   return {
     schema_version: '1.0',
     service: 'Satelink RPC Gateway',
