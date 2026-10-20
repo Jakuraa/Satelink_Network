@@ -304,19 +304,6 @@ export const footerFallback: Footer = {
       ],
     },
   ],
-  secondary: [
-    {
-      title: "Legal and Trust",
-      links: [
-        { label: "Privacy policy", href: "/privacy" },
-        { label: "Terms of service", href: "/terms" },
-        { label: "Refund & Cancellation", href: "/refund" },
-        { label: "Billing & payment", href: "/billing-policy" },
-        { label: "Acceptable use policy", href: "/acceptable-use" },
-        { label: "Security disclosure", href: "/responsible-disclosure" },
-      ],
-    },
-  ],
   social: [
     { platform: "GitHub", href: "https://github.com/Jakuraa/Satelink_Network" },
     { platform: "Status", href: "https://status.satelink.network" },

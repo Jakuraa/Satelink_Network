@@ -361,7 +361,7 @@ function MachinePortal() {
         <Panel title="Machine Identity Registry" description="Autonomous systems tracked by API key">
           <div className="mb-4 flex flex-wrap gap-2">
             {types.map((t) => (
-              <Badge key={t} variant="secondary">{t}</Badge>
+              <Badge key={t} variant="neutral">{t}</Badge>
             ))}
           </div>
           <LegacyDataTable

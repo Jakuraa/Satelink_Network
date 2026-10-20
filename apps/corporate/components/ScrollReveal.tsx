@@ -31,7 +31,7 @@ export function ScrollReveal({
   return (
     <LazyMotion features={domAnimation}>
       <Comp
-        ref={ref as any}
+        ref={ref as never}
         className={className}
         initial={{ opacity: 0, y }}
         animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y }}

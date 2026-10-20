@@ -111,9 +111,9 @@ export function AgentFlow() {
               setTest(j?.ok ? "ok" : "fail");
             }}>{test === "running" ? "Testing…" : "Test it"}</button>
             {test === "ok" && <p role="status" className="text-sl-text">It works — Satelink recognises this key. Nothing was charged.</p>}
-            {test === "fail" && <p role="alert" className="text-sl-down">The test didn't pass. Try again in a moment.</p>}
+            {test === "fail" && <p role="alert" className="text-sl-down">The test didn&apos;t pass. Try again in a moment.</p>}
           </div>
-          <div className="mt-6 flex justify-end"><button type="button" className={primaryBtn} onClick={() => setDone(true)}>I've saved the key</button></div>
+          <div className="mt-6 flex justify-end"><button type="button" className={primaryBtn} onClick={() => setDone(true)}>I&apos;ve saved the key</button></div>
         </FlowCard>
       )}
     </div>
