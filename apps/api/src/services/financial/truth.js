@@ -54,7 +54,7 @@ export function createFinancialTruthRouter(pool) {
         FROM revenue_events_v2 e
         LEFT JOIN api_credits t ON t.api_key = e.client_id
         WHERE (e.is_test_data = false OR e.is_test_data IS NULL)
-          AND ${CONSUMED_USAGE_PREDICATE}
+          AND (${CONSUMED_USAGE_PREDICATE})
       `, [FOUNDER_WALLETS]);
       const metered_value_usdt = parseFloat(meteredResult.rows[0]?.total || 0);
       const external_metered_usdt = parseFloat(meteredResult.rows[0]?.external_total || 0);
@@ -193,7 +193,7 @@ export function createFinancialTruthRouter(pool) {
 
         // Source metadata
         sources: {
-          metered: { table: 'revenue_events_v2', query: 'SUM(amount_usdt) WHERE NOT is_test_data AND consumed usage (excl. subscription_payment, pack_purchase, refund_reversal, is_billable=false)' },
+          metered: { table: 'revenue_events_v2', query: 'SUM(amount_usdt) WHERE NOT is_test_data AND consumed usage (excl. subscription_payment, pack_purchase, refund_reversal, is_billable=false, x402 bundle purchases)' },
           external: { table: 'revenue_events_v2 (excluding treasury keys)', query: 'SUM(amount_usdt)' },
           internal: { table: 'revenue_events_v2 (treasury keys)', query: 'SUM(amount_usdt)' },
           allocated: { table: 'epoch_ledger', query: 'SUM(total_revenue) WHERE CLOSED' },
@@ -260,7 +260,7 @@ async function tracePipeline(pool, treasuryAddress) {
       FROM revenue_events_v2 e
       LEFT JOIN api_credits t ON t.api_key = e.client_id
       WHERE (e.is_test_data = false OR e.is_test_data IS NULL)
-        AND ${CONSUMED_USAGE_PREDICATE}
+        AND (${CONSUMED_USAGE_PREDICATE})
     `, [FOUNDER_WALLETS]);
     trace.revenue_events_v2.count = parseInt(eventsResult.rows[0]?.count || 0);
     trace.revenue_events_v2.sum_usdt = parseFloat(eventsResult.rows[0]?.sum || 0);
