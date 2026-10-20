@@ -92,7 +92,7 @@ export function PricingView({ catalog, faqList }: PricingViewProps) {
         { feature: "Deterministic Hard Spend Caps", free: true, pro: true, max5x: true, max20x: true, ent: true },
         { feature: "Usage Notifications (70%, 85%, 95%, 100%)", free: "In-app", pro: "Email & Webhooks", max5x: "Email & Webhooks", max20x: "Email & Webhooks", ent: "Custom incident triggers" },
         { feature: "Circuit Breaker on Repeated Tool Errors", free: true, pro: true, max5x: true, max20x: true, ent: true },
-        { feature: "Detailed Consumption Breakdown by Model/Tool", free: "Summary", pro: "Daily logs", max5x: "Full telemetry", max20x: "Real-time stream", ent: "SOC2-compliant audit export" },
+        { feature: "Detailed Consumption Breakdown by Model/Tool", free: "Summary", pro: "Daily logs", max5x: "Full telemetry", max20x: "Real-time stream", ent: "Audit export" },
         { feature: "Single Sign-On (SSO) & SCIM Directory", free: false, pro: false, max5x: false, max20x: false, ent: true },
       ],
     },

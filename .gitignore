@@ -55,6 +55,9 @@ yarn-error.log*
 # ── BUILD OUTPUTS ────────────────────
 dist/
 build/
+!docs/build/
+docs/build/evidence/baseline-logs/
+docs/build/evidence/private/
 .next/
 out/
 .turbo/

@@ -149,7 +149,7 @@ function SuccessContent() {
             {timedOut && (
               <p className="text-muted-foreground">
                 Still not confirmed after a minute. Your payment went through, but crediting is delayed —
-                it will land shortly, or contact support with this key if it doesn't.
+                it will land shortly, or contact support with this key if it doesn&apos;t.
               </p>
             )}
           </div>
