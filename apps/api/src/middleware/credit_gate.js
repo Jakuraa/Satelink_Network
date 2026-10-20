@@ -163,3 +163,30 @@ export function createCreditGate(db, logger) {
     }
   };
 }
+
+// Refund-on-upstream-failure (F20 prerequisite, 2026-10-20). The legacy gate above
+// deducts BEFORE the upstream call, so a request that was not served (provider
+// error, timeout, exception) must get that exact deduction back. At most once per
+// request (req.creditRefunded); returns true only when the balance was restored.
+export async function refundCreditGateDeduction(db, req, logger) {
+  const log = logger || console;
+  const cost = req.creditDeducted;
+  if (!(Number(cost) > 0) || !req.creditWallet || req.creditRefunded) return false;
+  req.creditRefunded = true;
+  try {
+    const result = await db.query(
+      `UPDATE credit_balances
+       SET balance_usdt = balance_usdt + $1,
+           total_spent  = GREATEST(total_spent - $1, 0),
+           updated_at   = NOW()
+       WHERE lower(wallet_address) = $2`,
+      [cost, req.creditWallet]
+    );
+    if (result.rowCount === 1) return true;
+    log.error(`${LOG_PREFIX} refund matched ${result.rowCount} rows for wallet=${req.creditWallet} cost=${cost}`);
+  } catch (err) {
+    log.error(`${LOG_PREFIX} refund failed for wallet=${req.creditWallet} cost=${cost}: ${err.message}`);
+  }
+  req.creditRefunded = false;
+  return false;
+}
