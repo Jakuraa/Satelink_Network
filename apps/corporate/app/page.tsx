@@ -680,7 +680,7 @@ export default function HomePage() {
                 Expanding toward universal autonomous assistance.
               </h2>
               <p className="mt-4 text-base sm:text-lg text-stone-4 font-sans leading-relaxed">
-                While AI trading agents and machine-to-machine commerce are Satelink's initial focus,
+                While AI trading agents and machine-to-machine commerce are Satelink&apos;s initial focus,
                 our long-term architectural roadmap expands toward an institutional autonomous assistant capable of executing
                 complex multi-step operations across enterprise workflows.
               </p>
@@ -722,7 +722,7 @@ export default function HomePage() {
           <MotionReveal delay={220}>
             <div className="mt-8 rounded-xl border border-stone-2/70 bg-ivory p-4 font-mono text-xs text-stone-4">
               <span className="text-amber-ink font-semibold">ARCHITECTURAL STATUS NOTE: </span>
-              The universal AI assistant layer is in active research and architectural development. It is part of Jakuraa's long-term technical roadmap, while machine-to-machine payment infrastructure and trading intelligence systems are in active deployment.
+              The universal AI assistant layer is in active research and architectural development. It is part of Jakuraa&apos;s long-term technical roadmap, while machine-to-machine payment infrastructure and trading intelligence systems are in active deployment.
             </div>
           </MotionReveal>
         </Container>
@@ -870,7 +870,7 @@ export default function HomePage() {
                     Complete Operating Chronology
                   </h3>
                   <p className="mt-3 text-sm sm:text-base leading-relaxed text-stone-4 font-sans">
-                    Explore the complete chronological archive of Jakuraa's commercial ventures, physical experiments,
+                    Explore the complete chronological archive of Jakuraa&apos;s commercial ventures, physical experiments,
                     operational learnings, and architectural evolution from physical trade to autonomous software.
                   </p>
                 </div>

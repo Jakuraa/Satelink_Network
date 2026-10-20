@@ -16,7 +16,7 @@ import { Disclosure } from "@/components/ui/Disclosure";
 import samples from "../../../../../../data/intelligence-samples.json";
 
 type Sample = { fields: string[]; example: string };
-const SAMPLES = samples as Record<string, Sample>;
+const SAMPLES = samples as unknown as Record<string, Sample>;
 const BASE_ROUTE = "/products/trading-intelligence";
 // The standalone TI index page was removed (Q27) and 308s here.
 const TRADING_AI_ROUTE = "/trading-agent/product";

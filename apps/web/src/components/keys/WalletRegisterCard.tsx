@@ -133,7 +133,7 @@ function WalletRegisterCardInner({
         <div className="flex flex-wrap items-center gap-2">
           {!isConnected ? (
             <Button
-              variant="primary"
+              variant="default"
               onClick={() => connect({ connector: injected() })}
               disabled={connecting || !hasInjected}
             >
@@ -142,7 +142,7 @@ function WalletRegisterCardInner({
             </Button>
           ) : (
             <>
-              <Button variant="primary" onClick={handleRegister} disabled={busy}>
+              <Button variant="default" onClick={handleRegister} disabled={busy}>
                 <KeyRound className="size-4 mr-2" />
                 {busy ? "Waiting for signature…" : "Get API Key — Sign with MetaMask"}
               </Button>
