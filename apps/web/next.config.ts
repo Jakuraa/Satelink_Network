@@ -16,10 +16,6 @@ const nextConfig: NextConfig = {
   // the public-website system, shared with apps/corporate).
   transpilePackages: ["@satelink/ui", "@satelink/web-ui", "@satelink/content", "@satelink/seo"],
 
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-
   eslint: {
     ignoreDuringBuilds: true,
   },
