@@ -525,7 +525,8 @@ app.get("/api/mode", (req, res) => {
   // for a decision). GET /internal/ledger-parity.
   // Staff-only (W1): parity reports expose revenue and ledger sums. Path-scoped so the
   // /internal/dodo routes below keep their own shared-secret auth.
-  app.get(["/internal/ledger-parity", "/internal/draw-parity", "/internal/capacity-parity"], requireAdminAuth);
+  // app.use (not app.get): every method and sub-path under these prefixes is gated too.
+  app.use(["/internal/ledger-parity", "/internal/draw-parity", "/internal/capacity-parity"], requireAdminAuth);
   app.use("/internal", createLedgerParityRouter(pool));
   app.use("/internal", createDrawParityRouter(pool));
   // M8 — capacity enforcement cutover: dual-evaluation parity + latency.

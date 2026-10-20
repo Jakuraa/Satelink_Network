@@ -19,7 +19,7 @@ function build() {
   const pool = { async query() { return { rows: [{}], rowCount: 0 }; }, async connect() { return { async query() { return { rows: [] }; }, release() {} }; } };
   const app = express();
   app.use(express.json());
-  app.get(['/internal/ledger-parity', '/internal/draw-parity', '/internal/capacity-parity'], requireAdminAuth);
+  app.use(['/internal/ledger-parity', '/internal/draw-parity', '/internal/capacity-parity'], requireAdminAuth);
   app.use('/internal', createLedgerParityRouter(pool));
   app.use('/internal', createDrawParityRouter(pool));
   app.use('/internal', createCapacityParityRouter(pool));
@@ -34,11 +34,16 @@ describe('W1 — /internal parity reports are staff-only (real routing)', () => 
   for (const path of [
     '/internal/ledger-parity', '/internal/draw-parity', '/internal/capacity-parity',
     '/INTERNAL/Ledger-Parity', '/internal/ledger-parity/', '/internal/ledger-parity?x=1',
+    '/internal/ledger-parity/detail', '/internal/draw-parity/any/sub/path',
   ]) {
     it(`${path} without a token → 401`, async () => {
       expect((await request(build()).get(path)).status).to.equal(401);
     });
   }
+
+  it('non-GET methods on a parity prefix are gated too (POST → 401)', async () => {
+    expect((await request(build()).post('/internal/ledger-parity').send({})).status).to.equal(401);
+  });
 
   it('with the admin token the guard passes through to the parity router', async () => {
     const res = await request(build()).get('/internal/ledger-parity').set('x-admin-token', ADMIN);

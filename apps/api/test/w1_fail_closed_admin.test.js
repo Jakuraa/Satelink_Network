@@ -83,7 +83,7 @@ describe('W1 — fail-closed admin header secrets', () => {
       expect(af).to.not.match(/node_auth_route/);
     });
     it('parity reports are staff-gated by exact path, leaving /internal/dodo alone', () => {
-      expect(af).to.match(/app\.get\(\["\/internal\/ledger-parity", "\/internal\/draw-parity", "\/internal\/capacity-parity"\], requireAdminAuth\)/);
+      expect(af).to.match(/app\.use\(\["\/internal\/ledger-parity", "\/internal\/draw-parity", "\/internal\/capacity-parity"\], requireAdminAuth\)/);
       expect(af).to.not.match(/app\.use\("\/internal", requireAdminAuth/);
     });
   });
