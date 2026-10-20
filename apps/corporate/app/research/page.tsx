@@ -102,7 +102,7 @@ export default function ResearchPage() {
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-stone-3">Status: Live standard</span>
                     <a
-                      href="https://satelink.network"
+                      href={paper.url ?? "https://satelink.network"}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="font-medium text-green hover:underline inline-flex items-center gap-1"
@@ -120,6 +120,7 @@ export default function ResearchPage() {
         </div>
 
         {/* Anchor point for Network Telemetry & Distributed Infrastructure */}
+        {inProgressPapers.length > 0 && (
         <div id="distributed-telemetry" className="mt-20 scroll-mt-24">
           <div className="border-b border-stone-2 pb-4">
             <span className="font-mono text-xs uppercase tracking-wider text-amber-ink">ACTIVE RESEARCH</span>
@@ -159,7 +160,10 @@ export default function ResearchPage() {
           </div>
         </div>
 
+        )}
+
         {/* Anchor point for Dynamic Pricing & Machine Economics */}
+        {plannedPapers.length > 0 && (
         <div id="market-clearing" className="mt-20 scroll-mt-24">
           <div className="border-b border-stone-2 pb-4">
             <span className="font-mono text-xs uppercase tracking-wider text-stone-3">FUTURE AGENDA</span>
@@ -200,6 +204,7 @@ export default function ResearchPage() {
             ))}
           </div>
         </div>
+        )}
 
         {/* Institutional Disclosure Box */}
         <div className="mt-20 rounded-2xl border border-stone-2 bg-ivory-2 p-8 sm:p-10">

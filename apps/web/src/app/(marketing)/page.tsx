@@ -15,7 +15,6 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Disclosure } from "@/components/ui/Disclosure";
 import { ScrollLifecycleStory } from "@/components/home/ScrollLifecycleStory";
-import { CinematicVideoSection } from "@/components/home/CinematicVideoSection";
 import { FAQView, FAQItem } from "@/components/faq/FAQView";
 import DISCLAIMERS from "@/lib/trading-agent/disclaimers.json";
 
@@ -182,24 +181,6 @@ export default function HomePage() {
         <ScrollLifecycleStory />
       </section>
 
-      {/* Cinematic HD Video & Technical Product Media */}
-      <section id="cinematic-showcase" className="border-y border-sl-border bg-sl-bg-raised">
-        <div className="mx-auto max-w-[1200px] px-4 py-20 sm:px-6 md:py-24">
-          <ScrollReveal>
-            <SectionHeader
-              eyebrow="Technical demonstrations & media"
-              title="Cinematic Product Experience & Protocol Standards"
-              lede="Curated high-definition independent reviews, protocol demonstrations, and interactive interaction stages powering autonomous API procurement."
-            />
-          </ScrollReveal>
-
-          <div className="mt-12">
-            <ScrollReveal delay={80}>
-              <CinematicVideoSection />
-            </ScrollReveal>
-          </div>
-        </div>
-      </section>
 
       {/* GO / WAIT / REJECT */}
       <section id="decision" className="border-y border-sl-border bg-sl-bg-raised">
