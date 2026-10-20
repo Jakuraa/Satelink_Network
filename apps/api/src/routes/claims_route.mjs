@@ -362,6 +362,9 @@ export function createClaimsRouter(pool) {
       });
 
     } catch (err) {
+      if (err.code === 'claim_pending_reconciliation') {
+        return res.status(409).json({ success: false, error: 'claim_pending_reconciliation' });
+      }
       console.error('[Claims] Signature generation failed:', err.message);
       res.status(500).json({
         success: false,

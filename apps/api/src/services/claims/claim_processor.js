@@ -27,6 +27,48 @@ export async function generateClaimSignature(nodeId, walletAddress, pool) {
     const client = await pool.connect();
 
     try {
+        // Ensure claims table exists (before the pending-claim check reads it). Two first-ever
+        // concurrent creates can collide in the catalog (23505 / 42P07 / 42710): the table exists then.
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS claims (
+                claim_id TEXT PRIMARY KEY,
+                node_id TEXT NOT NULL,
+                wallet TEXT NOT NULL,
+                amount_usdt NUMERIC(18,8) NOT NULL,
+                signature TEXT NOT NULL,
+                nonce BIGINT NOT NULL,
+                expiry BIGINT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'pending',
+                tx_hash TEXT,
+                created_at BIGINT NOT NULL,
+                updated_at BIGINT,
+                claimed_at BIGINT
+            )
+        `).catch((e) => { if (!['23505', '42P07', '42710'].includes(e.code)) throw e; });
+
+        // One signature per unpaid balance (W1 follow-up). The contract only rejects a reused
+        // nonce, and every signing mints a fresh nonce, so two signatures over the same UNPAID
+        // earnings are both redeemable. Serialise per node and refuse while ANY claim for the
+        // node is still 'pending' — expired ones too: nothing records an on-chain redemption
+        // automatically (markClaimCompleted has no caller), so an expired pending claim may
+        // already have been paid. It must be reconciled (completed, or voided after checking
+        // usedNonces(nonce) on-chain) before a new signature is issued.
+        await client.query('BEGIN');
+        // Earnings match the node OR the wallet, so both are locked (always node, then wallet:
+        // a fixed order cannot deadlock) and both are checked for an open claim.
+        await client.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`claims:node:${nodeId}`]);
+        await client.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`claims:wallet:${String(walletAddress).toLowerCase()}`]);
+        const pending = await client.query(
+            `SELECT claim_id FROM claims
+             WHERE (node_id = $1 OR lower(wallet) = lower($2)) AND status = 'pending' LIMIT 1`,
+            [nodeId, walletAddress]
+        );
+        if (pending.rows.length > 0) {
+            const err = new Error(`claim_pending_reconciliation: claim ${pending.rows[0].claim_id} must be reconciled before a new signature`);
+            err.code = 'claim_pending_reconciliation';
+            throw err;
+        }
+
         // 1. Try epoch_earnings first (preferred path)
         const earningsResult = await client.query(
             `SELECT COALESCE(SUM(amount_usdt), 0) as claimable
@@ -111,23 +153,6 @@ export async function generateClaimSignature(nodeId, walletAddress, pool) {
         const claimId = `claim_${nodeId}_${nonce}`;
         const now = Math.floor(Date.now() / 1000);
 
-        // Ensure claims table exists
-        await client.query(`
-            CREATE TABLE IF NOT EXISTS claims (
-                claim_id TEXT PRIMARY KEY,
-                node_id TEXT NOT NULL,
-                wallet TEXT NOT NULL,
-                amount_usdt NUMERIC(18,8) NOT NULL,
-                signature TEXT NOT NULL,
-                nonce BIGINT NOT NULL,
-                expiry BIGINT NOT NULL,
-                status TEXT NOT NULL DEFAULT 'pending',
-                tx_hash TEXT,
-                created_at BIGINT NOT NULL,
-                updated_at BIGINT,
-                claimed_at BIGINT
-            )
-        `);
 
         await client.query(
             `INSERT INTO claims (claim_id, node_id, wallet, amount_usdt, signature, nonce, expiry, status, created_at)
@@ -139,6 +164,7 @@ export async function generateClaimSignature(nodeId, walletAddress, pool) {
                 updated_at = EXCLUDED.created_at`,
             [claimId, nodeId, walletAddress, claimable, signature, nonce, expiry, now]
         );
+        await client.query('COMMIT');
 
         logger.info({
             claimId,
@@ -162,6 +188,9 @@ export async function generateClaimSignature(nodeId, walletAddress, pool) {
             polygonscanContract: `https://polygonscan.com/address/${claimsContractAddress}`
         };
 
+    } catch (err) {
+        await client.query('ROLLBACK').catch(() => {});
+        throw err;
     } finally {
         client.release();
     }
