@@ -23,6 +23,14 @@ export const INTERNAL_PREDICATE =
 // COALESCE: an x402 payer with no api_credits row has t.wallet_address NULL;
 // without it `false OR NULL` is NULL and the row drops out of BOTH buckets.
 
+// Consumed usage only (S6, W1 2026-10-20; same rule as the fixed reconciliation Q5):
+// - deposits ('subscription_payment', 'pack_purchase') are money coming IN, counted when
+//   the credits they bought are consumed — summing them here double-counts;
+// - 'refund_reversal' belongs in a refunded bucket, not consumed usage;
+// - is_billable = false rows were never charged (phantom workload rows).
+export const CONSUMED_USAGE_PREDICATE =
+  `e.op_type NOT IN ('subscription_payment', 'pack_purchase', 'refund_reversal') AND COALESCE(e.is_billable, true)`;
+
 export function createFinancialTruthRouter(pool) {
   const router = Router();
 
@@ -40,7 +48,8 @@ export function createFinancialTruthRouter(pool) {
           COALESCE(SUM(e.amount_usdt) FILTER (WHERE ${INTERNAL_PREDICATE}), 0) as internal_total
         FROM revenue_events_v2 e
         LEFT JOIN api_credits t ON t.api_key = e.client_id
-        WHERE e.is_test_data = false OR e.is_test_data IS NULL
+        WHERE (e.is_test_data = false OR e.is_test_data IS NULL)
+          AND ${CONSUMED_USAGE_PREDICATE}
       `, [FOUNDER_WALLETS]);
       const metered_value_usdt = parseFloat(meteredResult.rows[0]?.total || 0);
       const external_metered_usdt = parseFloat(meteredResult.rows[0]?.external_total || 0);
@@ -179,7 +188,7 @@ export function createFinancialTruthRouter(pool) {
 
         // Source metadata
         sources: {
-          metered: { table: 'revenue_events_v2', query: 'SUM(amount_usdt) WHERE NOT is_test_data' },
+          metered: { table: 'revenue_events_v2', query: 'SUM(amount_usdt) WHERE NOT is_test_data AND consumed usage (excl. subscription_payment, pack_purchase, refund_reversal, is_billable=false)' },
           external: { table: 'revenue_events_v2 (excluding treasury keys)', query: 'SUM(amount_usdt)' },
           internal: { table: 'revenue_events_v2 (treasury keys)', query: 'SUM(amount_usdt)' },
           allocated: { table: 'epoch_ledger', query: 'SUM(total_revenue) WHERE CLOSED' },
@@ -245,7 +254,8 @@ async function tracePipeline(pool, treasuryAddress) {
         COALESCE(SUM(e.amount_usdt) FILTER (WHERE ${INTERNAL_PREDICATE}), 0)::float AS int_sum
       FROM revenue_events_v2 e
       LEFT JOIN api_credits t ON t.api_key = e.client_id
-      WHERE e.is_test_data = false OR e.is_test_data IS NULL
+      WHERE (e.is_test_data = false OR e.is_test_data IS NULL)
+        AND ${CONSUMED_USAGE_PREDICATE}
     `, [FOUNDER_WALLETS]);
     trace.revenue_events_v2.count = parseInt(eventsResult.rows[0]?.count || 0);
     trace.revenue_events_v2.sum_usdt = parseFloat(eventsResult.rows[0]?.sum || 0);
