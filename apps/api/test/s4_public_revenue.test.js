@@ -2,6 +2,9 @@ import { expect } from 'chai';
 import express from 'express';
 import request from 'supertest';
 import revenueRoutes from '../src/routes/revenue.js';
+import { readFileSync } from 'fs';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
 
 // S4 (mandate W1, 2026-10-20): public endpoints must not expose revenue figures.
 // /api/revenue, /api/revenue/events and /api/epochs are staff-only; the public
@@ -56,5 +59,14 @@ describe('S4 — no public revenue figures', () => {
     expect(res.body.lastEpochId).to.equal(42);
     expect(res.body.revenueVisibility).to.equal('staff_only');
     expect(p.sql.join('\n')).to.not.match(/SUM\(|total_revenue_usdt/i);
+  });
+
+  it('/api/diagnostics (inline in app_factory) neither sums revenue nor returns a revenue figure', () => {
+    const af = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'app_factory.mjs'), 'utf8');
+    const a = af.indexOf('app.get("/api/diagnostics"');
+    expect(a, 'diagnostics handler present').to.be.greaterThan(-1);
+    const handler = af.slice(a, af.indexOf('\n  });', a));
+    expect(handler).to.not.match(/revenue_events_v2/);
+    expect(handler).to.match(/totalRevenueUsdt:\s+null/);
   });
 });
