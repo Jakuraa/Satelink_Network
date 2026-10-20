@@ -14,12 +14,17 @@ staged=$(git diff --cached --name-only --diff-filter=ACM)
 
 # This script contains the secret patterns as literals; exclude it from the
 # content scan or it can never be committed.
-scan_files=$(echo "$staged" | grep -v '^scripts/pre-commit-gate\.sh$')
+scan_files=$(echo "$staged" | grep -v -E '^scripts/(pre-commit-gate\.sh|security/secret_scan\.mjs)$')
 
-# Check for private key patterns
-if [ -n "$scan_files" ] && echo "$scan_files" | xargs grep -l "PRIVATE KEY\|private_key\|sk_live_\|sk_test_" 2>/dev/null; then
-  echo "❌ BLOCKED: Private key detected in staged files"
-  exit 1
+# Check for private key / API key patterns (staged content). The patterns and the one
+# narrow allowlist entry (a masked key placeholder) live in scripts/security/secret_scan.mjs,
+# which has tests (node --test scripts/security/secret_scan.test.mjs, run in CI).
+if [ -n "$scan_files" ]; then
+  # shellcheck disable=SC2086
+  if ! echo "$scan_files" | tr '\n' '\0' | xargs -0 node scripts/security/secret_scan.mjs; then
+    echo "❌ BLOCKED: Private key detected in staged files"
+    exit 1
+  fi
 fi
 
 # Block .env files

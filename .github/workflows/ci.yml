@@ -156,6 +156,13 @@ jobs:
           fi
           echo "No secrets detected"
 
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Pre-commit secret scanner tests (real keys still caught; masked placeholder allowed)
+        run: node --test scripts/security/secret_scan.test.mjs
+
   build:
     name: Build Verification
     runs-on: ubuntu-latest
