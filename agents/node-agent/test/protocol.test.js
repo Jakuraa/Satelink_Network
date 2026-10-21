@@ -43,3 +43,14 @@ test('the key comes from the environment, never an argument', () => {
   assert.throws(() => p.walletFromEnv({}), /SATELINK_NODE_PRIVATE_KEY is not set/);
   assert.equal(p.walletFromEnv({ SATELINK_NODE_PRIVATE_KEY: wallet.privateKey }).address, wallet.address);
 });
+
+test('a malformed key never appears in the error (it would leak into logs)', () => {
+  const good = wallet.privateKey.slice(2);
+  for (const bad of [good.slice(0, 63), good.slice(0, 63) + 'z', good, '0x' + good + '"']) {
+    let msg = '';
+    try { p.walletFromEnv({ SATELINK_NODE_PRIVATE_KEY: bad }); } catch (e) { msg = String(e.message) + String(e.stack) + String(e.cause || ''); }
+    if (bad === good) continue; // a bare 64-hex key without 0x is accepted by ethers
+    assert.ok(msg.includes('is not a valid 32-byte hex private key'), msg);
+    assert.ok(!msg.includes(good.slice(4, 40)), 'key material leaked');
+  }
+});

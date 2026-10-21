@@ -45,13 +45,14 @@ npm yet; build it from the repository.)
 # 1. Node.js 20+
 # 2. Build the agent
 git clone https://github.com/Jakuraa/Satelink_Network.git && cd Satelink_Network
-npm ci && cd agents/node-agent && npx tsc -p .
+npm install --workspace agents/node-agent && cd agents/node-agent && npx tsc -p .
 
 # 3. Register your node (your endpoint must be public http(s) and answer GET /health with 200)
 export SATELINK_NODE_PRIVATE_KEY=...   # payout wallet key, used only to sign
 node dist/index.js register --endpoint https://YOUR_HOST:8080 --region us-east-1 --type rpc --chains 137
 
-# 4. Start the node (signed heartbeat every 2 minutes)
+# 4. Start the node (signed heartbeat every 2 minutes). Keep the host clock in sync (NTP):
+#    heartbeats more than 5 s ahead or 60 s behind server time are refused.
 node dist/index.js start
 ```
 
@@ -104,19 +105,26 @@ no redirects). Your endpoint must respond to `/health` with HTTP 200.
 node dist/index.js status
 ```
 
-Expected output:
+Expected output (values are examples):
 ```
 Satelink Node Status
 --------------------
-Node ID:      NODE-us-east-1-a1b2c3d4
-Wallet:       0x1234...5678
-Region:       us-east-1
-Status:       active
+Node ID:    NODE-us-east-1-a1b2c3d4
+Wallet:     0x1234...5678
+Region:     us-east-1
+Endpoint:   https://YOUR_HOST:8080
+Chains:     137
+Registered: 2026-10-21T10:00:00.000Z
+API:        https://rpc.satelink.network
+
+Network Status: active
+Last Heartbeat: 2026-10-21T10:02:00.000Z
+Reputation:     0
 ```
 
 Or check via API:
 ```bash
-curl https://rpc.satelink.network/nodes/NODE-us-east-1-YOUR_ID
+curl https://rpc.satelink.network/api/nodes/NODE-us-east-1-YOUR_ID
 ```
 
 ---

@@ -30,7 +30,13 @@ function heartbeatMessage({ nodeId, timestamp, endpointUrl }) {
 function walletFromEnv(env = process.env, name = 'SATELINK_NODE_PRIVATE_KEY') {
   const key = env[name];
   if (!key) throw new Error(`${name} is not set (the payout wallet's private key, used only to sign)`);
-  return new Wallet(key.trim());
+  try {
+    return new Wallet(key.trim());
+  } catch {
+    // Never surface the library error: for a malformed key it echoes (nearly) the whole key,
+    // which would land in terminals and service logs.
+    throw new Error(`${name} is not a valid 32-byte hex private key`);
+  }
 }
 
 /** Build a signed registration body. chainIds must be positive integers. */
