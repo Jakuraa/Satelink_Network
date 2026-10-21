@@ -20,6 +20,8 @@ import 'dotenv/config';
 import { expect } from 'chai';
 import express from 'express';
 import request from 'supertest';
+import { localRequest, closeLocalServers } from './_helpers/local_request.mjs';
+
 import { ethers } from 'ethers';
 
 const PRICE = 0.00003;
@@ -212,6 +214,7 @@ describe('x402 session keys (secure reuse credential)', function () {
   });
 
   describe('k5: POST /v1/x402/key/recover', () => {
+  afterEach(closeLocalServers); // see test/_helpers/local_request.mjs (macOS 127.0.0.1 port hijack)
     let app;
     before(() => {
       app = express();
@@ -219,7 +222,7 @@ describe('x402 session keys (secure reuse credential)', function () {
     });
 
     async function challenge(address) {
-      const r = await request(app).post('/v1/x402/key/recover/challenge').send({ address });
+      const r = await (await localRequest(app)).post('/v1/x402/key/recover/challenge').send({ address });
       return r;
     }
 
@@ -227,7 +230,7 @@ describe('x402 session keys (secure reuse credential)', function () {
       const c = await challenge(payer.address);
       expect(c.status).to.equal(200);
       const signature = await stranger.signMessage(c.body.message);
-      const r = await request(app).post('/v1/x402/key/recover').send({ address: payer.address, nonce: c.body.nonce, signature });
+      const r = await (await localRequest(app)).post('/v1/x402/key/recover').send({ address: payer.address, nonce: c.body.nonce, signature });
       expect(r.status).to.equal(401);
       expect(r.body.error).to.equal('signature_invalid');
       expect(r.body.api_key).to.equal(undefined);
@@ -235,7 +238,7 @@ describe('x402 session keys (secure reuse credential)', function () {
 
     it('rejects a missing/invented challenge and a wallet with no account', async () => {
       const signature = await payer.signMessage('anything');
-      const r = await request(app).post('/v1/x402/key/recover').send({ address: payer.address, nonce: 'a'.repeat(32), signature });
+      const r = await (await localRequest(app)).post('/v1/x402/key/recover').send({ address: payer.address, nonce: 'a'.repeat(32), signature });
       expect(r.status).to.equal(401);
       // No enumeration: a wallet with no account gets a challenge like any other.
       const none = await challenge(stranger.address);
@@ -243,12 +246,12 @@ describe('x402 session keys (secure reuse credential)', function () {
     });
 
     it('rejects malformed input (400) and an expired challenge (401)', async () => {
-      const bad = await request(app).post('/v1/x402/key/recover').send({ address: 'nope', nonce: 'x', signature: '0x' });
+      const bad = await (await localRequest(app)).post('/v1/x402/key/recover').send({ address: 'nope', nonce: 'x', signature: '0x' });
       expect(bad.status).to.equal(400);
       const c = await challenge(payer.address);
       await raw.query(`UPDATE x402_key_recovery_nonces SET expires_at = NOW() - INTERVAL '1 second' WHERE nonce = $1`, [c.body.nonce]);
       const signature = await payer.signMessage(c.body.message);
-      const r = await request(app).post('/v1/x402/key/recover').send({ address: payer.address, nonce: c.body.nonce, signature });
+      const r = await (await localRequest(app)).post('/v1/x402/key/recover').send({ address: payer.address, nonce: c.body.nonce, signature });
       expect(r.status).to.equal(401);
       expect(r.body.api_key).to.equal(undefined);
     });
@@ -256,7 +259,7 @@ describe('x402 session keys (secure reuse credential)', function () {
     it('a valid payer signature issues a new working key once and revokes the old one; nonce is single-use', async () => {
       const c = await challenge(payer.address);
       const signature = await payer.signMessage(c.body.message);
-      const r = await request(app).post('/v1/x402/key/recover').send({ address: payer.address, nonce: c.body.nonce, signature });
+      const r = await (await localRequest(app)).post('/v1/x402/key/recover').send({ address: payer.address, nonce: c.body.nonce, signature });
       expect(r.status).to.equal(200);
       const fresh = r.body.api_key;
       expect(fresh).to.match(/^x402_[0-9a-f]{64}$/);
@@ -267,7 +270,7 @@ describe('x402 session keys (secure reuse credential)', function () {
       expect((await credit.resolveAccount(db, { apiKey: fresh }))?.api_key).to.equal(`x402_${payerAddr}`);
       expect(await credit.resolveAccount(db, { apiKey: issuedKey })).to.equal(null); // revoked
 
-      const replay = await request(app).post('/v1/x402/key/recover').send({ address: payer.address, nonce: c.body.nonce, signature });
+      const replay = await (await localRequest(app)).post('/v1/x402/key/recover').send({ address: payer.address, nonce: c.body.nonce, signature });
       expect(replay.status).to.equal(401);
       expect(replay.body.api_key).to.equal(undefined);
       issuedKey = fresh;

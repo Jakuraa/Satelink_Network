@@ -1,6 +1,8 @@
 import { expect } from 'chai';
 import express from 'express';
 import request from 'supertest';
+import { localRequest, closeLocalServers } from './_helpers/local_request.mjs';
+
 import { identityClientIp, resolveClientIp, isCloudflare, ipBucket, CLIENT_IP_HEADER } from '../src/auth/client_ip.mjs';
 import { createSessionReadLimiter, identitySubPath, SESSION_READ_LIMIT, SESSION_READ_IP_LIMIT } from '../src/auth/session_read_limit.mjs';
 import { RATE_LIMIT } from '../src/auth/better_auth.mjs';
@@ -20,6 +22,7 @@ function app({ now, ...opts } = {}) {
 }
 
 describe('identity rate limits — per session for reads, trusted IP for the rest', () => {
+  afterEach(closeLocalServers); // see test/_helpers/local_request.mjs (macOS 127.0.0.1 port hijack)
   const saved = process.env.CONSOLE_S2S_SECRET;
   beforeEach(() => { process.env.CONSOLE_S2S_SECRET = 'test-s2s-secret-0123456789'; });
   afterEach(() => { if (saved === undefined) delete process.env.CONSOLE_S2S_SECRET; else process.env.CONSOLE_S2S_SECRET = saved; });
@@ -27,7 +30,7 @@ describe('identity rate limits — per session for reads, trusted IP for the res
   it('a 12th (and 40th) rapid get-session from one signed-in user succeeds, even from a shared Vercel IP', async () => {
     const a = app();
     for (let i = 1; i <= 40; i++) {
-      const r = await request(a).get('/api/identity/get-session').set('X-Forwarded-For', VERCEL_IP).set('Cookie', cookieFor('user-1'));
+      const r = await (await localRequest(a)).get('/api/identity/get-session').set('X-Forwarded-For', VERCEL_IP).set('Cookie', cookieFor('user-1'));
       expect(r.status, `call ${i}`).to.equal(200);
     }
   });
@@ -36,7 +39,7 @@ describe('identity rate limits — per session for reads, trusted IP for the res
     const a = app();
     for (let u = 0; u < 30; u++) {
       for (let i = 0; i < 12; i++) {
-        const r = await request(a).get('/api/identity/get-session').set('X-Forwarded-For', VERCEL_IP).set('Cookie', cookieFor('user-' + u));
+        const r = await (await localRequest(a)).get('/api/identity/get-session').set('X-Forwarded-For', VERCEL_IP).set('Cookie', cookieFor('user-' + u));
         expect(r.status).to.equal(200);
       }
     }
@@ -46,19 +49,19 @@ describe('identity rate limits — per session for reads, trusted IP for the res
     let t = 1_000_000;
     const a = app({ now: () => t });
     for (let i = 0; i < SESSION_READ_LIMIT.max; i++) {
-      const r = await request(a).get('/api/identity/get-session').set('Cookie', cookieFor('flooder'));
+      const r = await (await localRequest(a)).get('/api/identity/get-session').set('Cookie', cookieFor('flooder'));
       expect(r.status).to.equal(200);
     }
-    const blocked = await request(a).get('/api/identity/get-session').set('Cookie', cookieFor('flooder'));
+    const blocked = await (await localRequest(a)).get('/api/identity/get-session').set('Cookie', cookieFor('flooder'));
     expect(blocked.status).to.equal(429);
     expect(blocked.body.error).to.equal('rate_limited');
     expect(Number(blocked.headers['retry-after'])).to.be.within(1, SESSION_READ_LIMIT.window);
     // another session is unaffected
-    const other = await request(a).get('/api/identity/get-session').set('Cookie', cookieFor('someone-else'));
+    const other = await (await localRequest(a)).get('/api/identity/get-session').set('Cookie', cookieFor('someone-else'));
     expect(other.status).to.equal(200);
     // the window resets
     t += SESSION_READ_LIMIT.window * 1000;
-    const later = await request(a).get('/api/identity/get-session').set('Cookie', cookieFor('flooder'));
+    const later = await (await localRequest(a)).get('/api/identity/get-session').set('Cookie', cookieFor('flooder'));
     expect(later.status).to.equal(200);
   });
 
@@ -67,10 +70,10 @@ describe('identity rate limits — per session for reads, trusted IP for the res
     const a = app({ now: () => t });
     for (let i = 0; i < SESSION_READ_LIMIT.max; i++) {
       const p = ['/get-session', '/list-sessions', '/list-accounts'][i % 3];
-      expect((await request(a).get('/api/identity' + p).set('Cookie', cookieFor('s'))).status).to.equal(200);
+      expect((await (await localRequest(a)).get('/api/identity' + p).set('Cookie', cookieFor('s'))).status).to.equal(200);
     }
-    expect((await request(a).get('/api/identity/list-accounts').set('Cookie', cookieFor('s'))).status).to.equal(429);
-    expect((await request(a).post('/api/identity/sign-in/email').set('Cookie', cookieFor('s'))).status).to.equal(200);
+    expect((await (await localRequest(a)).get('/api/identity/list-accounts').set('Cookie', cookieFor('s'))).status).to.equal(429);
+    expect((await (await localRequest(a)).post('/api/identity/sign-in/email').set('Cookie', cookieFor('s'))).status).to.equal(200);
   });
 
   it('dot-segment and encoded paths that Better Auth resolves to a session read are still limited', async () => {
@@ -81,7 +84,7 @@ describe('identity rate limits — per session for reads, trusted IP for the res
     const a = app({ now: () => t, max: 3 });
     const variants = ['/api/identity/get-session', '/api/identity/./get-session', '/api/identity/%2e/get-session', '/api/identity/x/../get-session'];
     const codes = [];
-    for (const v of variants) codes.push((await request(a).get(v).set('Cookie', cookieFor('dots'))).status);
+    for (const v of variants) codes.push((await (await localRequest(a)).get(v).set('Cookie', cookieFor('dots'))).status);
     expect(codes).to.deep.equal([200, 200, 200, 429]);
   });
 
@@ -89,20 +92,20 @@ describe('identity rate limits — per session for reads, trusted IP for the res
     let t = 7_000_000;
     const a = app({ now: () => t });
     for (let i = 0; i < SESSION_READ_IP_LIMIT.max; i++) {
-      const r = await request(a).get('/api/identity/get-session').set('X-Forwarded-For', '203.0.113.50').set('Cookie', cookieFor('rnd-' + i));
+      const r = await (await localRequest(a)).get('/api/identity/get-session').set('X-Forwarded-For', '203.0.113.50').set('Cookie', cookieFor('rnd-' + i));
       expect(r.status).to.equal(200);
     }
-    const r = await request(a).get('/api/identity/get-session').set('X-Forwarded-For', '203.0.113.50').set('Cookie', cookieFor('rnd-x'));
+    const r = await (await localRequest(a)).get('/api/identity/get-session').set('X-Forwarded-For', '203.0.113.50').set('Cookie', cookieFor('rnd-x'));
     expect(r.status).to.equal(429);
     // a different client IP is unaffected
-    expect((await request(a).get('/api/identity/get-session').set('X-Forwarded-For', '203.0.113.51').set('Cookie', cookieFor('rnd-y'))).status).to.equal(200);
+    expect((await (await localRequest(a)).get('/api/identity/get-session').set('X-Forwarded-For', '203.0.113.51').set('Cookie', cookieFor('rnd-y'))).status).to.equal(200);
   });
 
   it('bucket memory is capped (oldest evicted)', async () => {
     const a = app({ maxBuckets: 50 });
-    for (let i = 0; i < 200; i++) await request(a).get('/api/identity/get-session').set('X-Forwarded-For', `198.51.100.${i % 250}`).set('Cookie', cookieFor('c' + i));
+    for (let i = 0; i < 200; i++) await (await localRequest(a)).get('/api/identity/get-session').set('X-Forwarded-For', `198.51.100.${i % 250}`).set('Cookie', cookieFor('c' + i));
     // no assertion on internals beyond "still serving": the cap is enforced in hit()
-    expect((await request(a).get('/api/identity/get-session').set('Cookie', cookieFor('after'))).status).to.equal(200);
+    expect((await (await localRequest(a)).get('/api/identity/get-session').set('Cookie', cookieFor('after'))).status).to.equal(200);
   });
 
   it('Better Auth keeps its strict per-IP limit for everything except the three session reads', () => {
@@ -113,20 +116,20 @@ describe('identity rate limits — per session for reads, trusted IP for the res
 
   describe('trusted client IP', () => {
     it('drops a client-supplied X-Satelink-Client-Ip', async () => {
-      const r = await request(app()).get('/api/identity/sign-in/email').set('X-Forwarded-For', '203.0.113.9').set(CLIENT_IP_HEADER, '1.2.3.4');
+      const r = await (await localRequest(app())).get('/api/identity/sign-in/email').set('X-Forwarded-For', '203.0.113.9').set(CLIENT_IP_HEADER, '1.2.3.4');
       expect(r.body.ip).to.equal('203.0.113.9');
     });
 
     it('ignores X-Satelink-End-User-Ip without the console secret (wrong or missing)', async () => {
       for (const auth of [undefined, 'wrong-secret']) {
-        const req = request(app()).get('/api/identity/sign-in/email').set('X-Forwarded-For', VERCEL_IP).set('X-Satelink-End-User-Ip', '198.51.100.7');
+        const req = (await localRequest(app())).get('/api/identity/sign-in/email').set('X-Forwarded-For', VERCEL_IP).set('X-Satelink-End-User-Ip', '198.51.100.7');
         if (auth) req.set('X-Satelink-Console-Auth', auth);
         expect((await req).body.ip).to.equal(VERCEL_IP);
       }
     });
 
     it('honours X-Satelink-End-User-Ip only with the correct console secret', async () => {
-      const r = await request(app()).get('/api/identity/sign-in/email').set('X-Forwarded-For', VERCEL_IP)
+      const r = await (await localRequest(app())).get('/api/identity/sign-in/email').set('X-Forwarded-For', VERCEL_IP)
         .set('X-Satelink-Console-Auth', 'test-s2s-secret-0123456789').set('X-Satelink-End-User-Ip', '198.51.100.7');
       expect(r.body.ip).to.equal('198.51.100.7');
     });
@@ -150,13 +153,13 @@ describe('identity rate limits — per session for reads, trusted IP for the res
       const saved = process.env.BETTER_AUTH_URL;
       process.env.BETTER_AUTH_URL = 'https://api.satelink.network/api/identity';
       try {
-        const r = await request(a).get('/api/identity/foo').set('X-Forwarded-Proto', 'http://h/api/identity/get-session?');
+        const r = await (await localRequest(a)).get('/api/identity/foo').set('X-Forwarded-Proto', 'http://h/api/identity/get-session?');
         expect(r.body).to.deep.equal({ proto: 'https', host: 'api.satelink.network' });
         const u = new URL(`${r.body.proto}://${r.body.host}/api/identity/foo`);
         expect(u.pathname).to.equal('/api/identity/foo');
       } finally { if (saved === undefined) delete process.env.BETTER_AUTH_URL; else process.env.BETTER_AUTH_URL = saved; }
       delete process.env.BETTER_AUTH_URL;
-      const r2 = await request(a).get('/api/identity/foo').set('Host', 'h/api/identity/get-session?');
+      const r2 = await (await localRequest(a)).get('/api/identity/foo').set('Host', 'h/api/identity/get-session?');
       expect(r2.body.host).to.equal('api.satelink.network');
       if (saved !== undefined) process.env.BETTER_AUTH_URL = saved;
     });
