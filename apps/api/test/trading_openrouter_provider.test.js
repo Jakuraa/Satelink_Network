@@ -13,7 +13,7 @@ const MSGS = [{ role: 'user', content: 'classify the regime' }];
 const json = (body, { status = 200, headers = {} } = {}) => ({
   ok: status >= 200 && status < 300, status,
   headers: { get: (k) => headers[k.toLowerCase()] ?? null },
-  json: async () => body,
+  text: async () => JSON.stringify(body),
 });
 const completion = (content, o = {}) => ({
   id: 'gen-1', model: o.model ?? 'anthropic/claude-sonnet-5', provider: o.provider ?? 'Anthropic',
@@ -57,7 +57,7 @@ describe('trading: OpenRouterProvider contract', () => {
   });
 
   it('malformed output: non-JSON body, missing choices and in-body errors throw; nothing is fabricated', async () => {
-    const notJson = { ok: true, status: 200, headers: { get: () => null }, json: async () => { throw new SyntaxError('Unexpected token <'); } };
+    const notJson = { ok: true, status: 200, headers: { get: () => null }, text: async () => '<html>gateway</html>' };
     for (const [name, res, retryable, status] of [
       ['non-JSON', notJson, false, null],
       ['no choices', json({ id: 'g', model: 'm' }), false, null],
@@ -93,6 +93,23 @@ describe('trading: OpenRouterProvider contract', () => {
     expect(Date.now() - started).to.be.below(1000);
   });
 
+  it('timeout: a 200 whose body stalls still times out (one deadline covers headers and body)', async () => {
+    const stall = { ok: true, status: 200, headers: { get: () => null }, text: () => new Promise(() => {}) };
+    const f = queueFetch([stall, json(completion('retried'))]);
+    const started = Date.now();
+    const e = await caught(() => provider(f, { timeoutMs: 20, maxRetries: 0 }).chat(MSGS, { model: 'm' }));
+    expect([e.retryable, e.message]).to.deep.equal([true, 'openrouter request failed: timeout']);
+    expect(Date.now() - started).to.be.below(1000);
+    const f2 = queueFetch([{ ...stall }, json(completion('retried'))]);
+    expect((await provider(f2, { timeoutMs: 20, maxRetries: 1 }).chat(MSGS, { model: 'm' })).content).to.equal('retried');
+  });
+
+  it('provider errors: a connection reset while reading the body is retryable network, not malformed', async () => {
+    const reset = { ok: true, status: 200, headers: { get: () => null }, text: async () => { throw new TypeError('terminated'); } };
+    const e = await caught(() => provider(queueFetch([reset]), { maxRetries: 0 }).chat(MSGS, { model: 'm' }));
+    expect([e.code, e.retryable, e.message]).to.deep.equal(['PROVIDER_ERROR', true, 'openrouter request failed: network']);
+  });
+
   it('provider errors: HTTP status classification; key never in the error', async () => {
     for (const [s, retryable] of [[429, true], [500, true], [502, true], [503, true], [400, false], [401, false], [402, false], [404, false]]) {
       const e = await caught(() => provider(queueFetch([json({}, { status: s })]), { maxRetries: 0 }).chat(MSGS, { model: 'm' }));
@@ -119,10 +136,21 @@ describe('trading: OpenRouterProvider contract', () => {
     f = queueFetch([json({}, { status: 429, headers: { 'retry-after': '3600' } }), json({}, { status: 429 }), json({}, { status: 429 }), json(completion('late'))]);
     const e = await caught(() => provider(f, { sleep, maxRetries: 2 }).chat(MSGS, { model: 'm' }));
     expect([e.status, f.calls.length, sleeps]).to.deep.equal([429, 3, [5000, 500]]);
+    // HTTP-date Retry-After is honoured (clamped to the cap)
+    sleeps.length = 0;
+    const date = new Date(Date.now() + 60_000).toUTCString();
+    f = queueFetch([json({}, { status: 503, headers: { 'retry-after': date } }), json(completion('ok'))]);
+    await provider(f, { sleep, maxRetries: 1 }).chat(MSGS, { model: 'm' });
+    expect(sleeps).to.deep.equal([5000]);
+    // a retryable in-body error (200 + {error:{code:502}}) is retried too
+    sleeps.length = 0;
+    f = queueFetch([json({ error: { code: 502, message: 'upstream' } }), json(completion('second'))]);
+    expect((await provider(f, { sleep, maxRetries: 1 }).chat(MSGS, { model: 'm' })).content).to.equal('second');
+    expect(f.calls.length).to.equal(2);
     // 400 is not retried
     f = queueFetch([json({}, { status: 400 }), json(completion('never'))]);
-    await caught(() => provider(f, { sleep, maxRetries: 3 }).chat(MSGS, { model: 'm' }));
-    expect(f.calls.length).to.equal(1);
+    const e400 = await caught(() => provider(f, { sleep, maxRetries: 3 }).chat(MSGS, { model: 'm' }));
+    expect([f.calls.length, e400.retryAfterMs]).to.deep.equal([1, undefined]);
   });
 
   it('fallback: the tiered router falls back to the next provider only on retryable OpenRouter failures', async () => {
@@ -161,6 +189,26 @@ describe('trading: OpenRouterProvider contract', () => {
     expect(out.join('')).to.equal('range');
     const e = await caught(async () => { for await (const _c of provider(queueFetch([sse('data: {"choices":[{"delta":{"content":"a"}}]}\n', 'data: {"error":{"code":502,"message":"x"}}\n')])).stream(MSGS, { model: 'm' })); });
     expect([e.code, e.status]).to.deep.equal(['PROVIDER_ERROR', 502]);
+  });
+
+  it('stream: a truncated stream (no [DONE]) throws instead of returning a partial answer', async () => {
+    const enc = new TextEncoder();
+    const body = (async function* () { yield enc.encode('data: {"choices":[{"delta":{"content":"ra"}}]}\n'); })();
+    const out = [];
+    const e = await caught(async () => { for await (const c of provider(queueFetch([{ ok: true, status: 200, headers: { get: () => null }, body }])).stream(MSGS, { model: 'm' })) out.push(c.delta); });
+    expect([e.code, e.retryable, e.message]).to.deep.equal(['PROVIDER_ERROR', false, 'openrouter malformed response: stream ended before [DONE]']);
+  });
+
+  it('stream: a read error or a stall mid-stream is a retryable ProviderError (router may fall back)', async () => {
+    const enc = new TextEncoder();
+    const reset = (async function* () { yield enc.encode('data: {"choices":[{"delta":{"content":"a"}}]}\n'); throw new TypeError('terminated'); })();
+    const e = await caught(async () => { for await (const _c of provider(queueFetch([{ ok: true, status: 200, headers: { get: () => null }, body: reset }])).stream(MSGS, { model: 'm' })); });
+    expect([e.code, e.retryable, e.message]).to.deep.equal(['PROVIDER_ERROR', true, 'openrouter stream failed: network']);
+    const stall = { [Symbol.asyncIterator]: () => ({ next: () => new Promise(() => {}) }) };
+    const started = Date.now();
+    const s = await caught(async () => { for await (const _c of provider(queueFetch([{ ok: true, status: 200, headers: { get: () => null }, body: stall }]), { timeoutMs: 20 }).stream(MSGS, { model: 'm' })); });
+    expect([s.retryable, s.message]).to.deep.equal([true, 'openrouter stream failed: timeout']);
+    expect(Date.now() - started).to.be.below(1000);
   });
 
   it('composition root registers OpenRouter only when its key is injected; defaults do not route to it', () => {

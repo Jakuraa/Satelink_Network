@@ -2,9 +2,12 @@
 // AIProvider, so one key reaches many upstream models. Same contract as groq.mjs, plus:
 //
 //   bounded retries   → at most `maxRetries` extra attempts, ONLY for retryable failures
-//                       (429 / 5xx / network / timeout); Retry-After honoured, capped.
-//   malformed output  → non-JSON body, missing choices or an in-body error → ProviderError; never a
-//                       fabricated empty answer.
+//                       (429 / 5xx / network / timeout, incl. a retryable in-body error);
+//                       Retry-After (seconds or HTTP-date) honoured, capped at 5 s.
+//   timeouts          → one deadline covers the request AND the body read; streams time out on
+//                       silence longer than timeoutMs.
+//   malformed output  → non-JSON body, missing choices, an in-body error or a stream without [DONE]
+//                       → ProviderError; never a fabricated or truncated answer.
 //   truthful report   → `model` is the model OpenRouter says served the call and `upstreamProvider`
 //                       the upstream it names; nothing is filled in from the request when absent
 //                       except `model` (the requested id, same as groq.mjs).
@@ -59,47 +62,44 @@ export class OpenRouterProvider extends AIProvider {
     return body;
   }
 
-  async #once(body) {
+  /**
+   * One attempt: the request AND reading the response share one deadline (a 200 whose body stalls
+   * still times out). A body read failure is network/timeout (retryable); `consume(text)` parses, and
+   * only an unparsable body is malformed.
+   */
+  async #attempt(body, consume) {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), this.#timeoutMs);
-    let res;
     try {
-      res = await this.#fetch(`${this.#baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', authorization: `Bearer ${this.#apiKey}`, ...this.#headers },
-        body: JSON.stringify(body),
-        signal: ctrl.signal,
-      });
-    } catch (e) {
-      throw new ProviderError(`openrouter request failed: ${e?.name === 'AbortError' ? 'timeout' : 'network'}`, { retryable: true, provider: 'openrouter' });
+      const res = await this.#request(body, ctrl.signal);
+      let text;
+      try { text = await withAbort(res.text(), ctrl.signal); } catch (e) { throw transportError(e, ctrl.signal); }
+      return consume(text);
     } finally {
       clearTimeout(timer);
     }
-    if (!res.ok) {
-      const err = new ProviderError(`openrouter HTTP ${res.status}`, { retryable: isRetryableStatus(res.status), status: res.status, provider: 'openrouter' });
-      err.retryAfterMs = retryAfterMs(res);
-      throw err;
-    }
-    return res;
   }
 
-  /** One request plus at most #maxRetries retries, for retryable failures only. */
-  async #post(body) {
+  /** At most 1 + #maxRetries attempts; only retryable failures (incl. retryable in-body errors) are retried. */
+  async #withRetries(fn) {
     for (let attempt = 0; ; attempt += 1) {
       try {
-        return await this.#once(body);
+        return await fn();
       } catch (e) {
-        if (!e.retryable || attempt >= this.#maxRetries) throw e;
+        if (!(e instanceof ProviderError) || !e.retryable || attempt >= this.#maxRetries) throw e;
         await this.#sleep(e.retryAfterMs ?? 250 * 2 ** attempt);
       }
     }
   }
 
   async chat(messages, opts = {}) {
-    const res = await this.#post(this.#body(messages, opts));
-    let data;
-    try { data = await res.json(); } catch { throw malformed('response body is not JSON'); }
-    if (data?.error) throw inBodyError(data.error);
+    const body = this.#body(messages, opts);
+    const data = await this.#withRetries(() => this.#attempt(body, (text) => {
+      let d;
+      try { d = JSON.parse(text); } catch { throw malformed('response body is not JSON'); }
+      if (d?.error) throw inBodyError(d.error);
+      return d;
+    }));
     const choice = data?.choices?.[0]?.message;
     if (!choice || typeof choice !== 'object') throw malformed('response has no choices[0].message');
     return {
@@ -112,34 +112,100 @@ export class OpenRouterProvider extends AIProvider {
     };
   }
 
-  /** Server-sent events stream. Retries happen only before the first byte; a mid-stream error throws. */
+  /**
+   * Server-sent events stream. Retries happen only until the response headers arrive; after that
+   * every failure throws a ProviderError: a read error or a silence longer than timeoutMs (retryable,
+   * so the router may fall back), an in-body error event, or a stream that ends without [DONE]
+   * (a truncated answer is never returned as complete).
+   */
   async *stream(messages, opts = {}) {
-    const res = await this.#post(this.#body(messages, { ...opts, tools: undefined, stream: true }));
+    const body = this.#body(messages, { ...opts, tools: undefined, stream: true });
+    const { res, ctrl } = await this.#withRetries(() => this.#openStream(body));
     const decoder = new TextDecoder();
+    const it = res.body[Symbol.asyncIterator]();
     let buffer = '';
-    for await (const chunk of res.body) {
-      buffer += decoder.decode(chunk, { stream: true });
-      let nl;
-      while ((nl = buffer.indexOf('\n')) >= 0) {
-        const line = buffer.slice(0, nl).trim();
-        buffer = buffer.slice(nl + 1);
-        if (!line.startsWith('data:')) continue; // includes OpenRouter ": OPENROUTER PROCESSING" keep-alives
-        const payload = line.slice(5).trim();
-        if (payload === '[DONE]') return;
-        let event;
-        try { event = JSON.parse(payload); } catch { throw malformed('stream event is not JSON'); }
-        if (event?.error) throw inBodyError(event.error);
-        const delta = event?.choices?.[0]?.delta?.content;
-        if (delta) yield { delta };
+    try {
+      for (;;) {
+        let step;
+        const idle = setTimeout(() => ctrl.abort(), this.#timeoutMs);
+        try { step = await withAbort(it.next(), ctrl.signal); }
+        catch { throw new ProviderError(`openrouter stream failed: ${ctrl.signal.aborted ? 'timeout' : 'network'}`, { retryable: true, provider: 'openrouter' }); }
+        finally { clearTimeout(idle); }
+        if (step.done) throw malformed('stream ended before [DONE]');
+        buffer += decoder.decode(step.value, { stream: true });
+        let nl;
+        while ((nl = buffer.indexOf('\n')) >= 0) {
+          const line = buffer.slice(0, nl).trim();
+          buffer = buffer.slice(nl + 1);
+          if (!line.startsWith('data:')) continue; // includes OpenRouter ": OPENROUTER PROCESSING" keep-alives
+          const payload = line.slice(5).trim();
+          if (payload === '[DONE]') return;
+          let event;
+          try { event = JSON.parse(payload); } catch { throw malformed('stream event is not JSON'); }
+          if (event?.error) throw inBodyError(event.error);
+          const delta = event?.choices?.[0]?.delta?.content;
+          if (delta) yield { delta };
+        }
       }
+    } finally {
+      ctrl.abort(); // release the connection on early exit (consumer break, error)
     }
   }
+
+  /** Opens the stream; the deadline covers only the wait for response headers. */
+  async #openStream(body) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), this.#timeoutMs);
+    try {
+      return { res: await this.#request(body, ctrl.signal), ctrl };
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  /** POST + status classification. Retry-After is kept only on retryable errors. */
+  async #request(body, signal) {
+    let res;
+    try {
+      res = await this.#fetch(`${this.#baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${this.#apiKey}`, ...this.#headers },
+        body: JSON.stringify(body),
+        signal,
+      });
+    } catch (e) { throw transportError(e, signal); }
+    if (!res.ok) {
+      const retryable = isRetryableStatus(res.status);
+      const err = new ProviderError(`openrouter HTTP ${res.status}`, { retryable, status: res.status, provider: 'openrouter' });
+      if (retryable) err.retryAfterMs = retryAfterMs(res);
+      throw err;
+    }
+    return res;
+  }
+}
+
+function transportError(e, signal) {
+  const why = signal.aborted || e?.name === 'AbortError' ? 'timeout' : 'network';
+  return new ProviderError(`openrouter request failed: ${why}`, { retryable: true, provider: 'openrouter' });
+}
+
+/** Rejects when `signal` aborts, even if `promise` (a body read) never settles on its own. */
+function withAbort(promise, signal) {
+  if (signal.aborted) return Promise.reject(Object.assign(new Error('aborted'), { name: 'AbortError' }));
+  return new Promise((resolve, reject) => {
+    const onAbort = () => reject(Object.assign(new Error('aborted'), { name: 'AbortError' }));
+    signal.addEventListener('abort', onAbort, { once: true });
+    promise.then((v) => { signal.removeEventListener('abort', onAbort); resolve(v); },
+      (e) => { signal.removeEventListener('abort', onAbort); reject(e); });
+  });
 }
 
 function retryAfterMs(res) {
   const raw = res.headers?.get?.('retry-after');
-  const secs = raw == null ? NaN : Number(raw);
-  return Number.isFinite(secs) && secs >= 0 ? Math.min(secs * 1000, MAX_RETRY_AFTER_MS) : undefined;
+  if (raw == null || raw === '') return undefined;
+  const secs = Number(raw);
+  const ms = Number.isFinite(secs) ? secs * 1000 : Date.parse(raw) - Date.now(); // delta-seconds or HTTP-date
+  return Number.isFinite(ms) ? Math.min(Math.max(ms, 0), MAX_RETRY_AFTER_MS) : undefined;
 }
 
 function malformed(why) {
