@@ -1,0 +1,145 @@
+// Capability Registry v3 skeleton (decision S-6). Hermetic: no DB, no network.
+//
+// v1 the registry block in config/plan_catalog.v2.json is valid; the validator rejects each malformed shape
+// v2 CAPABILITY_REGISTRY_V3=1 changes NO live price: /v1/pricing and /.well-known/satelink.json are identical
+//    to flag-off except for the added capability list
+// v3 registry ↔ /v1/pricing ↔ MCP tool list agree (prices, tools, products), and withheld prices never surface
+// v4 snapshot: the public registry view is pinned in capability_registry_v3.snapshot.json — any price or
+//    listing change must update the snapshot in the same PR (visible in review)
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import express from 'express';
+import request from 'supertest';
+import { loadCatalog, validateCatalog } from '../src/pricing_v2/catalog.mjs';
+import { railPrices } from '../src/pricing_v2/rails.mjs';
+import {
+  validateCapabilities, publicCapabilities, registryRpcPrices, microToUsd, RPC_CREDITS_CAPABILITY, RPC_X402_BUNDLE_CAPABILITY,
+} from '../src/pricing_v2/capability_registry.mjs';
+import { PRICE_PER_CALL_USDT } from '../src/billing/credit_service.mjs';
+import { createWellKnownSatelinkRouter, createMachineV1Router } from '../src/routes/machine_onboarding.js';
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const SNAPSHOT = path.join(here, 'capability_registry_v3.snapshot.json');
+const clone = (o) => JSON.parse(JSON.stringify(o));
+
+function withFlag(value, fn) {
+  const saved = process.env.CAPABILITY_REGISTRY_V3;
+  if (value === undefined) delete process.env.CAPABILITY_REGISTRY_V3; else process.env.CAPABILITY_REGISTRY_V3 = value;
+  return Promise.resolve(fn()).finally(() => {
+    if (saved === undefined) delete process.env.CAPABILITY_REGISTRY_V3; else process.env.CAPABILITY_REGISTRY_V3 = saved;
+  });
+}
+
+function app() {
+  const a = express();
+  a.use('/.well-known', createWellKnownSatelinkRouter());
+  a.use('/v1', createMachineV1Router({ query: async () => ({ rows: [], rowCount: 0 }) }));
+  return a;
+}
+// Volatile/best-effort fields (pricing intelligence, timestamps) are not part of the price contract.
+const VOLATILE = ['market_position', 'market_median_usd_per_million', 'effective_usd_per_million', 'machine_preference_score', 'why_choose_satelink'];
+const stable = (b) => { const o = clone(b); for (const k of VOLATILE) delete o[k]; return o; };
+
+describe('Capability Registry v3 (S-6 skeleton)', () => {
+  const c = loadCatalog();
+
+  it('v1: the catalog registry is valid; every malformed shape is rejected', () => {
+    assert.deepEqual(validateCapabilities(c), []);
+    assert.deepEqual(validateCatalog(c), []);
+    const bad = (mutate, re) => {
+      const x = clone(c);
+      mutate(x);
+      const errs = validateCapabilities(x);
+      assert.ok(errs.some((e) => re.test(e)), `expected ${re} in ${JSON.stringify(errs)}`);
+    };
+    const rpc = (x) => x.capabilities.find((k) => k.id === RPC_CREDITS_CAPABILITY);
+    const ti = (x) => x.capabilities.find((k) => k.price.amount_micro === null);
+    bad((x) => { x.capabilities.push(clone(rpc(x))); }, /duplicate id/);
+    bad((x) => { rpc(x).id = 'RPC Call'; }, /id must be dotted/);
+    bad((x) => { rpc(x).status = 'production-verified'; }, /status must be one of/);
+    bad((x) => { rpc(x).product = 'nope'; }, /unknown product nope/);
+    bad((x) => { rpc(x).audience = ['robots']; }, /audience/);
+    bad((x) => { rpc(x).interfaces.mcp_tool = 'funding_rate_heatmap'; }, /not in product polygon_rpc\.mcp_tools/);
+    bad((x) => { delete rpc(x).interfaces.console; }, /interfaces must have exactly/);
+    bad((x) => { rpc(x).price.amount_micro = 0.5; }, /amount_micro must be an integer/);
+    bad((x) => { rpc(x).price.amount_micro = -1; }, /amount_micro must be an integer/);
+    bad((x) => { rpc(x).price.amount_micro = '30'; }, /amount_micro must be an integer/);
+    bad((x) => { rpc(x).price.currency = 'USDT'; }, /currency must be USD/);
+    bad((x) => { rpc(x).price.per = 0; }, /price\.per/);
+    bad((x) => { rpc(x).price.withheld = 'F8'; }, /withheld only allowed/);
+    bad((x) => { delete ti(x).price.withheld; }, /requires price\.withheld/);
+    bad((x) => { ti(x).commercial_status = 'sellable'; }, /withheld price cannot be sellable/);
+    bad((x) => { rpc(x).commercial_status = 'for sale'; }, /commercial_status/);
+    bad((x) => { rpc(x).approval_mode = 'auto'; }, /approval_mode/);
+    bad((x) => { x.capabilities = {}; }, /must be an array/);
+    assert.ok(validateCatalog({ ...clone(c), capabilities: [{}] }).length > 0, 'loadCatalog rejects an invalid registry');
+  });
+
+  it('v2: turning CAPABILITY_REGISTRY_V3 on changes no live price on /v1/pricing or /.well-known/satelink.json', async () => {
+    const get = async (p) => (await request(app()).get(p)).body;
+    const off = await withFlag(undefined, async () => ({ pricing: await get('/v1/pricing'), manifest: await get('/.well-known/satelink.json') }));
+    const on = await withFlag('1', async () => ({ pricing: await get('/v1/pricing'), manifest: await get('/.well-known/satelink.json') }));
+    for (const k of ['pricing', 'manifest']) {
+      assert.equal(off[k].capabilities, undefined, `${k}: flag off lists no capabilities`);
+      const { capabilities, capability_registry_version, ...rest } = on[k];
+      assert.ok(Array.isArray(capabilities) && capabilities.length > 0, `${k}: flag on lists capabilities`);
+      assert.equal(capability_registry_version, c.version);
+      assert.deepEqual(stable(rest), stable(off[k]), `${k}: everything except the capability list is unchanged`);
+    }
+    assert.equal(on.pricing.price_per_call_usdt, 0.00003);
+    assert.equal(on.pricing.rails.rpc_x402_bundle.price_usd, 0.1);
+    assert.equal(on.pricing.rails.rpc_x402_bundle.calls, 1000);
+    // only the exact value "1" turns it on
+    const loose = await withFlag('true', () => get('/v1/pricing'));
+    assert.equal(loose.capabilities, undefined);
+  });
+
+  it('v3: registry, rails, /v1/pricing and the MCP tool list agree; withheld prices never surface', async () => {
+    // registry ↔ catalog rails ↔ enforcement constant
+    const reg = registryRpcPrices(c);
+    assert.equal(reg.rpc_credits.price_usd_per_call, c.rails.rpc_credits.price_usd_per_call);
+    assert.equal(reg.rpc_credits.price_usd_per_call, PRICE_PER_CALL_USDT);
+    assert.deepEqual(reg.rpc_x402_bundle, { price_usd: c.rails.rpc_x402_bundle.price_usd, calls: c.rails.rpc_x402_bundle.calls });
+    assert.deepEqual(railPrices(c, { CAPABILITY_REGISTRY_V3: '1' }), railPrices(c, {}));
+
+    // registry ↔ /v1/pricing (flag on): every listed price is the registry's integer micro-USD
+    const body = await withFlag('1', async () => (await request(app()).get('/v1/pricing')).body);
+    const listed = new Map(body.capabilities.map((k) => [k.id, k]));
+    const credit = listed.get(RPC_CREDITS_CAPABILITY);
+    const bundle = listed.get(RPC_X402_BUNDLE_CAPABILITY);
+    assert.equal(microToUsd(credit.price.amount_micro) / credit.price.per, body.price_per_call_usdt);
+    assert.equal(microToUsd(bundle.price.amount_micro), body.rails.rpc_x402_bundle.price_usd);
+    assert.equal(bundle.price.per, body.rails.rpc_x402_bundle.calls);
+
+    // registry ↔ MCP tools
+    const { TOOL_PRODUCTS, advertisedTools } = await import('../../mcp-server/src/server-factory.mjs');
+    const capTools = new Map();
+    for (const k of c.capabilities) if (k.interfaces.mcp_tool) capTools.set(k.interfaces.mcp_tool, k.product);
+    assert.deepEqual([...capTools.keys()].sort(), Object.keys(TOOL_PRODUCTS).sort(), 'every MCP tool has a capability and vice versa');
+    for (const [tool, product] of capTools) assert.equal(TOOL_PRODUCTS[tool], product, `${tool}: same product in registry and MCP`);
+    const publicTools = new Set(publicCapabilities(c).map((k) => k.interfaces.mcp_tool).filter(Boolean));
+    assert.deepEqual(advertisedTools({ includeInternal: false }).map((t) => t.name).sort(), [...publicTools].sort(),
+      'MCP advertises exactly the tools of public capabilities');
+
+    // withheld (F8) entries: internal, never priced on any public surface
+    const withheld = c.capabilities.filter((k) => k.price.amount_micro === null);
+    assert.ok(withheld.length >= 4, 'Trading Intelligence stays withheld until F8');
+    const surfaces = await withFlag('1', async () => JSON.stringify([
+      (await request(app()).get('/v1/pricing')).body, (await request(app()).get('/.well-known/satelink.json')).body,
+    ]));
+    for (const k of withheld) {
+      assert.equal(k.price.withheld, 'F8');
+      assert.ok(!listed.has(k.id), `${k.id}: withheld capability not listed publicly`);
+      assert.ok(!surfaces.includes(`"${k.id}"`), `${k.id}: absent from public surfaces`);
+    }
+    assert.doesNotMatch(surfaces, /price_usd_per_request|intelligence_credits/);
+  });
+
+  it('v4: the public registry view matches the committed snapshot (price changes need a reviewed snapshot update)', () => {
+    const view = publicCapabilities(c);
+    if (process.env.UPDATE_REGISTRY_SNAPSHOT === '1') fs.writeFileSync(SNAPSHOT, `${JSON.stringify(view, null, 2)}\n`);
+    assert.deepEqual(view, JSON.parse(fs.readFileSync(SNAPSHOT, 'utf8')));
+  });
+});

@@ -6,11 +6,14 @@
 // x402 env overrides (X402_BUNDLE_PRICE_USD / X402_BUNDLE_CALLS) still win here,
 // because the payment middleware honours them: discovery shows what is charged.
 import { loadCatalog } from './catalog.mjs';
+import { registryEnabled, registryRpcPrices } from './capability_registry.mjs';
 
 export const usd = (n) => `$${Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 })}`;
 
 export function railPrices(c = loadCatalog(), env = process.env) {
-  const r = c.rails;
+  // CAPABILITY_REGISTRY_V3=1: the RPC prices come from the capability registry (same values;
+  // test/capability_registry_v3.test.js proves flag-on output equals flag-off output).
+  const r = registryEnabled(env) ? withRegistryRpcPrices(c) : c.rails;
   const bundleUsd = Number(env.X402_BUNDLE_PRICE_USD || r.rpc_x402_bundle.price_usd);
   const bundleCalls = Number(env.X402_BUNDLE_CALLS || r.rpc_x402_bundle.calls);
   const tiUsd = +(c.meters.intelligence_request.uu * c.unit.usd_list_value).toFixed(6);
@@ -37,6 +40,15 @@ export function railPrices(c = loadCatalog(), env = process.env) {
       label: `${usd(tiUsd)} per request — metered from api_credits (not a direct x402 challenge on this path)`,
     },
     rails_note: 'Different rails, different prices: never read the x402 bundle and the USDT-credit price as the same product.',
+  };
+}
+
+function withRegistryRpcPrices(c) {
+  const reg = registryRpcPrices(c);
+  return {
+    ...c.rails,
+    rpc_credits: { ...c.rails.rpc_credits, ...reg.rpc_credits },
+    rpc_x402_bundle: { ...c.rails.rpc_x402_bundle, ...reg.rpc_x402_bundle },
   };
 }
 

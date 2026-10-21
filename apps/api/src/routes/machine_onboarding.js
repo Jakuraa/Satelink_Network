@@ -27,6 +27,8 @@ import { apiKeyCreateLimiter } from '../security/middleware/rate_limits.js';
 import { getIntelSummary, recordPricingView } from '../economics/pricing_intelligence/index.js';
 import { publicRailPrices, bundlePriceText } from '../pricing_v2/rails.mjs';
 import { publicProducts, PRODUCT_STATUSES } from '../pricing_v2/products.mjs';
+import { loadCatalog } from '../pricing_v2/catalog.mjs';
+import { registryEnabled, publicCapabilities } from '../pricing_v2/capability_registry.mjs';
 
 const API_BASE = () => process.env.API_BASE_URL || 'https://rpc.satelink.network';
 const VAULT = () => process.env.REVENUE_VAULT_ADDRESS || '0x577D3716d6Ad5b676d230f5409deF9838FABaCEF';
@@ -50,6 +52,13 @@ export function registrationMessage(wallet) {
 
 // Every price below comes from the PlanCatalog via railPrices() (Wave 2 C1/C8).
 const bundleText = (r) => bundlePriceText(r);
+
+/** { capabilities, capability_registry_version } behind CAPABILITY_REGISTRY_V3=1, else nothing. */
+function registryView() {
+  if (!registryEnabled()) return {};
+  const c = loadCatalog();
+  return { capability_registry_version: c.version, capabilities: publicCapabilities(c) };
+}
 
 function pricingBody() {
   const rails = publicRailPrices();
@@ -94,6 +103,9 @@ function pricingBody() {
     // Per-rail prices with rail/network/status labels (C4): the credits price and
     // the x402 bundle are different rails, never the same product at two prices.
     rails,
+    // Capability Registry v3 (S-6), only when CAPABILITY_REGISTRY_V3=1: public capabilities with
+    // integer micro-USD prices; withheld prices appear as { withheld }, never as a number.
+    ...registryView(),
     // Trading Intelligence delisting (founder decision, Phase 7 amendment):
     // this manifest no longer advertises /v1/intelligence as a standalone
     // catalog entry. The routes keep serving existing keys unchanged — see
@@ -125,6 +137,7 @@ function manifestBody() {
     // rail is preserved for existing integrations under alternative_rails.
     // Product registry (Step 6): public products and their verified status.
     products: { statuses: PRODUCT_STATUSES, items: publicProducts() },
+    ...registryView(),
     payment: {
       rail: 'x402',
       network: 'eip155:8453',
