@@ -1,0 +1,26 @@
+{
+  "name": "@satelink/sie-providers",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "SIE provider adapters (infrastructure). Implement @satelink/sie's AIProvider; transport and keys are injected by a composition root. No route uses them yet (decision S-1, flag SIE_OPENROUTER_ENABLED off).",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@satelink/sie": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.19",
+    "typescript": "^5.9.3",
+    "vitest": "^3.0.0"
+  }
+}

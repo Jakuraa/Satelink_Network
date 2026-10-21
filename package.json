@@ -59,12 +59,12 @@
     "deploy": "bash scripts/deploy.sh",
     "deploy:skip-cert": "bash scripts/deploy.sh --skip-cert",
     "watch:events": "node scripts/event-watcher.js",
-    "arch": "depcruise --config .dependency-cruiser.cjs --output-type err-long libs tools workers",
+    "arch": "depcruise --config .dependency-cruiser.cjs --output-type err-long libs tools workers services/sie",
     "arch:graph": "depcruise --config .dependency-cruiser.cjs --output-type dot libs | dot -T svg > architecture.svg",
     "test:arch": "vitest run --project tools",
-    "test:libs": "vitest run --project libs",
+    "test:libs": "vitest run --project libs --project services",
     "test:integration": "vitest run --project integration",
-    "typecheck:libs": "npm run typecheck --workspace=@satelink/kernel && npm run typecheck --workspace=@satelink/financial-domain && npm run typecheck --workspace=@satelink/financial",
+    "typecheck:libs": "npm run typecheck --workspace=@satelink/kernel && npm run typecheck --workspace=@satelink/financial-domain && npm run typecheck --workspace=@satelink/financial && npm run typecheck --workspace=@satelink/sie && npm run typecheck --workspace=@satelink/sie-providers",
     "typecheck:workers": "npm run typecheck --workspace=@satelink/reconciler"
   },
   "dependencies": {
