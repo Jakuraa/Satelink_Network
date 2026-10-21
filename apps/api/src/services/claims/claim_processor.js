@@ -246,6 +246,86 @@ export async function markClaimCompleted(claimId, txHash, pool) {
 }
 
 /**
+ * On-chain facts about a claim signature, read from ClaimsContract (read-only).
+ * Throws on any RPC/config problem: callers fail closed.
+ */
+export function createClaimChainReader({ rpcUrl = process.env.POLYGON_RPC_URL, contract = process.env.CLAIMS_CONTRACT_ADDRESS } = {}) {
+    return {
+        async usedNonce(nonce) {
+            if (!rpcUrl || !contract) throw new Error('chain_unconfigured');
+            const provider = new ethers.JsonRpcProvider(rpcUrl, 137, { staticNetwork: true });
+            const c = new ethers.Contract(contract, ['function usedNonces(uint256) view returns (bool)'], provider);
+            return Boolean(await c.usedNonces(BigInt(nonce)));
+        },
+        async chainTime() {
+            if (!rpcUrl) throw new Error('chain_unconfigured');
+            const provider = new ethers.JsonRpcProvider(rpcUrl, 137, { staticNetwork: true });
+            const block = await provider.getBlock('latest');
+            return Number(block.timestamp);
+        },
+    };
+}
+
+/**
+ * Staff-only: void a pending claim whose signature can no longer be redeemed, releasing the
+ * earnings it reserved (CLAIMING -> UNPAID) so a new claim can be signed.
+ * Safe only when BOTH hold on-chain: the signature has expired (chain time, since
+ * ClaimsContract.claim() checks block.timestamp < expiry) AND its nonce was never used. Any
+ * chain error refuses (fail closed). A redeemed nonce must be completed, never voided.
+ * @returns {Promise<{ok: true, claimId: string, released: string} | {ok: false, http: number, error: string}>}
+ */
+export async function voidClaim(claimId, pool, { chain = createClaimChainReader() } = {}) {
+    const client = await pool.connect();
+    let broken;
+    try {
+        await client.query('BEGIN');
+        const found = await client.query(
+            `SELECT claim_id, node_id, wallet, nonce, expiry, status FROM claims WHERE claim_id = $1 FOR UPDATE`,
+            [claimId]
+        );
+        const claim = found.rows[0];
+        if (!claim) { await client.query('ROLLBACK'); return { ok: false, http: 404, error: 'claim_not_found' }; }
+        if (claim.status !== 'pending') { await client.query('ROLLBACK'); return { ok: false, http: 409, error: `claim_${claim.status}` }; }
+
+        let chainNow, used;
+        try {
+            chainNow = await chain.chainTime();
+            used = await chain.usedNonce(claim.nonce);
+        } catch {
+            await client.query('ROLLBACK');
+            return { ok: false, http: 503, error: 'chain_unavailable' };
+        }
+        if (!(chainNow >= Number(claim.expiry))) {
+            await client.query('ROLLBACK');
+            return { ok: false, http: 409, error: 'claim_not_expired' };
+        }
+        if (used) {
+            await client.query('ROLLBACK');
+            return { ok: false, http: 409, error: 'claim_redeemed_on_chain' };
+        }
+
+        const ids = [claim.node_id, claim.wallet].filter(Boolean).map((x) => String(x).toLowerCase());
+        await client.query(`UPDATE claims SET status = 'void', updated_at = $2 WHERE claim_id = $1`, [claimId, Math.floor(Date.now() / 1000)]);
+        const released = await client.query(
+            `WITH r AS (
+                UPDATE epoch_earnings SET status = 'UNPAID'
+                 WHERE lower(wallet_or_node_id) = ANY($1::text[]) AND status = 'CLAIMING'
+                 RETURNING amount_usdt
+             ) SELECT COALESCE(SUM(amount_usdt), 0)::text AS released FROM r`,
+            [ids]
+        );
+        await client.query('COMMIT');
+        logger.info({ claimId, released: released.rows[0].released }, 'CLAIM_VOID: expired, unredeemed claim voided');
+        return { ok: true, claimId, released: released.rows[0].released };
+    } catch (err) {
+        await client.query('ROLLBACK').catch((rbErr) => { broken = rbErr; });
+        throw err;
+    } finally {
+        client.release(broken);
+    }
+}
+
+/**
  * Get pending claims for a wallet.
  * @param {string} walletAddress - Wallet address
  * @param {import('pg').Pool} pool - PostgreSQL pool
@@ -263,6 +343,7 @@ export async function getPendingClaims(walletAddress, pool) {
 }
 
 export default {
+    voidClaim,
     generateClaimSignature,
     markClaimCompleted,
     getPendingClaims
