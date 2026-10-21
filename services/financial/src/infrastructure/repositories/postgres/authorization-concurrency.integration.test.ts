@@ -27,6 +27,7 @@ import { Money, USDT } from '@satelink/kernel';
 import type { Result } from '@satelink/kernel';
 import { PostgresAuthorizationRepository } from './postgres-authorization-repository.js';
 import { getCapacity } from '../../../application/queries/get-capacity.js';
+import { truncateForTest } from '../../../../../../libs/testing/src/truncate-for-test.js';
 
 const MIGRATIONS_DIR = resolve(
   import.meta.dirname ?? new URL('.', import.meta.url).pathname,
@@ -60,7 +61,7 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  await pool.query('TRUNCATE principals RESTART IDENTITY CASCADE');
+  await truncateForTest(pool, 'TRUNCATE principals RESTART IDENTITY CASCADE');
   await pool.query(`INSERT INTO principals (id, kind) VALUES ('prn_owner','machine')`);
   await pool.query(
     `INSERT INTO funding_sources (id, principal_id, rail_id, rail_reference, mode, capabilities, state, version)
