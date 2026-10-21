@@ -159,3 +159,22 @@ export type { DrawError } from './draw/errors.js';
 
 export { authorizeDrawRequest } from './coordination/draw-authorizer.js';
 export type { AuthorizeDrawResult, Grant, Policy } from './coordination/draw-authorizer.js';
+
+// ---------------------------------------------------------------------------
+// Reservation — reserve → capture | release | expire (mandate §8 invariant 6)
+// ---------------------------------------------------------------------------
+export { Reservation, sumHeld } from './reservation/reservation.js';
+export type { ReservationProps, ReservationStateValue } from './reservation/reservation.js';
+export { ReservationId } from './reservation/reservation-id.js';
+export {
+  InvalidReservationIdError,
+  InvalidReservationAmountError,
+  InsufficientAvailableError,
+  CaptureExceedsReservedError,
+  ReservationCurrencyMismatchError,
+  ReservationExpiredError,
+  ReservationNotExpiredError,
+  IllegalReservationTransitionError,
+  IdempotencyConflictError,
+} from './reservation/errors.js';
+export type { ReservationError } from './reservation/errors.js';
