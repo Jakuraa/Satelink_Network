@@ -153,6 +153,19 @@ describe('claims_route — T-02 admin secret (no hard-coded fallback)', () => {
     });
 
     describe('POST /admin/close-epoch', () => {
+        afterEach(() => { delete process.env.MANUAL_EARNINGS_ALLOCATION_ENABLED; });
+
+        it('correct secret but MANUAL_EARNINGS_ALLOCATION_ENABLED unset -> 503 manual_allocation_disabled', async () => {
+            process.env.ADMIN_BACKFILL_SECRET = 'a-real-secret';
+            const app = buildApp(makePool());
+            const res = await request(app)
+                .post('/api/nodes/admin/close-epoch')
+                .set('Authorization', `Bearer ${signToken()}`)
+                .send({ adminSecret: 'a-real-secret' });
+            expect(res.status).to.equal(503);
+            expect(res.body.error).to.equal('manual_allocation_disabled');
+        });
+
         it('ADMIN_BACKFILL_SECRET unset -> 503, even with the old literal', async () => {
             delete process.env.ADMIN_BACKFILL_SECRET;
             const app = buildApp(makePool());
@@ -175,6 +188,7 @@ describe('claims_route — T-02 admin secret (no hard-coded fallback)', () => {
 
         it('ADMIN_BACKFILL_SECRET set -> the correct secret passes the gate', async () => {
             process.env.ADMIN_BACKFILL_SECRET = 'a-real-secret';
+            process.env.MANUAL_EARNINGS_ALLOCATION_ENABLED = 'true'; // manual epoch tool is off by default
             // connect() rejects -> proves we got past the secret gate into the DB code
             // (500, not 403/503).
             const app = buildApp(makePool({ connectShouldReject: true }));

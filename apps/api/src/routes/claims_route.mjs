@@ -134,11 +134,13 @@ export function createClaimsRouter(pool) {
                   trunc(s.total * 0.5 - x.existing, 6)::text AS to_allocate
              FROM (SELECT COALESCE(SUM(e.amount_usdt), 0) AS total FROM revenue_events_v2 e
                     WHERE e.node_id = $1
-                      -- Only revenue of epochs already CLOSED: the scheduler closes and finalizes an
-                      -- epoch in one transaction, so its node_operator rows are already in
-                      -- epoch_earnings and counted below. Revenue of the open epoch (or not yet
-                      -- assigned to one) is left to the finalizer — counting it here paid it twice.
+                      -- Backfill only: revenue of CLOSED epochs the finalizer never ran on. The
+                      -- open epoch (or unassigned revenue) is paid by the finalizer at close; a
+                      -- finalized epoch was already split (equally across its nodes) — topping a
+                      -- node up to 50% of its own revenue there paid the pool out twice.
                       AND e.epoch_id IN (SELECT id FROM epochs WHERE status = 'CLOSED')
+                      AND NOT EXISTS (SELECT 1 FROM epoch_earnings f
+                                       WHERE f.epoch_id = e.epoch_id AND f.role = 'node_operator')
                       AND (e.is_test_data = false OR e.is_test_data IS NULL)
                       AND (${CONSUMED_USAGE_PREDICATE})) s,
                   (SELECT COALESCE(SUM(amount_usdt), 0) AS existing FROM epoch_earnings
@@ -193,6 +195,12 @@ export function createClaimsRouter(pool) {
       }
       if (!secretEquals(adminSecret, process.env.ADMIN_BACKFILL_SECRET)) {
         return res.status(403).json({ success: false, error: 'Invalid admin secret' });
+      }
+      // Manual epoch tool: it writes epoch_ledger ids into revenue_events_v2.epoch_id (a
+      // column that holds epochs ids) and pays wallet-keyed shares outside the scheduler —
+      // a second allocator. Off unless explicitly enabled, like allocate-earnings.
+      if (process.env.MANUAL_EARNINGS_ALLOCATION_ENABLED !== 'true') {
+        return res.status(503).json({ success: false, error: 'manual_allocation_disabled' });
       }
 
       const client = await pool.connect();

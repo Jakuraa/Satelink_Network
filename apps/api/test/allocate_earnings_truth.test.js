@@ -197,4 +197,22 @@ describe('allocate-earnings: consumed usage only, never twice (real SQL)', funct
     expect(res.status).to.equal(500);
     expect(await total()).to.equal(0);
   });
+
+  it('an epoch the finalizer already split across several nodes gets no manual top-up (no pool overpay)', async () => {
+    await pool.query(`DELETE FROM revenue_events_v2`);
+    await pool.query(`INSERT INTO epochs VALUES (3, 'CLOSED')`);
+    await pool.query(`INSERT INTO revenue_events_v2 VALUES
+      ('node-a', 9, false, 'rpc_call', true, 'r-a', 3), ('node-b', 1, false, 'rpc_call', true, 'r-b', 3)`);
+    // finalizer: pool 5 split equally
+    await pool.query(`INSERT INTO epoch_earnings VALUES (3, 'node_operator', 'node-a', 2.5, 'UNPAID', 0), (3, 'node_operator', 'node-b', 2.5, 'UNPAID', 0)`);
+    const res = await allocate();
+    expect(res.body.totalRevenue).to.equal(0); // finalized epoch excluded
+    expect(res.body.allocated).to.equal(0);
+    expect(await total(`role = 'node_operator' OR role = 'manual_allocation'`), 'node payouts stay = pool').to.equal(5);
+  });
+
+  it('a CLOSED epoch the finalizer never ran on is the backfill case: 50% of its consumed usage', async () => {
+    const res = await allocate(); // fixture revenue is in closed epoch 1 with no node_operator rows
+    expect(res.body.allocated).to.equal(1.5);
+  });
 });
