@@ -167,17 +167,19 @@ describe('SEC-5 — node heartbeat requires the registered wallet\'s signature',
     expect(res.body.status).to.equal('active');
   });
 
-  it('registration probes a public endpoint without following redirects', async () => {
-    const seen = [];
+  it('registration probes the endpoint through the guarded client, not global fetch', async () => {
+    // node_endpoint_fetch (resolve-then-check, no redirects) replaced fetch(); its behaviour is
+    // covered in node_endpoint_dns_rebinding.test.js. '.example' never resolves -> refused.
+    let globalFetchCalls = 0;
     const realFetch = globalThis.fetch;
-    globalThis.fetch = async (u, init) => { seen.push(init?.redirect); return new Response('', { status: 302, headers: { location: 'http://10.0.0.1/' } }); };
+    globalThis.fetch = async () => { globalFetchCalls += 1; return new Response('', { status: 200 }); };
     try {
       const res = await request(app(fakeDb())).post('/api/nodes/register').send({
         wallet_address: owner.address, node_type: 'rpc', endpoint_url: 'https://node.example:8545',
         region: 'us-east-1', chain_ids: [137],
       });
-      expect(seen[0]).to.equal('manual');
-      expect(res.status).to.equal(400); // a redirect is not a healthy endpoint
+      expect(res.status).to.equal(400);
+      expect(globalFetchCalls).to.equal(0);
     } finally { globalThis.fetch = realFetch; }
   });
 });

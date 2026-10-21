@@ -55,7 +55,7 @@ export function verifyNodeHeartbeat({ nodeId, wallet, timestamp, signature, endp
   return { ok: true };
 }
 
-function isBlockedIp(host) {
+export function isBlockedIp(host) {
   const v = net.isIP(host);
   if (v === 4) {
     const [a, b, c] = host.split('.').map(Number);

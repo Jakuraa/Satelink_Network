@@ -26,6 +26,7 @@ import { handleNodeComeback } from './offline_detector.js';
 import { getNodeEarnings } from './earnings_aggregator.js';
 import { requireHeaderSecret } from '../../security/header_secret.js';
 import { verifyNodeHeartbeat, validateNodeEndpoint, acceptMonotonicHeartbeat } from './heartbeat_auth.js';
+import { nodeEndpointFetch } from './node_endpoint_fetch.js';
 
 const VALID_REGIONS = ['ap-south-1', 'us-east-1', 'eu-west-1', 'ap-southeast-1'];
 const VALID_NODE_TYPES = ['rpc', 'bandwidth', 'compute'];
@@ -100,20 +101,12 @@ function generateNodeId(region) {
 }
 
 async function validateEndpoint(url, timeoutMs = 5000) {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
   try {
     const healthUrl = url.endsWith('/') ? `${url}health` : `${url}/health`;
-    const response = await fetch(healthUrl, {
-      method: 'GET',
-      redirect: 'manual', // a redirect could lead into the private network (SSRF)
-      signal: controller.signal
-    });
-    clearTimeout(timeoutId);
+    // Resolve-then-check at connect time, no redirects (node_endpoint_fetch.js).
+    const response = await nodeEndpointFetch(healthUrl, { method: 'GET', timeoutMs });
     return response.ok;
-  } catch (err) {
-    clearTimeout(timeoutId);
+  } catch {
     return false;
   }
 }
