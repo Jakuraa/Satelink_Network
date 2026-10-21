@@ -17,6 +17,7 @@ There is no execution tier. `place_order`, `cancel_order`, `withdraw`, `transfer
 | `redaction.mjs` | deep redaction (secret-looking keys; key/token/JWT/PEM/0x-private-key/connection-URL values) applied before any trace is stored |
 | `provider.mjs` | `AIProvider` (`chat`, `reason`, `structuredOutput` with mandatory re-validation, `stream`) + deterministic `ScriptedProvider` |
 | `providers/groq.mjs` | `GroqProvider`: the codebase's existing provider behind the interface; **injected** API key and `fetch`; retryable = 429/5xx/network |
+| `providers/openrouter.mjs` | `OpenRouterProvider`: OpenAI-compatible gateway; **injected** key and `fetch`; bounded retries (≤3, retryable only, Retry-After capped 5 s); malformed body / in-body error → `ProviderError`; reports the served `model` and `upstreamProvider`. Not in the default tier routes; models unpriced |
 | `router.mjs` | `ModelRouter`: per-task route chains; falls back **only** on retryable provider errors; every attempt traced |
 | `trace.mjs` | `TraceRecorder` → `agent_runs` / `tool_calls` / `model_traces` (migration 023) via `InMemoryTraceStore` / `PgTraceStore` |
 | `runtime.mjs` | `AgentRunner`: bounded loop (max steps), system rules, tool results fed back only as rendered untrusted data |
