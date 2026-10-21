@@ -82,7 +82,8 @@ export function isBlockedIp(host) {
     // 2000::/3, 6to4 (2002::/16, embeds an IPv4) and documentation (2001:db8::/32) are refused.
     const first = parseInt(h.split(':')[0] || '0', 16);
     if (!(first >= 0x2000 && first <= 0x3fff)) return true;
-    return first === 0x2002 || h.startsWith('2001:db8:') || h.startsWith('2001:0db8:');
+    // Teredo 2001:0::/32 embeds an IPv4 address like 6to4 does.
+    return first === 0x2002 || h.startsWith('2001:db8:') || h.startsWith('2001:0db8:') || /^2001:(0{1,4})?:/.test(h);
   }
   return false;
 }

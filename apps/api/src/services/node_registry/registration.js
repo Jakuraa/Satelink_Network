@@ -104,7 +104,7 @@ async function validateEndpoint(url, timeoutMs = 5000) {
   try {
     const healthUrl = url.endsWith('/') ? `${url}health` : `${url}/health`;
     // Resolve-then-check at connect time, no redirects (node_endpoint_fetch.js).
-    const response = await nodeEndpointFetch(healthUrl, { method: 'GET', timeoutMs });
+    const response = await nodeEndpointFetch(healthUrl, { method: 'GET', timeoutMs, headersOnly: true });
     return response.ok;
   } catch {
     return false;

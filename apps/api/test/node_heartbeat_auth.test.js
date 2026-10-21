@@ -116,7 +116,7 @@ describe('SEC-5 — node heartbeat requires the registered wallet\'s signature',
       'https://a\nb.example', 'https://node.example/\tx', 'http://2130706433', 'http://0x7f.1', 'http://0',
       'http://[::7f00:1]', 'http://[::127.0.0.1]', 'http://[64:ff9b::a9fe:a9fe]', 'http://[2002:a9fe:a9fe::]',
       'http://[::ffff:0:7f00:1]', 'http://[fec0::1]', 'http://[2001:db8::1]', 'http://198.18.0.1', 'http://192.0.2.10',
-      'http://203.0.113.7', 'http://foo.railway.internal.']) {
+      'http://203.0.113.7', 'http://foo.railway.internal.', 'http://[2001:0:4136:e378::1]']) {
       expect(validateNodeEndpoint(bad), bad).to.equal('invalid_endpoint');
     }
     for (const ok of ['https://node.example:8545', 'http://93.184.216.34:3737', 'https://[2606:4700:4700::1111]:443']) {

@@ -12,14 +12,17 @@ import { createNodeEndpointFetch, createGuardedLookup, nodeEndpointFetch } from 
 
 describe('node endpoints: resolve-then-check at connect time (DNS rebinding)', function () {
   this.timeout(15000);
-  let server, port, hits;
+  let server, port, hits, lastHeaders;
 
   before(async () => {
     hits = [];
     server = http.createServer((req, res) => {
       hits.push(req.url);
+      lastHeaders = req.headers;
+      if (req.url === '/reset') { res.writeHead(200); res.write('partial'); setTimeout(() => res.socket.destroy(), 20); return; }
       if (req.url === '/redirect') { res.writeHead(302, { location: `http://node.test:${port}/target` }); return res.end(); }
       if (req.url === '/big') { res.writeHead(200); res.end(Buffer.alloc(64 * 1024, 'a')); return; }
+      if (req.url === '/drip') { res.writeHead(200); const t = setInterval(() => res.write('a'), 50); req.on('close', () => clearInterval(t)); return; }
       if (req.url === '/slow') { setTimeout(() => { res.writeHead(200); res.end('{}'); }, 2000); return; }
       res.writeHead(200, { 'content-type': 'application/json' });
       res.end(JSON.stringify({ jsonrpc: '2.0', id: 1, result: '0x10' }));
@@ -63,6 +66,34 @@ describe('node endpoints: resolve-then-check at connect time (DNS rebinding)', f
     expect(big?.code).to.equal('response_too_large');
     let slow; try { await f(`http://node.test:${port}/slow`, { timeoutMs: 200 }); } catch (e) { slow = e; }
     expect(slow?.code).to.equal('timeout');
+    const t0 = Date.now();
+    let drip; try { await f(`http://node.test:${port}/drip`, { timeoutMs: 300 }); } catch (e) { drip = e; }
+    expect(drip?.code, 'a drip-feeding endpoint hits the total deadline').to.equal('timeout');
+    expect(Date.now() - t0).to.be.below(1500);
+  });
+
+  it('POST bodies carry Content-Length (not chunked) and a User-Agent', async () => {
+    const f = createNodeEndpointFetch({ baseLookup: toLoopback, isBlocked: () => false });
+    const body = JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_blockNumber', params: [] });
+    await f(`http://node.test:${port}/`, { method: 'POST', headers: { 'content-type': 'application/json' }, body });
+    expect(lastHeaders['content-length']).to.equal(String(Buffer.byteLength(body)));
+    expect(lastHeaders['transfer-encoding']).to.equal(undefined);
+    expect(lastHeaders['user-agent']).to.equal('satelink-gateway');
+  });
+
+  it('headersOnly resolves on the status line even when the body never ends (health probes)', async () => {
+    const f = createNodeEndpointFetch({ baseLookup: toLoopback, isBlocked: () => false });
+    const t0 = Date.now();
+    const res = await f(`http://node.test:${port}/drip`, { timeoutMs: 2000, headersOnly: true });
+    expect(res.ok).to.equal(true);
+    expect(Date.now() - t0).to.be.below(1000);
+  });
+
+  it('a connection reset mid-body is a fixed category (unreachable), not raw error text', async () => {
+    const f = createNodeEndpointFetch({ baseLookup: toLoopback, isBlocked: () => false });
+    let err; try { await f(`http://node.test:${port}/reset`); } catch (e) { err = e; }
+    expect(err?.code).to.equal('unreachable');
+    expect(err?.message).to.equal('unreachable');
   });
 
   it('literal private addresses and bad schemes are refused by the URL check', async () => {

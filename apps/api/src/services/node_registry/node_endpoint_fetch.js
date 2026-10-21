@@ -47,38 +47,54 @@ export function createGuardedLookup({ baseLookup = dns.lookup, isBlocked = isBlo
  */
 export function createNodeEndpointFetch({ baseLookup, isBlocked = isBlockedIp } = {}) {
   const lookup = createGuardedLookup({ baseLookup, isBlocked });
-  return function nodeEndpointFetch(url, { method = 'GET', headers = {}, body, timeoutMs = DEFAULT_TIMEOUT_MS, maxBytes = DEFAULT_MAX_BYTES } = {}) {
+  const CATEGORIES = new Set(['blocked_address', 'timeout', 'response_too_large', 'dns_no_address', 'invalid_endpoint']);
+  const categorize = (err) => (CATEGORIES.has(err?.code) ? err : Object.assign(new Error('unreachable'), { code: 'unreachable', cause: err }));
+
+  return function nodeEndpointFetch(url, {
+    method = 'GET', headers = {}, body, timeoutMs = DEFAULT_TIMEOUT_MS, maxBytes = DEFAULT_MAX_BYTES, headersOnly = false,
+  } = {}) {
     return new Promise((resolve, reject) => {
       // Literal-address and scheme checks (lookup is not consulted for IP literals).
       if (validateNodeEndpoint(url)) return reject(codedError('invalid_endpoint'));
-      let u;
-      try { u = new URL(url); } catch { return reject(codedError('invalid_endpoint')); }
+      const u = new URL(url);
       const lib = u.protocol === 'https:' ? https : http;
-      const req = lib.request(u, { method, headers, lookup, agent: false, timeout: timeoutMs }, (res) => {
+
+      // Settle exactly once; every path clears the hard deadline.
+      let settled = false;
+      let req;
+      const finish = (fn, v) => { if (settled) return; settled = true; clearTimeout(deadline); fn(v); };
+      const fail = (err) => { finish(reject, categorize(err)); if (req && !req.destroyed) req.destroy(); };
+      // `timeout` on the request is an idle timer; this is the hard total deadline, so a
+      // drip-feeding endpoint cannot hold a request (or a health-check cycle) open.
+      const deadline = setTimeout(() => fail(codedError('timeout')), timeoutMs);
+
+      const payload = body === undefined ? undefined : Buffer.from(String(body));
+      const reqHeaders = { 'user-agent': 'satelink-gateway', ...headers };
+      if (payload) reqHeaders['content-length'] = String(payload.length); // not chunked
+
+      req = lib.request(u, { method, headers: reqHeaders, lookup, agent: false, timeout: timeoutMs }, (res) => {
+        const result = (text) => ({
+          ok: res.statusCode >= 200 && res.statusCode < 300,
+          status: res.statusCode,
+          headers: res.headers,
+          text: async () => text,
+          json: async () => JSON.parse(text),
+        });
+        if (headersOnly) { finish(resolve, result('')); res.destroy(); return; } // body unused
         const chunks = [];
         let size = 0;
         res.on('data', (c) => {
           size += c.length;
-          if (size > maxBytes) { req.destroy(codedError('response_too_large')); return; }
+          if (size > maxBytes) return fail(codedError('response_too_large'));
           chunks.push(c);
         });
-        res.on('end', () => {
-          const buf = Buffer.concat(chunks).toString('utf8');
-          resolve({
-            ok: res.statusCode >= 200 && res.statusCode < 300,
-            status: res.statusCode,
-            headers: res.headers,
-            text: async () => buf,
-            json: async () => JSON.parse(buf),
-          });
-        });
-        res.on('error', reject);
+        res.on('end', () => finish(resolve, result(Buffer.concat(chunks).toString('utf8'))));
+        res.on('error', fail);
+        res.on('aborted', () => fail(new Error('aborted')));
       });
-      req.on('timeout', () => req.destroy(codedError('timeout')));
-      req.on('error', (err) => reject(err.code === 'blocked_address' || err.code === 'timeout' || err.code === 'response_too_large'
-        || err.code === 'dns_no_address' ? err : Object.assign(new Error('unreachable'), { code: 'unreachable', cause: err })));
-      if (body !== undefined) req.write(body);
-      req.end();
+      req.on('timeout', () => fail(codedError('timeout')));
+      req.on('error', fail);
+      req.end(payload);
     });
   };
 }

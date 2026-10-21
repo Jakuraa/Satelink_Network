@@ -212,7 +212,7 @@ export async function forwardToNode(node, rpcRequest) {
     const latencyMs = Date.now() - startTime;
     return {
       success: false,
-      error: err.message,
+      error: err.code || 'unreachable', // fixed category, never raw error text
       latencyMs,
       nodeId: node.node_id
     };

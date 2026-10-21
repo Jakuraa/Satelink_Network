@@ -57,7 +57,7 @@ async function checkNodeHealth(node, timeoutMs = HEALTH_CHECK_TIMEOUT_MS) {
 
   try {
     // Resolve-then-check at connect time, no redirects (node_endpoint_fetch.js).
-    const response = await nodeEndpointFetch(healthUrl, { method: 'GET', timeoutMs });
+    const response = await nodeEndpointFetch(healthUrl, { method: 'GET', timeoutMs, headersOnly: true });
     const responseTimeMs = Date.now() - startTime;
 
     if (response.ok) {
