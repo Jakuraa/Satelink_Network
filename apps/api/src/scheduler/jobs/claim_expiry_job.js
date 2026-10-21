@@ -21,94 +21,100 @@ async function sweepExpiredEarnings(pool) {
     const expiryThreshold = now - (EARNINGS_EXPIRY_DAYS * 24 * 60 * 60); // 48 days ago
 
     try {
-        await client.query('BEGIN');
-
-        // Find expired unclaimed earnings grouped by node
-        const expiredResult = await client.query(`
-            SELECT
-                wallet_or_node_id as node_id,
-                SUM(amount_usdt) as expired_amount
-            FROM epoch_earnings
-            WHERE status = 'UNPAID'
-            AND created_at < $1
-            GROUP BY wallet_or_node_id
-            HAVING SUM(amount_usdt) > 0
-        `, [expiryThreshold]);
-
-        let totalSwept = 0;
-        let totalReallocated = 0;
-
-        for (const row of expiredResult.rows) {
-            const expiredAmount = parseFloat(row.expired_amount);
-
-            // Mark earnings as expired
-            await client.query(`
-                UPDATE epoch_earnings
-                SET status = 'EXPIRED', expired_at = $1
-                WHERE wallet_or_node_id = $2
-                AND status = 'UNPAID'
-                AND created_at < $3
-            `, [now, row.node_id, expiryThreshold]);
-
-            // 50% goes to treasury, 50% reallocated to active nodes
-            const treasuryShare = expiredAmount * 0.5;
-            const reallocationShare = expiredAmount * 0.5;
-
-            // Record 50% sweep to treasury
-            await client.query(`
-                INSERT INTO treasury_sweeps (node_id, amount_usdt, reason, swept_at)
-                VALUES ($1, $2, '48_day_expiry_50pct', $3)
-            `, [row.node_id, treasuryShare, now]);
-
-            totalSwept += treasuryShare;
-            totalReallocated += reallocationShare;
-
-            logger.info({
-                nodeId: row.node_id,
-                amount: expiredAmount,
-                toTreasury: treasuryShare,
-                toReallocation: reallocationShare,
-                reason: '48_day_expiry'
-            }, 'CLAIM_EXPIRY: expired earnings split 50/50');
+        // No runtime DDL (docs/build/runbooks/DB_ROLE_SWITCH.md): read what the schema has.
+        const schema = await client.query(`
+            SELECT to_regclass('treasury_sweeps') IS NOT NULL AS has_sweeps,
+                   EXISTS (SELECT 1 FROM information_schema.columns
+                            WHERE table_schema = current_schema() AND table_name = 'epoch_earnings'
+                              AND column_name = 'expired_at') AS has_expired_at
+        `);
+        const { has_sweeps: hasSweeps, has_expired_at: hasExpiredAt } = schema.rows[0];
+        if (!hasSweeps) {
+            // Fail closed: never mark earnings EXPIRED without recording where the money went.
+            logger.warn('CLAIM_EXPIRY: treasury_sweeps table missing — skipping earnings expiry (apply the migration)');
+            return { nodesAffected: 0, totalSwept: 0, totalReallocated: 0, skipped: 'treasury_sweeps_missing' };
         }
 
-        // Reallocate 50% to currently active nodes
-        if (totalReallocated > 0) {
-            const activeNodes = await client.query(`
-                SELECT node_id FROM nodes
-                WHERE LOWER(status) IN ('active', 'online', 'healthy')
-            `);
+        await client.query('BEGIN');
 
-            if (activeNodes.rows.length > 0) {
-                const perNodeShare = totalReallocated / activeNodes.rows.length;
+        // Mark expired UNPAID earnings (reserved CLAIMING rows are never touched) and get the
+        // per-node amounts back; all money in SQL numeric.
+        const expired = await client.query(`
+            WITH x AS (
+                UPDATE epoch_earnings
+                   SET status = 'EXPIRED'${hasExpiredAt ? ', expired_at = $2' : ''}
+                 WHERE status = 'UNPAID' AND created_at < $1 AND amount_usdt > 0
+                RETURNING wallet_or_node_id, amount_usdt
+            )
+            SELECT wallet_or_node_id AS node_id, SUM(amount_usdt)::text AS expired_amount
+              FROM x GROUP BY wallet_or_node_id
+        `, hasExpiredAt ? [expiryThreshold, now] : [expiryThreshold]);
 
-                for (const node of activeNodes.rows) {
-                    await client.query(`
-                        INSERT INTO epoch_earnings
-                            (epoch_id, wallet_or_node_id, amount_usdt, status, created_at)
-                        VALUES
-                            (0, $1, $2, 'UNPAID', $3)
-                    `, [node.node_id, perNodeShare, now]);
-                }
+        // 50% to treasury per node (recorded), 50% pooled for reallocation.
+        let totalSwept = '0';
+        let totalReallocated = '0';
+        if (expired.rows.length > 0) {
+            const sweep = await client.query(`
+                WITH e AS (SELECT * FROM jsonb_to_recordset($1::jsonb) AS t(node_id text, expired_amount numeric)),
+                     ins AS (
+                        INSERT INTO treasury_sweeps (node_id, amount_usdt, reason, swept_at)
+                        SELECT node_id, trunc(expired_amount * 0.5, 8), '48_day_expiry_50pct', $2 FROM e
+                        RETURNING amount_usdt
+                     )
+                SELECT (SELECT COALESCE(SUM(amount_usdt), 0) FROM ins)::text AS swept,
+                       (SELECT COALESCE(SUM(expired_amount), 0) FROM e)::text AS expired
+            `, [JSON.stringify(expired.rows), now]);
+            totalSwept = sweep.rows[0].swept;
+            // Reallocation = everything expired minus what went to the treasury (no rounding loss).
+            const rem = await client.query(`SELECT ($1::numeric - $2::numeric)::text AS r`, [sweep.rows[0].expired, totalSwept]);
+            totalReallocated = rem.rows[0].r;
+        }
 
-                logger.info({
-                    totalReallocated,
-                    nodesReallocated: activeNodes.rows.length,
-                    perNodeShare
-                }, 'CLAIM_EXPIRY: reallocated expired earnings to active nodes');
+        // Reallocate the pooled 50% to currently active nodes. Own role (expiry_reallocation,
+        // epoch 0): role is NOT NULL and part of the PK (epoch_id, role, wallet_or_node_id), so
+        // repeat runs add to the node's row instead of failing.
+        if (Number(totalReallocated) > 0) {
+            const realloc = await client.query(`
+                WITH active AS (
+                    SELECT node_id FROM nodes WHERE LOWER(status) IN ('active', 'online', 'healthy')
+                ), share AS (
+                    SELECT trunc($1::numeric / NULLIF((SELECT COUNT(*) FROM active), 0), 8) AS per_node
+                )
+                INSERT INTO epoch_earnings (epoch_id, role, wallet_or_node_id, amount_usdt, status, created_at)
+                SELECT 0, 'expiry_reallocation', active.node_id, share.per_node, 'UNPAID', $2
+                  FROM active, share WHERE share.per_node > 0
+                ON CONFLICT (epoch_id, role, wallet_or_node_id)
+                DO UPDATE SET amount_usdt = epoch_earnings.amount_usdt + EXCLUDED.amount_usdt
+                RETURNING wallet_or_node_id
+            `, [totalReallocated, now]);
+            if (realloc.rowCount === 0) {
+                // No active node to receive it: record the pooled half with the treasury rather
+                // than letting it vanish (expired = swept + reallocated, always).
+                await client.query(
+                    `INSERT INTO treasury_sweeps (node_id, amount_usdt, reason, swept_at) VALUES (NULL, $1::numeric, 'expiry_no_active_nodes', $2)`,
+                    [totalReallocated, now]);
             }
+            logger.info({
+                totalReallocated,
+                nodesReallocated: realloc.rowCount,
+            }, 'CLAIM_EXPIRY: reallocated expired earnings to active nodes');
         }
 
         await client.query('COMMIT');
 
+        for (const row of expired.rows) {
+            logger.info({ nodeId: row.node_id, amount: row.expired_amount, reason: '48_day_expiry' },
+                'CLAIM_EXPIRY: expired earnings split 50/50');
+        }
+
         return {
-            nodesAffected: expiredResult.rows.length,
-            totalSwept,
-            totalReallocated
+            nodesAffected: expired.rows.length,
+            totalSwept: Number(totalSwept),
+            totalReallocated: Number(totalReallocated)
         };
 
     } catch (err) {
-        await client.query('ROLLBACK');
+        await client.query('ROLLBACK').catch(() => {});
         throw err;
     } finally {
         client.release();
@@ -203,53 +209,12 @@ export function startClaimExpiryJob(pool) {
     };
 }
 
-/**
- * Ensure required tables exist.
- * @param {import('pg').Pool} pool - PostgreSQL pool
- */
-export async function ensureExpiryTables(pool) {
-    await pool.query(`
-        CREATE TABLE IF NOT EXISTS treasury_sweeps (
-            id SERIAL PRIMARY KEY,
-            node_id TEXT,
-            amount_usdt NUMERIC(18,8),
-            reason TEXT,
-            swept_at BIGINT
-        )
-    `);
+// ensureExpiryTables (runtime CREATE/ALTER) was removed: it was never called, and runtime DDL
+// fails for a non-owner role. The schema comes from migrations (core/db/sql/033_claims_pull_model.sql).
 
-    // Ensure claims table has required columns
-    await pool.query(`
-        DO $$
-        BEGIN
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns
-                           WHERE table_name = 'claims' AND column_name = 'claim_id') THEN
-                ALTER TABLE claims ADD COLUMN claim_id TEXT UNIQUE;
-            END IF;
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns
-                           WHERE table_name = 'claims' AND column_name = 'signature') THEN
-                ALTER TABLE claims ADD COLUMN signature TEXT;
-            END IF;
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns
-                           WHERE table_name = 'claims' AND column_name = 'nonce') THEN
-                ALTER TABLE claims ADD COLUMN nonce BIGINT;
-            END IF;
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns
-                           WHERE table_name = 'claims' AND column_name = 'expiry') THEN
-                ALTER TABLE claims ADD COLUMN expiry BIGINT;
-            END IF;
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns
-                           WHERE table_name = 'epoch_earnings' AND column_name = 'expired_at') THEN
-                ALTER TABLE epoch_earnings ADD COLUMN expired_at BIGINT;
-            END IF;
-        END $$;
-    `);
-
-    logger.info('CLAIM_EXPIRY: ensured required tables exist');
-}
+export { runExpiryJob, sweepExpiredEarnings };
 
 export default {
     startClaimExpiryJob,
-    runExpiryJob,
-    ensureExpiryTables
+    runExpiryJob
 };
