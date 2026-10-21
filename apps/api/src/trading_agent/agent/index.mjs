@@ -13,6 +13,7 @@ export { ToolRegistry, ToolTier, defineTool, isForbiddenToolName, FORBIDDEN_TOOL
 export { createDefaultTools, MARKET_PURPOSE } from './tools.mjs';
 export { AIProvider, ScriptedProvider, Task } from './provider.mjs';
 export { GroqProvider, GROQ_DEFAULT_BASE_URL } from './providers/groq.mjs';
+export { OpenRouterProvider, OPENROUTER_DEFAULT_BASE_URL } from './providers/openrouter.mjs';
 export { AnthropicProvider } from './providers/anthropic.mjs';
 export { ModelRouter } from './router.mjs';
 export { TieredModelRouter } from './tiered_router.mjs';
