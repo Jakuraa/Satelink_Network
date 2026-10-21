@@ -48,6 +48,9 @@ describe('typed provider errors', () => {
     for (const k of ['timeout', 'connection_reset', 'rate_limited', 'server_error'] as const) expect(isFallbackEligible(new ProviderError(k, k, { provider: 'p' }))).toBe(true);
     for (const k of ['stream_truncated', 'malformed', 'rejected', 'deadline_exceeded', 'config'] as const) expect(isFallbackEligible(new ProviderError(k, k, { provider: 'p' }))).toBe(false);
     expect(isFallbackEligible(new Error('x'))).toBe(false);
+    // a deadline cut-off is eligible only when its last failure was transient
+    expect(isFallbackEligible(new ProviderDeadlineExceededError('d', { provider: 'p', cause: new ProviderError('server_error', '503', { provider: 'p' }) }))).toBe(true);
+    expect(isFallbackEligible(new ProviderDeadlineExceededError('d', { provider: 'p', cause: new ProviderError('rejected', '400', { provider: 'p' }) }))).toBe(false);
   });
 });
 

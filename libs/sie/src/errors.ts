@@ -105,7 +105,15 @@ export function providerErrorForStatus(status: number, message: string, opts: Om
   return new ProviderRejectedError(message, o);
 }
 
-/** A router may try the next provider in the chain only for transient failures. */
+/**
+ * A router may try the next provider in the chain only for transient failures. A deadline cut-off
+ * whose last failure was transient (429, 5xx, timeout, reset) is eligible too: it is the same
+ * outage, merely stopped by the budget instead of by maxRetries, so the outcome must not depend on
+ * which limit was hit first. It stays non-retryable against the SAME provider.
+ */
 export function isFallbackEligible(e: unknown): boolean {
-  return e instanceof ProviderError && e.retryable;
+  if (!(e instanceof ProviderError)) return false;
+  if (e.retryable) return true;
+  const cause = (e as { cause?: unknown }).cause;
+  return e.kind === 'deadline_exceeded' && cause instanceof ProviderError && cause.retryable;
 }

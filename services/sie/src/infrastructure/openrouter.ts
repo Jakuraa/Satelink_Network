@@ -8,9 +8,11 @@
 //                      malformed, rejected, deadline_exceeded (see @satelink/sie errors).
 //   bounded retries  → at most `maxRetries` extra attempts, only for retryable failures; Retry-After
 //                      (seconds or HTTP-date) honoured, capped at 5 s.
-//   total deadline   → `deadlineMs` bounds every attempt plus every backoff; each attempt's timeout
-//                      is min(timeoutMs, time left). One attempt's timeout covers the request AND
-//                      the body read; streams time out on silence longer than timeoutMs.
+//   total deadline   → `deadlineMs` bounds every chat attempt plus every backoff, and a stream's wait
+//                      for response headers; each attempt's timeout is min(timeoutMs, time left). One
+//                      attempt's timeout covers the request AND the body read. Once a stream is open
+//                      only the idle timeout applies (silence longer than timeoutMs; keep-alive
+//                      comments count as activity), as in #579.
 //   malformed output → non-JSON body, missing choices, an in-body error or a stream without [DONE]
 //                      throw; never a fabricated or truncated answer.
 //
@@ -83,13 +85,15 @@ export class OpenRouterProvider extends AIProvider {
     super();
     if (typeof o.apiKey !== 'string' || o.apiKey.length < 8) throw new ProviderError('config', 'OpenRouterProvider requires an injected apiKey', { provider: PROVIDER });
     if (typeof o.fetch !== 'function') throw new ProviderError('config', 'OpenRouterProvider requires an injected fetch', { provider: PROVIDER });
+    const timeoutMs = o.timeoutMs ?? 30_000;
+    if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) throw new ProviderError('config', 'timeoutMs must be a positive number', { provider: PROVIDER });
     const maxRetries = o.maxRetries ?? 1;
     const deadlineMs = o.deadlineMs ?? 60_000;
     assertRetryPolicy({ maxRetries, deadlineMs }, PROVIDER);
     this.#apiKey = o.apiKey;
     this.#fetch = o.fetch;
     this.#baseUrl = (o.baseUrl ?? OPENROUTER_DEFAULT_BASE_URL).replace(/\/+$/, '');
-    this.#timeoutMs = o.timeoutMs ?? 30_000;
+    this.#timeoutMs = timeoutMs;
     this.#deadlineMs = deadlineMs;
     this.#maxRetries = maxRetries;
     this.#now = o.now ?? Date.now;
@@ -118,7 +122,9 @@ export class OpenRouterProvider extends AIProvider {
     const data = await this.#retry((remaining) => this.#attempt(body, remaining));
     const choice = data.choices?.[0]?.message;
     if (!choice || typeof choice !== 'object') throw malformed('response has no choices[0].message');
-    const toolCalls: ToolCall[] = (choice.tool_calls ?? []).map((tc) => ({
+    const rawCalls: unknown = choice.tool_calls ?? [];
+    if (!Array.isArray(rawCalls) || rawCalls.some((tc) => !tc || typeof tc !== 'object')) throw malformed('tool_calls is not an array of objects');
+    const toolCalls: ToolCall[] = (rawCalls as WireToolCall[]).map((tc) => ({
       id: str(tc.id) ?? undefined, name: str(tc.function?.name) ?? undefined, arguments: str(tc.function?.arguments) ?? '{}',
     }));
     return {
@@ -180,7 +186,8 @@ export class OpenRouterProvider extends AIProvider {
           }
           let event: WireCompletion;
           try { event = JSON.parse(payload) as WireCompletion; } catch { throw malformed('stream event is not JSON'); }
-          if (event?.error) throw inBodyError(event.error);
+          if (!event || typeof event !== 'object') throw malformed('stream event is not an object');
+          if (event.error) throw inBodyError(event.error);
           if (str(event.id)) seen.id = event.id;
           if (str(event.model)) seen.model = event.model;
           if (str(event.provider)) seen.provider = event.provider;

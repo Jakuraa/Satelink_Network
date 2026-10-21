@@ -1,6 +1,8 @@
 // Provider-reported cost → integer micro-USD (1 USD = 1_000_000 micro). Money is bigint in integer
 // minor units, never a float (libs invariant #2). The provider's decimal is converted digit by digit
-// from its shortest round-trip text, so no floating-point arithmetic touches the value.
+// from the shortest round-trip text of the parsed number (or from a decimal string as given), with
+// integer arithmetic only. A JSON number has already been parsed to a double, so digits beyond ~17
+// significant figures are not recoverable; for provider costs that is far below one micro-USD.
 //
 // Rounding: UP to the next whole micro-USD. This records what Satelink paid, and the conservative
 // direction for a cost is never to under-record it (a 0.0000004 USD call costs 1 micro, not 0).

@@ -182,6 +182,19 @@ describe('OpenRouterProvider contract (ported from #579)', () => {
     expect(out).toEqual(['ra']); // what was streamed is never followed by a `final` chunk
   });
 
+  it('malformed output: a null stream event or non-array tool_calls is a typed malformed error, never a TypeError', async () => {
+    const n = await caught(() => drain(provider(queueFetch([sse('data: null\n')])).stream(MSGS, { model: 'm' })));
+    expect([n instanceof ProviderError, n.kind, n.message]).toEqual([true, 'malformed', 'openrouter malformed response: stream event is not an object']);
+    for (const tc of [{ x: 1 }, [null], ['str']]) {
+      const body = { id: 'g', model: 'm', choices: [{ message: { content: 'x', tool_calls: tc } }] };
+      const e = await caught(() => provider(queueFetch([json(body)])).chat(MSGS, { model: 'm' }));
+      expect([e instanceof ProviderError, e.kind], JSON.stringify(tc)).toEqual([true, 'malformed']);
+    }
+    for (const t of [0, -1, Number.NaN]) {
+      expect(() => new OpenRouterProvider({ apiKey: FAKE_KEY, fetch: async () => json({}), timeoutMs: t }), String(t)).toThrow(/timeoutMs/);
+    }
+  });
+
   it('stream: a read error or a stall mid-stream is a retryable typed error (router may fall back)', async () => {
     const reset: HttpResponseLike = { ok: true, status: 200, headers: { get: () => null }, text: async () => '',
       body: (async function* () { yield enc.encode('data: {"choices":[{"delta":{"content":"a"}}]}\n'); throw new TypeError('terminated'); })() };
@@ -240,6 +253,7 @@ describe('OpenRouterProvider — served model, generation id, cost (new on main)
     // 700 (attempt 1) + 200 wait + 700 (attempt 2) = 1600 ≥ 1500 → no third attempt
     expect([e.name, e.kind, e.retryable, f.calls.length]).toEqual(['ProviderDeadlineExceededError', 'deadline_exceeded', false, 2]);
     expect((e as Error & { cause?: ProviderError }).cause?.status).toBe(503);
+    expect(isFallbackEligible(e)).toBe(true); // same outage as exhausting maxRetries: the router may still fall back
   });
 
   it('total deadline: a single attempt never waits longer than the time left', async () => {

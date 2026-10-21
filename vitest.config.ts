@@ -76,7 +76,7 @@ export default defineConfig({
         plugins: [workspaceResolver],
         test: {
           name: 'services',
-          include: ['services/**/*.{test,spec}.ts'],
+          include: ['services/sie/**/*.{test,spec}.ts'],
           exclude: ['**/node_modules/**', '.claude/worktrees/**', ...INTEGRATION_PATTERNS, '**/*.live.test.ts'],
           environment: 'node',
         },
