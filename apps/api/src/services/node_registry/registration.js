@@ -372,6 +372,9 @@ export function createNodeRegistryRouter(db, redis) {
       // SEC-4b (W1 follow-up): the payout wallet, the raw endpoint (IP:port), hardware and
       // failure text are staff-only. Public callers get the operational summary.
       const staff = isStaffRequest(req);
+      // The body depends on a request header: never let a cache serve the staff view publicly.
+      res.set('Vary', 'Authorization, X-Admin-Token');
+      if (staff) res.set('Cache-Control', 'private, no-store');
 
       res.json({
         ok: true,

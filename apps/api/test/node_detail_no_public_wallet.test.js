@@ -26,13 +26,16 @@ describe('SEC-4b — node detail hides payout wallet and endpoint from the publi
     const a = express(); a.use(express.json()); a.use('/api/nodes', createNodeRegistryRouter(db, null)); return a;
   };
 
-  for (const [name, headers] of [['anonymous', {}], ['wrong staff token', { 'x-admin-token': 'nope' }], ['wrong Bearer', { Authorization: 'Bearer nope' }]]) {
+  for (const [name, headers] of [['anonymous', {}], ['wrong staff token', { 'x-admin-token': 'nope' }], ['wrong Bearer', { Authorization: 'Bearer nope' }],
+    ['wrong x-admin-token wins over a correct Bearer', { 'x-admin-token': 'nope', Authorization: `Bearer ${STAFF}` }],
+    ['lowercase bearer scheme', { Authorization: `bearer ${STAFF}` }]]) {
     it(`${name}: public summary only`, async () => {
       const res = await request(app()).get('/api/nodes/node-1').set(headers);
       expect(res.status).to.equal(200);
       for (const f of PRIVATE_FIELDS) expect(res.body.node, f).to.not.have.property(f);
       expect(JSON.stringify(res.body)).to.not.contain('203.0.113.7').and.not.contain('0f00d1');
       expect(res.body.node).to.include({ nodeId: 'node-1', status: 'active', region: 'us-east-1' });
+      expect(res.headers.vary).to.match(/Authorization/i).and.match(/X-Admin-Token/i);
     });
   }
 
@@ -42,6 +45,8 @@ describe('SEC-4b — node detail hides payout wallet and endpoint from the publi
       expect(res.body.node.wallet).to.equal(row.wallet);
       expect(res.body.node.endpointUrl).to.equal(row.endpoint_url);
       expect(res.body.node.lastFailureReason).to.equal(row.last_failure_reason);
+      expect(res.body.node.hardware).to.deep.equal(row.hardware_json);
+      expect(res.headers['cache-control']).to.equal('private, no-store');
     });
   }
 
