@@ -25,7 +25,7 @@ import { getNodeHealthSummary } from '../../scheduler/node_health_monitor.js';
 import { handleNodeComeback } from './offline_detector.js';
 import { getNodeEarnings } from './earnings_aggregator.js';
 import { requireHeaderSecret } from '../../security/header_secret.js';
-import { verifyNodeHeartbeat, validateNodeEndpoint } from './heartbeat_auth.js';
+import { verifyNodeHeartbeat, validateNodeEndpoint, acceptMonotonicHeartbeat } from './heartbeat_auth.js';
 
 const VALID_REGIONS = ['ap-south-1', 'us-east-1', 'eu-west-1', 'ap-southeast-1'];
 const VALID_NODE_TYPES = ['rpc', 'bandwidth', 'compute'];
@@ -107,6 +107,7 @@ async function validateEndpoint(url, timeoutMs = 5000) {
     const healthUrl = url.endsWith('/') ? `${url}health` : `${url}/health`;
     const response = await fetch(healthUrl, {
       method: 'GET',
+      redirect: 'manual', // a redirect could lead into the private network (SSRF)
       signal: controller.signal
     });
     clearTimeout(timeoutId);
@@ -470,6 +471,9 @@ export function createNodeRegistryRouter(db, redis) {
         const endpointError = validateNodeEndpoint(endpoint_url);
         if (endpointError) return res.status(400).json({ ok: false, error: endpointError });
       }
+      if (!(await acceptMonotonicHeartbeat(nodeResult.rows[0].node_id, timestamp, redis))) {
+        return res.status(409).json({ ok: false, error: 'heartbeat_replayed' });
+      }
 
       const now = Math.floor(Date.now() / 1000);
       const currentStatus = nodeResult.rows[0].status;
@@ -477,7 +481,10 @@ export function createNodeRegistryRouter(db, redis) {
       let comebackInfo = null;
 
       // Handle offline/suspended node comeback
-      if (currentStatus === 'offline' || currentStatus === 'suspended') {
+      // Only 'offline' is revived by a heartbeat. 'suspended' may be a staff sanction (PATCH)
+      // and cannot be told apart from the automatic >24h suspension, so it stays until staff
+      // reactivate the node.
+      if (currentStatus === 'offline') {
         comebackInfo = await handleNodeComeback(actualNodeId, db);
         newStatus = 'active';
       } else if (currentStatus === 'pending') {
@@ -559,6 +566,9 @@ export function createNodeRegistryRouter(db, redis) {
         const endpointError = validateNodeEndpoint(endpoint_url);
         if (endpointError) return res.status(400).json({ ok: false, error: endpointError });
       }
+      if (!(await acceptMonotonicHeartbeat(nodeResult.rows[0].node_id, timestamp, redis))) {
+        return res.status(409).json({ ok: false, error: 'heartbeat_replayed' });
+      }
 
       const now = Math.floor(Date.now() / 1000);
       const currentStatus = nodeResult.rows[0].status;
@@ -566,7 +576,10 @@ export function createNodeRegistryRouter(db, redis) {
       let comebackInfo = null;
 
       // Handle offline/suspended node comeback
-      if (currentStatus === 'offline' || currentStatus === 'suspended') {
+      // Only 'offline' is revived by a heartbeat. 'suspended' may be a staff sanction (PATCH)
+      // and cannot be told apart from the automatic >24h suspension, so it stays until staff
+      // reactivate the node.
+      if (currentStatus === 'offline') {
         comebackInfo = await handleNodeComeback(nodeId, db);
         newStatus = 'active';
       } else if (currentStatus === 'pending') {

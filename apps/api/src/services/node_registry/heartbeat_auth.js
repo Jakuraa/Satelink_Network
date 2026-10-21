@@ -32,7 +32,7 @@ export function heartbeatMessage({ nodeId, timestamp, endpointUrl }) {
  * @returns {{ok: true} | {ok: false, http: number, error: string}}
  */
 export function verifyNodeHeartbeat({ nodeId, wallet, timestamp, signature, endpointUrl, now = Date.now() }) {
-  if (typeof signature !== 'string' || signature.length === 0 || timestamp === undefined || timestamp === null) {
+  if (typeof signature !== 'string' || signature.length === 0 || signature.length > 200 || timestamp === undefined || timestamp === null) {
     return { ok: false, http: 401, error: 'heartbeat_signature_required' };
   }
   const ts = Number(timestamp);
@@ -58,9 +58,12 @@ export function verifyNodeHeartbeat({ nodeId, wallet, timestamp, signature, endp
 function isBlockedIp(host) {
   const v = net.isIP(host);
   if (v === 4) {
-    const [a, b] = host.split('.').map(Number);
+    const [a, b, c] = host.split('.').map(Number);
     return a === 0 || a === 10 || a === 127 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31)
-      || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127) || a >= 224;
+      || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127) || a >= 224
+      || (a === 198 && (b === 18 || b === 19))                       // benchmarking 198.18/15
+      || (a === 192 && b === 0 && (c === 0 || c === 2))               // 192.0.0/24, TEST-NET-1
+      || (a === 198 && b === 51 && c === 100) || (a === 203 && b === 0 && c === 113); // TEST-NET-2/3
   }
   if (v === 6) {
     const h = host.toLowerCase();
@@ -72,24 +75,53 @@ function isBlockedIp(host) {
         const hi = parseInt(hex[1], 16), lo = parseInt(hex[2], 16);
         return isBlockedIp(`${hi >> 8}.${hi & 255}.${lo >> 8}.${lo & 255}`);
       }
-      return isBlockedIp(rest);
+      return true; // any other ::ffff: form (e.g. ::ffff:0:7f00:1) is not global unicast
     }
-    return h === '::' || h === '::1' || h.startsWith('fc') || h.startsWith('fd') || h.startsWith('fe80');
+    // Only global unicast (2000::/3) is a node endpoint; that excludes ::/96 (IPv4-compatible),
+    // ::ffff:0:0/96, 64:ff9b::/96 (NAT64), fc00::/7, fe80::/10, fec0::/10, multicast. Inside
+    // 2000::/3, 6to4 (2002::/16, embeds an IPv4) and documentation (2001:db8::/32) are refused.
+    const first = parseInt(h.split(':')[0] || '0', 16);
+    if (!(first >= 0x2000 && first <= 0x3fff)) return true;
+    return first === 0x2002 || h.startsWith('2001:db8:') || h.startsWith('2001:0db8:');
   }
   return false;
 }
 
+// Replay guard: a node's accepted heartbeat timestamps must strictly increase, so a captured
+// heartbeat cannot be replayed (e.g. to roll back a newer endpoint change). Redis when
+// available (shared across instances), an in-process map otherwise.
+const lastAccepted = new Map();
+const MONOTONIC_LUA = "local c=redis.call('GET',KEYS[1]) if c and tonumber(c)>=tonumber(ARGV[1]) then return 0 end redis.call('SET',KEYS[1],ARGV[1],'EX',600) return 1";
+
+export async function acceptMonotonicHeartbeat(nodeId, timestamp, redis) {
+  const ts = Number(timestamp);
+  const prev = lastAccepted.get(nodeId);
+  if (prev !== undefined && ts <= prev) return false;
+  if (redis && typeof redis.eval === 'function') {
+    try {
+      const ok = await redis.eval(MONOTONIC_LUA, 1, `node:hb:last:${nodeId}`, String(ts));
+      if (Number(ok) !== 1) return false;
+    } catch { /* redis optional: the in-process guard still applies */ }
+  }
+  lastAccepted.set(nodeId, ts);
+  return true;
+}
+
 /**
- * Validates a node endpoint URL (used before storing it). Literal-address checks only;
- * hostnames that resolve to private addresses are the health monitor's concern.
+ * Validates a node endpoint URL (used before storing it). Literal-address checks only: a DNS
+ * name that resolves to a private address is NOT caught here (follow-up: resolve-then-check
+ * at connect time); fetch sites refuse redirects (redirect: 'manual').
  * @returns {string|null} error code, or null when acceptable
  */
 export function validateNodeEndpoint(endpointUrl) {
+  // The raw string is what gets stored and signed: no whitespace/control characters (the URL
+  // parser silently strips them, so the validated and the stored value could differ).
+  if (typeof endpointUrl !== 'string' || endpointUrl.length > 2048 || /[\s\x00-\x1f\x7f]/.test(endpointUrl)) return 'invalid_endpoint';
   let u;
   try { u = new URL(endpointUrl); } catch { return 'invalid_endpoint'; }
   if (u.protocol !== 'http:' && u.protocol !== 'https:') return 'invalid_endpoint';
   if (u.username || u.password) return 'invalid_endpoint';
-  const host = u.hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  const host = u.hostname.replace(/^\[|\]$/g, '').toLowerCase().replace(/\.+$/, ''); // "localhost." == localhost
   if (!host || host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.internal') || host.endsWith('.local')) {
     return 'invalid_endpoint';
   }

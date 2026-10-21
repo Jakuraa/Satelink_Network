@@ -58,6 +58,7 @@ async function checkNodeHealth(node, timeoutMs = HEALTH_CHECK_TIMEOUT_MS) {
   try {
     const response = await fetch(healthUrl, {
       method: 'GET',
+      redirect: 'manual', // never follow a node's redirect into the private network (SSRF)
       signal: controller.signal
     });
     clearTimeout(timeoutId);

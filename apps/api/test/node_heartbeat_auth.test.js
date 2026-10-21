@@ -29,7 +29,11 @@ function fakeDb({ wallet = owner.address, status = 'offline' } = {}) {
 }
 
 const app = (db) => { const a = express(); a.use(express.json()); a.use('/api/nodes', createNodeRegistryRouter(db, null)); return a; };
-const sign = async (wallet, { nodeId = 'node-1', timestamp = Date.now(), endpointUrl } = {}) =>
+// Accepted heartbeat timestamps must strictly increase per node (replay guard), so each
+// signature in this file uses a fresh, increasing timestamp.
+let clock = Date.now() - 30_000;
+const nextTs = () => (clock += 7);
+const sign = async (wallet, { nodeId = 'node-1', timestamp = nextTs(), endpointUrl } = {}) =>
   ({ timestamp, signature: await wallet.signMessage(heartbeatMessage({ nodeId, timestamp, endpointUrl })) });
 
 const routes = [
@@ -108,10 +112,14 @@ describe('SEC-5 — node heartbeat requires the registered wallet\'s signature',
   it('validateNodeEndpoint rejects loopback, private, link-local, metadata, non-http and circular hosts', () => {
     for (const bad of ['http://localhost:8545', 'http://127.0.0.1', 'http://10.0.0.4', 'http://172.20.1.1', 'http://192.168.1.2',
       'http://169.254.169.254', 'http://[::1]:80', 'http://[fd00::1]', 'http://[::ffff:127.0.0.1]', 'http://[::ffff:a9fe:a9fe]', 'http://[::ffff:10.0.0.1]', 'ftp://node.example',
-      'https://rpc.satelink.network', 'http://user:pw@node.example', 'http://db.internal', 'not a url']) {
+      'https://rpc.satelink.network', 'http://user:pw@node.example', 'http://db.internal', 'not a url', 'http://localhost.', 'http://rpc.satelink.network.',
+      'https://a\nb.example', 'https://node.example/\tx', 'http://2130706433', 'http://0x7f.1', 'http://0',
+      'http://[::7f00:1]', 'http://[::127.0.0.1]', 'http://[64:ff9b::a9fe:a9fe]', 'http://[2002:a9fe:a9fe::]',
+      'http://[::ffff:0:7f00:1]', 'http://[fec0::1]', 'http://[2001:db8::1]', 'http://198.18.0.1', 'http://192.0.2.10',
+      'http://203.0.113.7', 'http://foo.railway.internal.']) {
       expect(validateNodeEndpoint(bad), bad).to.equal('invalid_endpoint');
     }
-    for (const ok of ['https://node.example:8545', 'http://203.0.113.7:3737', 'https://[2001:db8::1]:443']) {
+    for (const ok of ['https://node.example:8545', 'http://93.184.216.34:3737', 'https://[2606:4700:4700::1111]:443']) {
       expect(validateNodeEndpoint(ok), ok).to.equal(null);
     }
   });
@@ -128,6 +136,48 @@ describe('SEC-5 — node heartbeat requires the registered wallet\'s signature',
       expect(res.status).to.equal(400);
       expect(res.body.error).to.equal('invalid_endpoint');
       expect(fetched).to.equal(0);
+    } finally { globalThis.fetch = realFetch; }
+  });
+
+  it('a replayed or older heartbeat is refused (409) — it cannot roll back a newer endpoint', async () => {
+    const db = fakeDb({ status: 'active' });
+    const a = app(db);
+    const older = await sign(owner, { endpointUrl: 'https://old.example:8545' });
+    const newer = await sign(owner, { endpointUrl: 'https://new.example:8545' });
+    expect((await request(a).post('/api/nodes/node-1/heartbeat').send({ endpoint_url: 'https://new.example:8545', ...newer })).status).to.equal(200);
+    const replay = await request(a).post('/api/nodes/node-1/heartbeat').send({ endpoint_url: 'https://new.example:8545', ...newer });
+    expect(replay.status).to.equal(409);
+    const rollback = await request(a).post('/api/nodes/heartbeat').send({ nodeId: 'node-1', endpoint_url: 'https://old.example:8545', ...older });
+    expect(rollback.status).to.equal(409);
+    expect(db.writes.filter((w) => /endpoint_url = \$4/.test(w.sql)).map((w) => w.params[3])).to.deep.equal(['https://new.example:8545']);
+  });
+
+  it('a suspended node is not revived by its own heartbeat (staff reactivate it)', async () => {
+    const db = fakeDb({ status: 'suspended' });
+    const res = await request(app(db)).post('/api/nodes/node-1/heartbeat').send(await sign(owner));
+    expect(res.status).to.equal(200);
+    expect(res.body.status).to.equal('suspended');
+    expect(db.writes.every((w) => w.params[1] === 'suspended')).to.equal(true);
+  });
+
+  it('the generic route accepts node_id (snake case) and verifies against that node', async () => {
+    const db = fakeDb({ status: 'offline' });
+    const res = await request(app(db)).post('/api/nodes/heartbeat').send({ node_id: 'node-1', ...(await sign(owner)) });
+    expect(res.status, JSON.stringify(res.body)).to.equal(200);
+    expect(res.body.status).to.equal('active');
+  });
+
+  it('registration probes a public endpoint without following redirects', async () => {
+    const seen = [];
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = async (u, init) => { seen.push(init?.redirect); return new Response('', { status: 302, headers: { location: 'http://10.0.0.1/' } }); };
+    try {
+      const res = await request(app(fakeDb())).post('/api/nodes/register').send({
+        wallet_address: owner.address, node_type: 'rpc', endpoint_url: 'https://node.example:8545',
+        region: 'us-east-1', chain_ids: [137],
+      });
+      expect(seen[0]).to.equal('manual');
+      expect(res.status).to.equal(400); // a redirect is not a healthy endpoint
     } finally { globalThis.fetch = realFetch; }
   });
 });
