@@ -185,6 +185,18 @@ async function runExpiryJob(pool) {
  * @param {import('pg').Pool} pool - PostgreSQL pool
  */
 export function startClaimExpiryJob(pool) {
+    // Off unless explicitly enabled, and never while settlement is in dry-run:
+    // - the job never worked before (it rolled back on every run), so enabling it expires every
+    //   UNPAID earning older than 48 days at once — earnings nobody could claim while
+    //   SETTLEMENT_DRY_RUN=1;
+    // - expireStaleSignatures flips stale 'pending' claims to 'expired', which would let a claim
+    //   that may already be redeemed on-chain be signed again (the one-signature guard blocks on
+    //   'pending'). Reconcile claims before enabling.
+    if (process.env.CLAIM_EXPIRY_ENABLED !== 'true' || process.env.SETTLEMENT_DRY_RUN !== '0') {
+        logger.info({ enabled: process.env.CLAIM_EXPIRY_ENABLED === 'true', settlementDryRun: process.env.SETTLEMENT_DRY_RUN !== '0' },
+            'CLAIM_EXPIRY: disabled (needs CLAIM_EXPIRY_ENABLED=true and SETTLEMENT_DRY_RUN=0)');
+        return { runNow: async () => ({ ok: false, disabled: true }), stop: () => {} };
+    }
     const run = async () => {
         try {
             await runExpiryJob(pool);

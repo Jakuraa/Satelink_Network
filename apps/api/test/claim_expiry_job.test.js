@@ -2,7 +2,7 @@
 // (NOT NULL + part of the PK) so every run rolled back and nothing expired; money was split
 // in JS floats; it depended on runtime ALTER TABLE. Real SQL on the production table shape.
 import { expect } from 'chai';
-import { sweepExpiredEarnings } from '../src/scheduler/jobs/claim_expiry_job.js';
+import { sweepExpiredEarnings, startClaimExpiryJob } from '../src/scheduler/jobs/claim_expiry_job.js';
 
 describe('claim expiry: sweep + reallocation (real SQL)', function () {
   this.timeout(30000);
@@ -83,5 +83,23 @@ describe('claim expiry: sweep + reallocation (real SQL)', function () {
     await sweepExpiredEarnings(pool);
     expect(await sum(`SELECT SUM(amount_usdt)::text t FROM treasury_sweeps`)).to.equal('1.50000001');
     expect(await sum(`SELECT COUNT(*)::int t FROM epoch_earnings WHERE role = 'expiry_reallocation'`)).to.equal(0);
+  });
+
+  it('the scheduler is off unless CLAIM_EXPIRY_ENABLED=true AND SETTLEMENT_DRY_RUN=0 — and touches nothing', async () => {
+    await reset();
+    const saved = { e: process.env.CLAIM_EXPIRY_ENABLED, d: process.env.SETTLEMENT_DRY_RUN };
+    try {
+      for (const [e, d] of [[undefined, '0'], ['true', '1'], ['true', undefined], ['TRUE', '0']]) {
+        if (e === undefined) delete process.env.CLAIM_EXPIRY_ENABLED; else process.env.CLAIM_EXPIRY_ENABLED = e;
+        if (d === undefined) delete process.env.SETTLEMENT_DRY_RUN; else process.env.SETTLEMENT_DRY_RUN = d;
+        const job = startClaimExpiryJob(pool);
+        expect((await job.runNow()).disabled, `${e}/${d}`).to.equal(true);
+        job.stop();
+      }
+      expect(await sum(`SELECT COUNT(*)::int t FROM epoch_earnings WHERE status = 'EXPIRED'`)).to.equal(0);
+    } finally {
+      if (saved.e === undefined) delete process.env.CLAIM_EXPIRY_ENABLED; else process.env.CLAIM_EXPIRY_ENABLED = saved.e;
+      if (saved.d === undefined) delete process.env.SETTLEMENT_DRY_RUN; else process.env.SETTLEMENT_DRY_RUN = saved.d;
+    }
   });
 });
