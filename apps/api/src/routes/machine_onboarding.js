@@ -57,7 +57,7 @@ const bundleText = (r) => bundlePriceText(r);
 function registryView() {
   if (!registryEnabled()) return {};
   const c = loadCatalog();
-  return { capability_registry_version: c.version, capabilities: publicCapabilities(c) };
+  return { capability_registry_version: c.version, capabilities: publicCapabilities(c, process.env) };
 }
 
 function pricingBody() {

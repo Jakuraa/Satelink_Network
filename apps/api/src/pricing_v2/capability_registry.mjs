@@ -23,6 +23,31 @@ const NOT_PUBLIC_STATUS = new Set(['planned', 'deprecated']);
 
 export const registryEnabled = (env = process.env) => env.CAPABILITY_REGISTRY_V3 === '1';
 
+export const RPC_CREDITS_CAPABILITY = 'rpc.polygon.call';
+export const RPC_X402_BUNDLE_CAPABILITY = 'rpc.polygon.x402_bundle';
+
+const USD_DECIMAL_RE = /^(\d+)(?:\.(\d{1,6}))?$/;
+/** "0.25" → 250000 micro-USD, integer arithmetic; undefined unless an exact ≤6-decimal USD amount. */
+function usdTextToMicro(text) {
+  const m = USD_DECIMAL_RE.exec(String(text ?? '').trim());
+  if (!m) return undefined;
+  const micro = BigInt(m[1]) * 1_000_000n + BigInt((m[2] ?? '').padEnd(6, '0') || '0');
+  return micro <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(micro) : undefined;
+}
+
+/**
+ * The x402 bundle price as charged: the payment middleware honours X402_BUNDLE_PRICE_USD /
+ * X402_BUNDLE_CALLS, so discovery (rails.mjs) shows them — and so must the registry view, or one
+ * response would carry two bundle prices.
+ */
+function chargedBundlePrice(k, env) {
+  if (k.id !== RPC_X402_BUNDLE_CAPABILITY || k.price.amount_micro === null) return k.price;
+  const micro = env.X402_BUNDLE_PRICE_USD ? usdTextToMicro(env.X402_BUNDLE_PRICE_USD) : k.price.amount_micro;
+  const per = env.X402_BUNDLE_CALLS ? Number(env.X402_BUNDLE_CALLS) : k.price.per;
+  if (micro === undefined || !Number.isSafeInteger(per) || per < 1) return { ...k.price, amount_micro: null, withheld: 'env_override_unparseable' };
+  return { ...k.price, amount_micro: micro, per };
+}
+
 const isStrOrNull = (v) => v === null || (typeof v === 'string' && v.length > 0);
 
 /** @returns {string[]} errors; empty when the block is valid against the catalog's products. */
@@ -68,6 +93,13 @@ export function validateCapabilities(c) {
       if (p.withheld !== undefined) e('price.withheld only allowed when amount_micro is null');
     }
   }
+  // Discovery reads these two whenever CAPABILITY_REGISTRY_V3=1: a block without them must fail at
+  // load (boot), never as a 500 on /v1/pricing at request time.
+  for (const id of [RPC_CREDITS_CAPABILITY, RPC_X402_BUNDLE_CAPABILITY]) {
+    const k = caps.find((x) => x?.id === id);
+    if (!k) errs.push(`capabilities: ${id} required (discovery prices come from it)`);
+    else if (k.price?.amount_micro === null) errs.push(`capabilities: ${id} cannot be withheld (discovery lists it)`);
+  }
   return errs;
 }
 
@@ -79,8 +111,6 @@ const byId = (c) => new Map((c.capabilities || []).map((k) => [k.id, k]));
  */
 export const microToUsd = (micro) => micro / 1_000_000;
 
-export const RPC_CREDITS_CAPABILITY = 'rpc.polygon.call';
-export const RPC_X402_BUNDLE_CAPABILITY = 'rpc.polygon.x402_bundle';
 
 /**
  * The RPC rail prices as the registry states them, in the units rails.mjs reports:
@@ -107,10 +137,11 @@ export function registryRpcPrices(c) {
  * Public view for discovery: capabilities whose product is not internal and whose status is
  * not planned/deprecated. A withheld price is shown as { withheld: reason } — never a number.
  */
-export function publicCapabilities(c) {
+export function publicCapabilities(c, env = process.env) {
   const products = new Map((c.products || []).map((p) => [p.id, p]));
   return (c.capabilities || [])
     .filter((k) => products.get(k.product)?.audience !== 'internal' && !NOT_PUBLIC_STATUS.has(k.status))
+    .map((k) => ({ ...k, price: chargedBundlePrice(k, env) }))
     .map((k) => ({
       id: k.id,
       version: k.version,

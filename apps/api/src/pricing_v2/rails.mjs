@@ -44,6 +44,7 @@ export function railPrices(c = loadCatalog(), env = process.env) {
 }
 
 function withRegistryRpcPrices(c) {
+  if (!Array.isArray(c.capabilities)) return c.rails; // no registry block: the flag is a no-op
   const reg = registryRpcPrices(c);
   return {
     ...c.rails,

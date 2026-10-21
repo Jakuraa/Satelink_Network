@@ -74,6 +74,12 @@ describe('Capability Registry v3 (S-6 skeleton)', () => {
     bad((x) => { rpc(x).commercial_status = 'for sale'; }, /commercial_status/);
     bad((x) => { rpc(x).approval_mode = 'auto'; }, /approval_mode/);
     bad((x) => { x.capabilities = {}; }, /must be an array/);
+    bad((x) => { x.capabilities = x.capabilities.filter((k) => k.id !== RPC_X402_BUNDLE_CAPABILITY); }, /x402_bundle required/);
+    bad((x) => { Object.assign(rpc(x).price, { amount_micro: null, withheld: 'F8' }); rpc(x).commercial_status = 'internal'; }, /rpc\.polygon\.call cannot be withheld/);
+    // no registry block at all: valid, and the flag is a no-op (never a 500)
+    const { capabilities: _c, ...noBlock } = clone(c);
+    assert.deepEqual(validateCapabilities(noBlock), []);
+    assert.deepEqual(railPrices(noBlock, { CAPABILITY_REGISTRY_V3: '1' }), railPrices(noBlock, {}));
     assert.ok(validateCatalog({ ...clone(c), capabilities: [{}] }).length > 0, 'loadCatalog rejects an invalid registry');
   });
 
@@ -94,6 +100,37 @@ describe('Capability Registry v3 (S-6 skeleton)', () => {
     // only the exact value "1" turns it on
     const loose = await withFlag('true', () => get('/v1/pricing'));
     assert.equal(loose.capabilities, undefined);
+    // /.well-known/x402 never changes with the flag
+    const x402off = await withFlag(undefined, () => get('/.well-known/x402'));
+    const x402on = await withFlag('1', () => get('/.well-known/x402'));
+    assert.deepEqual(stable(x402on), stable(x402off));
+  });
+
+  it('v2b: x402 env overrides (charged price) show identically in rails and in the registry view', async () => {
+    const saved = { p: process.env.X402_BUNDLE_PRICE_USD, n: process.env.X402_BUNDLE_CALLS };
+    process.env.X402_BUNDLE_PRICE_USD = '0.25';
+    process.env.X402_BUNDLE_CALLS = '2000';
+    try {
+      const body = await withFlag('1', async () => (await request(app()).get('/v1/pricing')).body);
+      const cap = body.capabilities.find((k) => k.id === RPC_X402_BUNDLE_CAPABILITY);
+      assert.deepEqual([body.rails.rpc_x402_bundle.price_usd, body.rails.rpc_x402_bundle.calls], [0.25, 2000]);
+      assert.deepEqual([cap.price.amount_micro, cap.price.per], [250_000, 2000]);
+      process.env.X402_BUNDLE_PRICE_USD = '0.1234567'; // > 6 decimals: never shown as a rounded number
+      const odd = publicCapabilities(c, process.env).find((k) => k.id === RPC_X402_BUNDLE_CAPABILITY);
+      assert.deepEqual(odd.price, { withheld: 'env_override_unparseable' });
+    } finally {
+      for (const [k, v] of [['X402_BUNDLE_PRICE_USD', saved.p], ['X402_BUNDLE_CALLS', saved.n]]) { if (v === undefined) delete process.env[k]; else process.env[k] = v; }
+    }
+  });
+
+  it('v2c: a withheld price on a public, live capability is listed as { withheld } with no amount', () => {
+    const x = clone(c);
+    x.capabilities.push({ ...clone(x.capabilities[0]), id: 'rpc.polygon.trace', commercial_status: 'internal',
+      price: { amount_micro: null, withheld: 'F8', currency: 'USD', per: 1, metering_unit: 'call' } });
+    assert.deepEqual(validateCapabilities(x), []);
+    const view = publicCapabilities(x, {}).find((k) => k.id === 'rpc.polygon.trace');
+    assert.deepEqual(view.price, { withheld: 'F8' });
+    assert.ok(!JSON.stringify(view).includes('amount_micro'));
   });
 
   it('v3: registry, rails, /v1/pricing and the MCP tool list agree; withheld prices never surface', async () => {
@@ -119,7 +156,7 @@ describe('Capability Registry v3 (S-6 skeleton)', () => {
     for (const k of c.capabilities) if (k.interfaces.mcp_tool) capTools.set(k.interfaces.mcp_tool, k.product);
     assert.deepEqual([...capTools.keys()].sort(), Object.keys(TOOL_PRODUCTS).sort(), 'every MCP tool has a capability and vice versa');
     for (const [tool, product] of capTools) assert.equal(TOOL_PRODUCTS[tool], product, `${tool}: same product in registry and MCP`);
-    const publicTools = new Set(publicCapabilities(c).map((k) => k.interfaces.mcp_tool).filter(Boolean));
+    const publicTools = new Set(publicCapabilities(c, {}).map((k) => k.interfaces.mcp_tool).filter(Boolean));
     assert.deepEqual(advertisedTools({ includeInternal: false }).map((t) => t.name).sort(), [...publicTools].sort(),
       'MCP advertises exactly the tools of public capabilities');
 
@@ -138,7 +175,7 @@ describe('Capability Registry v3 (S-6 skeleton)', () => {
   });
 
   it('v4: the public registry view matches the committed snapshot (price changes need a reviewed snapshot update)', () => {
-    const view = publicCapabilities(c);
+    const view = publicCapabilities(c, {});
     if (process.env.UPDATE_REGISTRY_SNAPSHOT === '1') fs.writeFileSync(SNAPSHOT, `${JSON.stringify(view, null, 2)}\n`);
     assert.deepEqual(view, JSON.parse(fs.readFileSync(SNAPSHOT, 'utf8')));
   });
