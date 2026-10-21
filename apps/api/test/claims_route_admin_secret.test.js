@@ -128,6 +128,7 @@ describe('claims_route — T-02 admin secret (no hard-coded fallback)', () => {
 
         it('ADMIN_BACKFILL_SECRET set -> the correct secret passes the gate', async () => {
             process.env.ADMIN_BACKFILL_SECRET = 'a-real-secret';
+            process.env.MANUAL_EARNINGS_ALLOCATION_ENABLED = 'true'; // the route is off by default
             const app = buildApp(makePool());
             const res = await request(app)
                 .post('/api/nodes/admin/allocate-earnings')
@@ -135,6 +136,19 @@ describe('claims_route — T-02 admin secret (no hard-coded fallback)', () => {
                 .send({ adminSecret: 'a-real-secret' }); // no nodeId -> proves we reached the next check
             expect(res.status).to.equal(400);
             expect(res.body.error).to.match(/nodeId required/);
+            delete process.env.MANUAL_EARNINGS_ALLOCATION_ENABLED;
+        });
+
+        it('correct secret but MANUAL_EARNINGS_ALLOCATION_ENABLED unset -> 503 manual_allocation_disabled', async () => {
+            process.env.ADMIN_BACKFILL_SECRET = 'a-real-secret';
+            delete process.env.MANUAL_EARNINGS_ALLOCATION_ENABLED;
+            const app = buildApp(makePool());
+            const res = await request(app)
+                .post('/api/nodes/admin/allocate-earnings')
+                .set('Authorization', `Bearer ${signToken()}`)
+                .send({ nodeId: 'n1', adminSecret: 'a-real-secret' });
+            expect(res.status).to.equal(503);
+            expect(res.body.error).to.equal('manual_allocation_disabled');
         });
     });
 

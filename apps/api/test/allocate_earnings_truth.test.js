@@ -1,14 +1,12 @@
-// POST /api/nodes/admin/allocate-earnings (W1 review follow-up, 2026-10-20).
+// POST /api/nodes/admin/allocate-earnings (W1 review follow-ups, 2026-10-20/21).
 //
-// The allocated amount becomes a signed USDT payout (claim_processor reads
-// epoch_earnings as-is), so it must count only real consumed usage, and it must never
-// allocate the same share twice. Before this fix it summed ALL revenue_events_v2 rows for
-// the node (test data, deposits, refunds, x402 bundle purchases) and subtracted only
-// UNPAID rows written under nodeId — so a call with walletAddress, or any call after a
-// claim, allocated the share again.
+// Allocated rows become signed USDT payouts. The route must count only real consumed usage,
+// never allocate the same share twice (repeat calls, legacy wallet-keyed rows, finalizer
+// rows, after a claim), work on the production table (PK epoch_id, role, wallet_or_node_id),
+// and stay off unless explicitly enabled (the epoch finalizer is the allocator of record).
 //
-// Real SQL against local Postgres (CI: the Postgres service) in a throwaway schema,
-// through the real router (real verifyJWT + ADMIN_BACKFILL_SECRET gate).
+// Real SQL against local Postgres (CI: the Postgres service) in a throwaway schema with the
+// production epoch_earnings shape, through the real router (verifyJWT + backfill secret).
 import { expect } from 'chai';
 import express from 'express';
 import request from 'supertest';
@@ -18,7 +16,7 @@ describe('allocate-earnings: consumed usage only, never twice (real SQL)', funct
   this.timeout(30000);
   const url = process.env.DATABASE_URL || '';
   const schema = `alloc_test_${process.pid}_${Date.now()}`;
-  const WALLET = '0x000000000000000000000000000000000000beef';
+  const WALLET = '0x000000000000000000000000000000000000BEEF';
   const BACKFILL = 'test-only-backfill-value';
   const saved = {};
   let pg, admin, pool, app, token;
@@ -30,10 +28,15 @@ describe('allocate-earnings: consumed usage only, never twice (real SQL)', funct
     try { await admin.connect(); } catch { admin = null; this.skip(); }
     await admin.query(`CREATE SCHEMA ${schema}`);
     await admin.query(`CREATE TABLE ${schema}.revenue_events_v2 (
-      node_id TEXT, amount_usdt NUMERIC(18,8), is_test_data BOOLEAN,
-      op_type TEXT, is_billable BOOLEAN, request_id TEXT)`);
-    pool = new pg.Pool({ connectionString: url, options: `-c search_path=${schema}`, max: 3 });
-    for (const k of ['ADMIN_BACKFILL_SECRET', 'JWT_SECRET']) saved[k] = process.env[k];
+      node_id TEXT, amount_usdt NUMERIC(18,8), is_test_data BOOLEAN, op_type TEXT, is_billable BOOLEAN, request_id TEXT)`);
+    await admin.query(`CREATE TABLE ${schema}.epoch_earnings (
+      epoch_id INTEGER NOT NULL, role TEXT NOT NULL, wallet_or_node_id TEXT NOT NULL,
+      amount_usdt NUMERIC(18,8) NOT NULL, status TEXT NOT NULL DEFAULT 'UNPAID', created_at BIGINT NOT NULL,
+      PRIMARY KEY (epoch_id, role, wallet_or_node_id))`);
+    await admin.query(`CREATE TABLE ${schema}.registered_nodes (node_id TEXT PRIMARY KEY, wallet TEXT)`);
+    await admin.query(`INSERT INTO ${schema}.registered_nodes VALUES ('node-a', $1)`, [WALLET]);
+    pool = new pg.Pool({ connectionString: url, options: `-c search_path=${schema}`, max: 4 });
+    for (const k of ['ADMIN_BACKFILL_SECRET', 'JWT_SECRET', 'MANUAL_EARNINGS_ALLOCATION_ENABLED']) saved[k] = process.env[k];
     process.env.ADMIN_BACKFILL_SECRET = BACKFILL;
     if (!process.env.JWT_SECRET) process.env.JWT_SECRET = 'test-only-alloc-'.padEnd(64, '0');
     token = jwt.sign({ userId: 'staff', role: 'admin' }, process.env.JWT_SECRET, { expiresIn: '5m' });
@@ -48,8 +51,9 @@ describe('allocate-earnings: consumed usage only, never twice (real SQL)', funct
   });
 
   beforeEach(async () => {
+    process.env.MANUAL_EARNINGS_ALLOCATION_ENABLED = 'true';
     await pool.query(`DELETE FROM revenue_events_v2`);
-    await pool.query(`DROP TABLE IF EXISTS epoch_earnings`);
+    await pool.query(`DELETE FROM epoch_earnings`);
     await pool.query(`INSERT INTO revenue_events_v2 VALUES
       ('node-a', 2.00,  false, 'rpc_call',             true,  'req-1'),      -- real usage
       ('node-a', 1.00,  NULL,  NULL,                   NULL,  NULL),         -- real usage, NULL flags
@@ -61,35 +65,65 @@ describe('allocate-earnings: consumed usage only, never twice (real SQL)', funct
       ('node-b', 50,    false, 'rpc_call',             true,  'req-4')       -- another node`);
   });
 
-  const allocate = (body) => request(app).post('/api/nodes/admin/allocate-earnings')
-    .set('Authorization', `Bearer ${token}`).send({ adminSecret: BACKFILL, ...body });
-  const total = async () => Number((await pool.query(`SELECT COALESCE(SUM(amount_usdt),0) AS t FROM epoch_earnings`)).rows[0].t);
+  const allocate = (body = {}) => request(app).post('/api/nodes/admin/allocate-earnings')
+    .set('Authorization', `Bearer ${token}`).send({ adminSecret: BACKFILL, nodeId: 'node-a', ...body });
+  const total = async (where = 'true') =>
+    Number((await pool.query(`SELECT COALESCE(SUM(amount_usdt),0) AS t FROM epoch_earnings WHERE ${where}`)).rows[0].t);
 
-  it('allocates 50% of consumed usage only (3.00 → 1.50), ignoring test data and non-usage rows', async () => {
-    const res = await allocate({ nodeId: 'node-a' });
+  it('is off unless MANUAL_EARNINGS_ALLOCATION_ENABLED=true (the epoch finalizer is the allocator)', async () => {
+    delete process.env.MANUAL_EARNINGS_ALLOCATION_ENABLED;
+    const res = await allocate();
+    expect(res.status).to.equal(503);
+    expect(res.body.error).to.equal('manual_allocation_disabled');
+    expect(await total()).to.equal(0);
+  });
+
+  it('allocates 50% of consumed usage only (3.00 → 1.50) under its own key', async () => {
+    const res = await allocate();
     expect(res.status, JSON.stringify(res.body)).to.equal(200);
     expect(res.body.totalRevenue).to.equal(3);
     expect(await total()).to.equal(1.5);
+    expect(await total(`epoch_id = -1 AND role = 'manual_allocation'`)).to.equal(1.5);
   });
 
-  it('calling again with walletAddress does not allocate the share a second time', async () => {
-    await allocate({ nodeId: 'node-a', walletAddress: WALLET });
-    await allocate({ nodeId: 'node-a', walletAddress: WALLET });
-    await allocate({ nodeId: 'node-a' });
+  it('repeat calls do not allocate again, and a walletAddress in the body is ignored', async () => {
+    await allocate();
+    await allocate({ walletAddress: '0x0000000000000000000000000000000000000bad' });
+    await allocate();
     expect(await total()).to.equal(1.5);
+  });
+
+  it('legacy rows keyed by the registered wallet count, even when the caller sends no wallet', async () => {
+    await pool.query(`INSERT INTO epoch_earnings VALUES (7, 'node_operator', $1, 1.5, 'UNPAID', 0)`, [WALLET]);
+    await allocate();
+    expect(await total()).to.equal(1.5);
+  });
+
+  it('finalizer rows for the node count; claim-expiry reallocations (epoch 0) do not', async () => {
+    await pool.query(`INSERT INTO epoch_earnings VALUES (5, 'node_operator', 'node-a', 1.0, 'UNPAID', 0)`);
+    await pool.query(`INSERT INTO epoch_earnings VALUES (0, 'node_operator', 'node-a', 0.7, 'UNPAID', 0)`);
+    const res = await allocate();
+    expect(res.body.allocated).to.equal(0.5);
+    expect(await total(`epoch_id = -1`)).to.equal(0.5);
   });
 
   it('after the earnings are CLAIMED, a new call does not re-allocate them', async () => {
-    await allocate({ nodeId: 'node-a' });
+    await allocate();
     await pool.query(`UPDATE epoch_earnings SET status = 'CLAIMED'`);
-    await allocate({ nodeId: 'node-a' });
+    await allocate();
     expect(await total()).to.equal(1.5);
   });
 
-  it('new consumed usage after an allocation allocates only the difference', async () => {
-    await allocate({ nodeId: 'node-a' });
+  it('new consumed usage tops up only the difference — on the production primary key', async () => {
+    await allocate();
     await pool.query(`INSERT INTO revenue_events_v2 VALUES ('node-a', 1.00, false, 'rpc_call', true, 'req-5')`);
-    await allocate({ nodeId: 'node-a' });
+    const res = await allocate();
+    expect(res.status, JSON.stringify(res.body)).to.equal(200);
     expect(await total()).to.equal(2);
+  });
+
+  it('concurrent calls allocate the share once', async () => {
+    await Promise.all([allocate(), allocate(), allocate(), allocate()]);
+    expect(await total()).to.equal(1.5);
   });
 });
