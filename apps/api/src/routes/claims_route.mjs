@@ -349,12 +349,12 @@ export function createClaimsRouter(pool) {
 
       broadcaster.publish('claim:generated', {
         node_id: nodeId,
-        amount_usdt: result.amount_usdt || 0,
+        amount_usdt: result.amount || 0,
         wallet: walletAddress,
         timestamp: new Date().toISOString()
       });
 
-      discord.claim(nodeId, result.amount_usdt || 0, null).catch(() => {});
+      discord.claim(nodeId, result.amount || 0, null).catch(() => {});
 
       res.json({
         success: true,
