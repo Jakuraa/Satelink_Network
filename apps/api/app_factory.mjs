@@ -1,4 +1,5 @@
 import express from "express";
+import { createHealthHandler } from "./src/core/health_route.js";
 import compression from 'compression';
 import { attachBaseMiddleware } from "./src/security/middleware.js";
 import revenueRoutes from "./src/routes/revenue.js";
@@ -97,22 +98,8 @@ export function createApp(pool, redis) {
   // Core health endpoints
   app.get("/healthz", (req, res) => res.status(200).json({ status: "ok" }));
 
-  // Enhanced public health endpoint — ALWAYS returns 200 for Railway
-  app.get("/health", async (req, res) => {
-    res.setHeader("Cache-Control", "no-cache");
-    const checks = { server: 'ok', db: 'unknown', uptime: Math.floor(process.uptime()) };
-    try {
-      await pool.query('SELECT 1');
-      checks.db = 'ok';
-    } catch (e) {
-      checks.db = 'degraded: ' + (e.message || 'unknown').slice(0, 50);
-    }
-    res.status(200).json({
-      ok: true,
-      ...checks,
-      timestamp: new Date().toISOString()
-    });
-  });
+  // Public health endpoint — ALWAYS returns 200 for Railway; includes the deployed commit
+  app.get("/health", createHealthHandler(pool));
 
 app.get("/api/mode", (req, res) => {
     res.status(200).json({
