@@ -34,37 +34,30 @@ Revenue distribution is enforced on-chain — no trust required.
 
 ## Setup (5 minutes)
 
-### Option A: CLI Install (Recommended)
+### Option A: CLI from source (Recommended)
+
+The agent signs registration and every heartbeat with your **payout wallet** (EIP-191). The key
+is read from the `SATELINK_NODE_PRIVATE_KEY` environment variable only — never pass it as a
+command-line argument, and keep it off shared machines. (`@satelink/node-agent` is not published to
+npm yet; build it from the repository.)
 
 ```bash
-# 1. Install Node.js 20+ if not present
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt-get install -y nodejs
+# 1. Node.js 20+
+# 2. Build the agent
+git clone https://github.com/Jakuraa/Satelink_Network.git && cd Satelink_Network
+npm ci && cd agents/node-agent && npx tsc -p .
 
-# 2. Install the Satelink node agent
-npm install -g @satelink/node-agent
+# 3. Register your node (your endpoint must be public http(s) and answer GET /health with 200)
+export SATELINK_NODE_PRIVATE_KEY=...   # payout wallet key, used only to sign
+node dist/index.js register --endpoint https://YOUR_HOST:8080 --region us-east-1 --type rpc --chains 137
 
-# 3. Register your node
-satelink-node register \
-  --wallet 0xYOUR_POLYGON_WALLET \
-  --region us-east-1
-
-# 4. Start the node
-satelink-node start
+# 4. Start the node (signed heartbeat every 2 minutes)
+node dist/index.js start
 ```
 
 ### Option B: Docker
 
-```bash
-docker run -d \
-  --name satelink-node \
-  --restart unless-stopped \
-  -e WALLET_ADDRESS=0xYOUR_POLYGON_WALLET \
-  -e NODE_REGION=us-east-1 \
-  -e NODE_TYPE=rpc \
-  -p 8080:8080 \
-  satelinknetwork/node-agent:latest
-```
+Not available yet: no official image is published.
 
 ### Option C: Manual Registration
 
@@ -108,7 +101,7 @@ no redirects). Your endpoint must respond to `/health` with HTTP 200.
 ## Verify Registration
 
 ```bash
-satelink-node status
+node dist/index.js status
 ```
 
 Expected output:
@@ -187,10 +180,10 @@ Reputation decreases with:
 
 ### "Node not found"
 - Check your node ID is correct
-- Run `satelink-node status` to get your node ID
+- Run `node dist/index.js status` to get your node ID
 
 ### Node shows "offline"
-- Ensure the agent is running: `satelink-node start`
+- Ensure the agent is running: `node dist/index.js start`
 - Check logs: `journalctl -u satelink-node` (if using systemd)
 
 ---
