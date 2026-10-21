@@ -2,7 +2,7 @@
 // (NOT NULL + part of the PK) so every run rolled back and nothing expired; money was split
 // in JS floats; it depended on runtime ALTER TABLE. Real SQL on the production table shape.
 import { expect } from 'chai';
-import { sweepExpiredEarnings, startClaimExpiryJob } from '../src/scheduler/jobs/claim_expiry_job.js';
+import { sweepExpiredEarnings, startClaimExpiryJob, runExpiryJob } from '../src/scheduler/jobs/claim_expiry_job.js';
 
 describe('claim expiry: sweep + reallocation (real SQL)', function () {
   this.timeout(30000);
@@ -47,7 +47,7 @@ describe('claim expiry: sweep + reallocation (real SQL)', function () {
     expect(r.nodesAffected).to.equal(1);
     expect(await sum(`SELECT string_agg(status, ',' ORDER BY epoch_id) t FROM epoch_earnings WHERE epoch_id IN (1,2,3,4)`)).to.equal('EXPIRED,EXPIRED,CLAIMING,UNPAID');
     const expired = '1.50000001';
-    const swept = await sum(`SELECT SUM(amount_usdt)::text t FROM treasury_sweeps`);
+    const swept = await sum(`SELECT SUM(amount_usdt)::text t FROM treasury_sweeps WHERE reason = '48_day_expiry_50pct'`);
     const realloc = await sum(`SELECT SUM(amount_usdt)::text t FROM epoch_earnings WHERE role = 'expiry_reallocation'`);
     expect(swept).to.equal('0.75000000');
     expect((await pool.query(`SELECT ($1::numeric + $2::numeric)::text t`, [swept, realloc])).rows[0].t).to.match(/^1\.5000000/);
@@ -96,6 +96,50 @@ describe('claim expiry: sweep + reallocation (real SQL)', function () {
         expect((await job.runNow()).disabled, `${e}/${d}`).to.equal(true);
         job.stop();
       }
+      expect(await sum(`SELECT COUNT(*)::int t FROM epoch_earnings WHERE status = 'EXPIRED'`)).to.equal(0);
+    } finally {
+      if (saved.e === undefined) delete process.env.CLAIM_EXPIRY_ENABLED; else process.env.CLAIM_EXPIRY_ENABLED = saved.e;
+      if (saved.d === undefined) delete process.env.SETTLEMENT_DRY_RUN; else process.env.SETTLEMENT_DRY_RUN = saved.d;
+    }
+  });
+
+  const conserved = async () => (await pool.query(`SELECT
+      (SELECT COALESCE(SUM(amount_usdt),0) FROM treasury_sweeps)
+    + (SELECT COALESCE(SUM(amount_usdt),0) FROM epoch_earnings WHERE role = 'expiry_reallocation' AND status = 'UNPAID') AS out`)).rows[0].out;
+
+  it('money is conserved exactly: swept + credited + uncredited == expired (incl. split dust)', async () => {
+    await reset();
+    await pool.query(`INSERT INTO nodes VALUES ('n-active-3', 'healthy')`); // 3 nodes: 0.75000000 / 3 leaves no dust; 0.7500000x would
+    await pool.query(`UPDATE epoch_earnings SET amount_usdt = 1.00000002 WHERE epoch_id = 1`);
+    await sweepExpiredEarnings(pool);
+    expect(await conserved()).to.equal('1.50000002');
+  });
+
+  it('never adds a reallocation onto an EXPIRED or CLAIMING row — that share goes to the treasury', async () => {
+    await reset();
+    await pool.query(`INSERT INTO epoch_earnings VALUES
+      (0, 'expiry_reallocation', 'n-active-1', 5, 'CLAIMING', ${NEW}),
+      (0, 'expiry_reallocation', 'n-active-2', 7, 'EXPIRED',  ${NEW})`);
+    await sweepExpiredEarnings(pool);
+    const rows = Object.fromEntries((await pool.query(`SELECT wallet_or_node_id k, amount_usdt::text v, status FROM epoch_earnings WHERE role = 'expiry_reallocation'`))
+      .rows.map((r) => [r.k, `${r.v}/${r.status}`]));
+    expect(rows).to.deep.equal({ 'n-active-1': '5.00000000/CLAIMING', 'n-active-2': '7.00000000/EXPIRED' });
+    expect(await sum(`SELECT SUM(amount_usdt)::text t FROM treasury_sweeps`)).to.equal('1.50000001');
+  });
+
+  it('platform / pool / distribution rows are never expired', async () => {
+    await reset();
+    await pool.query(`INSERT INTO epoch_earnings VALUES (9, 'platform', 'PLATFORM_TREASURY', 10, 'UNPAID', ${OLD}), (9, 'distribution_pool', 'DAO_POOL', 4, 'UNPAID', ${OLD})`);
+    await sweepExpiredEarnings(pool);
+    expect(await sum(`SELECT string_agg(status, ',' ORDER BY role) t FROM epoch_earnings WHERE epoch_id = 9`)).to.equal('UNPAID,UNPAID');
+  });
+
+  it('runExpiryJob is gated like the scheduler (a manual trigger cannot bypass it)', async () => {
+    await reset();
+    const saved = { e: process.env.CLAIM_EXPIRY_ENABLED, d: process.env.SETTLEMENT_DRY_RUN };
+    try {
+      delete process.env.CLAIM_EXPIRY_ENABLED; process.env.SETTLEMENT_DRY_RUN = '0';
+      expect((await runExpiryJob(pool)).disabled).to.equal(true);
       expect(await sum(`SELECT COUNT(*)::int t FROM epoch_earnings WHERE status = 'EXPIRED'`)).to.equal(0);
     } finally {
       if (saved.e === undefined) delete process.env.CLAIM_EXPIRY_ENABLED; else process.env.CLAIM_EXPIRY_ENABLED = saved.e;

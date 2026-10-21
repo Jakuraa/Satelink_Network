@@ -44,6 +44,8 @@ async function sweepExpiredEarnings(pool) {
                 UPDATE epoch_earnings
                    SET status = 'EXPIRED'${hasExpiredAt ? ', expired_at = $2' : ''}
                  WHERE status = 'UNPAID' AND created_at < $1 AND amount_usdt > 0
+                   -- node earnings only: platform / pool / distribution rows are never expired
+                   AND role IN ('node_operator', 'expiry_reallocation')
                 RETURNING wallet_or_node_id, amount_usdt
             )
             SELECT wallet_or_node_id AS node_id, SUM(amount_usdt)::text AS expired_amount
@@ -74,30 +76,42 @@ async function sweepExpiredEarnings(pool) {
         // epoch 0): role is NOT NULL and part of the PK (epoch_id, role, wallet_or_node_id), so
         // repeat runs add to the node's row instead of failing.
         if (Number(totalReallocated) > 0) {
-            const realloc = await client.query(`
-                WITH active AS (
-                    SELECT node_id FROM nodes WHERE LOWER(status) IN ('active', 'online', 'healthy')
-                ), share AS (
-                    SELECT trunc($1::numeric / NULLIF((SELECT COUNT(*) FROM active), 0), 8) AS per_node
-                )
-                INSERT INTO epoch_earnings (epoch_id, role, wallet_or_node_id, amount_usdt, status, created_at)
-                SELECT 0, 'expiry_reallocation', active.node_id, share.per_node, 'UNPAID', $2
-                  FROM active, share WHERE share.per_node > 0
-                ON CONFLICT (epoch_id, role, wallet_or_node_id)
-                DO UPDATE SET amount_usdt = epoch_earnings.amount_usdt + EXCLUDED.amount_usdt
-                RETURNING wallet_or_node_id
-            `, [totalReallocated, now]);
-            if (realloc.rowCount === 0) {
-                // No active node to receive it: record the pooled half with the treasury rather
-                // than letting it vanish (expired = swept + reallocated, always).
-                await client.query(
-                    `INSERT INTO treasury_sweeps (node_id, amount_usdt, reason, swept_at) VALUES (NULL, $1::numeric, 'expiry_no_active_nodes', $2)`,
-                    [totalReallocated, now]);
+            const active = await client.query(
+                `SELECT node_id FROM nodes WHERE LOWER(status) IN ('active', 'online', 'healthy') ORDER BY node_id`);
+            let creditedCount = 0;
+            let perNode = '0';
+            if (active.rows.length > 0) {
+                perNode = (await client.query(`SELECT trunc($1::numeric / $2, 8)::text AS p`,
+                    [totalReallocated, active.rows.length])).rows[0].p;
             }
-            logger.info({
-                totalReallocated,
-                nodesReallocated: realloc.rowCount,
-            }, 'CLAIM_EXPIRY: reallocated expired earnings to active nodes');
+            if (Number(perNode) > 0) {
+                // Own role (expiry_reallocation, epoch 0): role is NOT NULL and part of the PK.
+                // Only add onto a row that is still UNPAID (adding to an EXPIRED / CLAIMING / CLAIMED
+                // row would lose the money or pay it outside a signed amount); refresh created_at so
+                // reallocated money does not expire again on the next run.
+                const realloc = await client.query(`
+                    INSERT INTO epoch_earnings (epoch_id, role, wallet_or_node_id, amount_usdt, status, created_at)
+                    SELECT 0, 'expiry_reallocation', node_id, $1::numeric, 'UNPAID', $2 FROM unnest($3::text[]) AS node_id
+                    ON CONFLICT (epoch_id, role, wallet_or_node_id)
+                    DO UPDATE SET amount_usdt = epoch_earnings.amount_usdt + EXCLUDED.amount_usdt,
+                                  created_at = EXCLUDED.created_at
+                       WHERE epoch_earnings.status = 'UNPAID'
+                    RETURNING 1
+                `, [perNode, now, active.rows.map((r) => r.node_id)]);
+                creditedCount = realloc.rowCount;
+            }
+            // Whatever was not credited (no active node, a node whose row is not UNPAID, and the
+            // truncation dust of the split) is recorded with the treasury:
+            // expired = swept + credited + uncredited, always.
+            const rest = (await client.query(`SELECT ($1::numeric - $2::numeric * $3)::text AS r`,
+                [totalReallocated, perNode, creditedCount])).rows[0].r;
+            if (Number(rest) > 0) {
+                await client.query(
+                    `INSERT INTO treasury_sweeps (node_id, amount_usdt, reason, swept_at) VALUES (NULL, $1::numeric, 'expiry_reallocation_uncredited', $2)`,
+                    [rest, now]);
+            }
+            logger.info({ totalReallocated, nodesCredited: creditedCount, uncredited: rest },
+                'CLAIM_EXPIRY: reallocated expired earnings to active nodes');
         }
 
         await client.query('COMMIT');
@@ -151,6 +165,10 @@ async function expireStaleSignatures(pool) {
  * @param {import('pg').Pool} pool - PostgreSQL pool
  */
 async function runExpiryJob(pool) {
+    // Same gate as the scheduler, so any future manual trigger cannot bypass it.
+    if (process.env.CLAIM_EXPIRY_ENABLED !== 'true' || process.env.SETTLEMENT_DRY_RUN !== '0') {
+        return { ok: false, disabled: true };
+    }
     try {
         logger.info('CLAIM_EXPIRY: running scheduled expiry job');
 
