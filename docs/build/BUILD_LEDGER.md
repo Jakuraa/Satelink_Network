@@ -5,6 +5,84 @@ categories only (R14); details in `docs/build/evidence/private/` on the build ma
 
 ---
 
+## Session A — 2026-10-22 deploy truth + P0 finish + SIE foundation (Opus 5.5, background job)
+
+Scope: founder prompt "SESSION A: DEPLOY TRUTH + P0 FINISH + SIE FOUNDATION".
+- **Unfilled founder lines:** the S-1…S-6 approval line and the "OPENROUTER_API_KEY set" line were left as unfilled templates. Treated as **not approved / not set**, so S-dependent work ships as drafts (OPEN_QUESTIONS).
+- **Missing attachments:** ARCHITECTURE.md, REVENUE_MODEL.md and ACCEPTANCE_TESTS.md were never attached. The mandate (M2, M3, §8) was used instead.
+
+### State at start (the 2026-10-21 merge-gate session was not recorded here)
+- Merged on main but **not live**: #569 `ed18f23d`, #567 `33bdf7f4`, #570 `6e34d3ba`.
+- #579 (OpenRouter adapter) is a draft against `trading-agent/integration`.
+- Production runs `0ce443ff` (#566), with `/health` uptime matching a 2026-10-20 15:08 UTC start.
+
+### Step 0 baseline (R7, 2026-10-21 19:54 UTC)
+- `/health` 200 (db ok, uptime 103,518 s) · `/api/status` 200 · anonymous `/rpc/polygon` 402 · `/admin/config` 401 · satelink.network 200.
+- CI-exact local API baseline on main `6e34d3ba` (fresh PG + `billing_test_schema.sql`, `REQUIRE_DB_TESTS=1`): 734 tests / 725 pass / 6 fail / 3 pending.
+  - The only failures outside the allowlist are the macOS identity rate-limit flake (#578).
+
+### Step 1 — deploy truth: `evidence/RAILWAY_DEPLOY_ROOT_CAUSE_2026-10-21.md`
+- **Root cause: a Railway platform incident** ("builds paused", 07:24 UTC 2026-10-21).
+  - Satelink-api and satelink-reconciler have no deployment record after `0ce443ff`.
+  - The trigger, the GitHub App install and watch paths are all intact.
+  - All three merges landed after the pause.
+  - No code or config cause, so no fix is possible on our side. The deploy needs an explicit "deploy main" once **Hobby** builds return.
+- During mitigation, Railway invalidated OAuth sessions (20:25 UTC), which logged out the CLI → founder `railway login`.
+- **#580** `52448b91` merged: `/health` returns `commit` (from `RAILWAY_GIT_COMMIT_SHA`). Gate evidence:
+  - 4 tests; mutation kills 2.
+  - Old → new baseline 734/725 → 738/730 (+4, no new failures).
+  - Independent review APPROVE; CI 12/12 (Build Verification re-run after an npm `ECONNRESET`); R7 green before.
+- **Lockfile:** `apps/api/package-lock.json` is real and production uses it (`npm ci` in the live build log). The #579 claim is stale.
+- **Deploy + probes of #569/#570/#567 and the five health checks: PENDING** (Railway Hobby builds still paused at 20:31 UTC).
+
+### Step 2 — P0/P1 queue
+- **Held: no merges.** The gate is deploy + probe after each merge, and deploys are impossible.
+- #571 CI is green after re-running a flaky Financial OS truth test. Vercel previews show "Deployment rate limited — retry in 24 hours".
+- #572 and #574 conflict with main; rebase each after the PR below it squash-merges.
+- #565: commented with the rebuild plan on #583 (Reservation). It closes when the rebuild PR exists.
+
+### Step 3 — architecture docs
+**Blocked**: the files were not attached. S-1…S-6 were not recorded as decisions (not approved).
+
+### Step 4 — SIE foundation: draft **#581**
+- **Packages:**
+  - `libs/sie` (`@satelink/sie`): AIProvider, typed errors, schema re-validation, micro-USD cost, bounded retries with a total deadline.
+  - `services/sie` (`@satelink/sie-providers`): the OpenRouter adapter, with served model, generation id and cost.
+  - Flag `SIE_OPENROUTER_ENABLED`, no route.
+- **Tests:** 14 + 19, including the 14 ported #579 contracts. 8/8 mutations killed.
+- **Review:** independent review APPROVE; both SHOULD-FIX items applied:
+  - a deadline cut-off whose cause was transient stays fallback-eligible
+  - a null stream event is typed `malformed`
+- **Checks:** `test:libs` 307 · arch clean · lock adds only the 6 workspace entries.
+- **Live contract test: not run.** `OPENROUTER_API_KEY` is not among the Railway variable names; only `GROQ_API_KEY` is.
+- #579 stays open; the integration branch must rebase onto `@satelink/sie`.
+
+### Step 5 — Capability Registry v3 skeleton: draft **#582** (`founder-review`)
+- **Shape:** a `capabilities` block in `plan_catalog.v2.json`, with integer `amount_micro` (or `null` + `withheld`).
+- **Validator:** wired into `validateCatalog`.
+- **Flag:** `CAPABILITY_REGISTRY_V3` switches `/v1/pricing` and `.well-known` to registry prices. Flag on equals flag off apart from the added list; no live price changed.
+- **Tests:** registry = rails = `PRICE_PER_CALL_USDT` = `/v1/pricing` = MCP tools; snapshot test.
+- **Review:** independent review APPROVE; both SHOULD-FIX items applied:
+  - the env-override bundle shows identically
+  - a missing RPC capability fails at load, not as a 500
+- 6/6 mutations killed. API baseline 738/731/4 known/3 pending.
+
+### Step 6 — Session B started: draft **#583** (`founder-review`)
+- `Reservation` aggregate in `libs/financial-domain`: reserve, capture, release, expire; idempotent; mandate §8 invariant 6.
+- 21 tests including 3 properties; 5/5 mutations killed; library only.
+
+### Next actions (in order)
+1. Founder runs `railway login`. When status.railway.com shows Hobby builds enabled, deploy main HEAD on Satelink-api.
+2. Probe:
+   - `/health.commit` equals main HEAD
+   - #569: anonymous `/api/nodes/:id` has no wallet, endpoint or hardware
+   - #570: an unsigned heartbeat gets 401
+   - #567: claim signing is refused in dry run
+   - R7
+   On failure, roll back to `b90ff9e5` and stop.
+3. Step 2 queue, deploying and probing after each merge: #571 → #572 → #574 → #575 → #568 → #576 → #577 → #578 → #573.
+4. Session B: #583 repository + migration → service → recovery job → rebuild #565 on it.
+
 ## Session 2 — 2026-10-20 P0 close-out (Opus 5.5, background job)
 
 Scope: founder session prompt "P0 CLOSE-OUT (security + money PRs)". Founder answers A1–A3 were
