@@ -80,7 +80,7 @@ describe('claims signing gate (W1)', () => {
     const writes = [];
     const client = {
       async query(sql, params) {
-        if (/FROM epoch_earnings/.test(sql)) return { rows: [{ claimable: '2.5' }] };
+        if (/UPDATE epoch_earnings SET status = 'CLAIMING'/.test(sql)) return { rows: [{ claimable: '2.5' }] }; // reservation (one signature per balance)
         if (/INSERT INTO claims/.test(sql)) writes.push(params);
         return { rows: [] };
       },

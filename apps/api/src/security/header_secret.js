@@ -9,6 +9,22 @@ export function secretEquals(got, expected) {
 }
 
 /**
+ * True only when the request carries the staff token (ADMIN_SECRET_TOKEN) in
+ * `x-admin-token` or `Authorization: Bearer …` — the same sources requireAdminAuth accepts.
+ * False when the env var is unset. For routes that serve a reduced public view and a
+ * full staff view; routes that must refuse non-staff use requireAdminAuth.
+ */
+export function staffTokenFrom(req) {
+  const authHeader = req.headers['authorization'] || '';
+  const bearer = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  return req.headers['x-admin-token'] || bearer;
+}
+
+export function isStaffRequest(req) {
+  return secretEquals(staffTokenFrom(req), process.env.ADMIN_SECRET_TOKEN);
+}
+
+/**
  * Fail-closed, constant-time shared-secret check for a request header (W1, 2026-10-20).
  *
  * Replaces `if (req.headers[h] !== process.env.X)` checks, which pass when X is unset
