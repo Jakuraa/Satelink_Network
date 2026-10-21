@@ -215,4 +215,19 @@ describe('allocate-earnings: consumed usage only, never twice (real SQL)', funct
     const res = await allocate(); // fixture revenue is in closed epoch 1 with no node_operator rows
     expect(res.body.allocated).to.equal(1.5);
   });
+
+  it('a closed epoch with only a platform row (finalizer ran, node pool 0) is not backfilled', async () => {
+    await pool.query(`INSERT INTO epoch_earnings VALUES (1, 'platform', 'PLATFORM_TREASURY', 0, 'UNPAID', 0)`);
+    const res = await allocate();
+    expect(res.body.totalRevenue).to.equal(0);
+    expect(res.body.allocated).to.equal(0);
+  });
+
+  it('two nodes backfilled from one unfinalized closed epoch never exceed 50% of it', async () => {
+    await pool.query(`INSERT INTO revenue_events_v2 VALUES ('node-b', 7.00, false, 'rpc_call', true, 'r-b1', 1)`);
+    await allocate();
+    await allocate({ nodeId: 'node-b' });
+    // fixture: node-a 3 consumed, node-b 50 (+7 here) in closed epoch 1 -> 50% of 60
+    expect(await total(`epoch_id = -1`)).to.equal(30);
+  });
 });
