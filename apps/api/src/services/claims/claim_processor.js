@@ -25,40 +25,71 @@ export async function generateClaimSignature(nodeId, walletAddress, pool) {
         throw new Error('settlement_dry_run: claim signing is disabled');
     }
     const client = await pool.connect();
+    let broken;
 
     try {
-        // 1. Try epoch_earnings first (preferred path)
-        const earningsResult = await client.query(
-            `SELECT COALESCE(SUM(amount_usdt), 0) as claimable
-             FROM epoch_earnings
-             WHERE (wallet_or_node_id = $1 OR wallet_or_node_id = $2)
-             AND status = 'UNPAID'`,
-            [nodeId, walletAddress]
-        );
+        // Ensure claims table exists (before the pending-claim check reads it). Two first-ever
+        // concurrent creates can collide in the catalog (23505 / 42P07 / 42710): the table exists then.
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS claims (
+                claim_id TEXT PRIMARY KEY,
+                node_id TEXT NOT NULL,
+                wallet TEXT NOT NULL,
+                amount_usdt NUMERIC(18,8) NOT NULL,
+                signature TEXT NOT NULL,
+                nonce BIGINT NOT NULL,
+                expiry BIGINT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'pending',
+                tx_hash TEXT,
+                created_at BIGINT NOT NULL,
+                updated_at BIGINT,
+                claimed_at BIGINT
+            )
+        `).catch((e) => { if (!['23505', '42P07', '42710'].includes(e.code)) throw e; });
 
-        let claimable = parseFloat(earningsResult.rows[0]?.claimable || 0);
-        let usedFallback = false;
-
-        // 2. If epoch_earnings empty, fallback to revenue_events_v2 direct sum
-        if (claimable < 0.01) {
-            const revResult = await client.query(
-                `SELECT COALESCE(SUM(amount_usdt) * 0.5, 0) as claimable
-                 FROM revenue_events_v2
-                 WHERE node_id = $1
-                   AND is_test_data = false`,
-                [nodeId]
-            );
-            claimable = parseFloat(revResult.rows[0]?.claimable || 0);
-            usedFallback = true;
-            console.log(`[CLAIM] epoch_earnings empty, using revenue_events_v2 fallback: $${claimable.toFixed(6)}`);
+        // One signature per unpaid balance (W1 follow-up). The contract only rejects a reused
+        // nonce, and every signing mints a fresh nonce, so two signatures over the same
+        // earnings are both redeemable. Rules:
+        // - Earnings match the node id OR the wallet, so the identifier set {nodeId, wallet}
+        //   (lowercased) is locked — one advisory lock per identifier, sorted (no deadlock) —
+        //   and an open claim on ANY identifier blocks (a wallet passed as a node id too).
+        // - Refused while any claim is 'pending', expired ones included: nothing records an
+        //   on-chain redemption automatically, so it must be reconciled first.
+        // - The signed amount is exactly the rows reserved here (UNPAID → CLAIMING); completion
+        //   flips only those to CLAIMED, so earnings accrued after signing are never swept.
+        // - No revenue_events_v2 fallback: it re-signed a node's lifetime revenue after every
+        //   reconciliation (nothing consumed it). No reserved earnings → nothing claimable.
+        const ids = [...new Set([nodeId, walletAddress].filter(Boolean).map((x) => String(x).toLowerCase()))].sort();
+        await client.query('BEGIN');
+        for (const id of ids) {
+            await client.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`claims:id:${id}`]);
         }
+        const pending = await client.query(
+            `SELECT claim_id FROM claims
+             WHERE (lower(node_id) = ANY($1::text[]) OR lower(wallet) = ANY($1::text[])) AND status = 'pending' LIMIT 1`,
+            [ids]
+        );
+        if (pending.rows.length > 0) {
+            const err = new Error(`claim_pending_reconciliation: claim ${pending.rows[0].claim_id} must be reconciled before a new signature`);
+            err.code = 'claim_pending_reconciliation';
+            throw err;
+        }
+
+        // Reserve exactly what this signature pays (rolled back with everything else on error).
+        const reserved = await client.query(
+            `WITH r AS (
+                UPDATE epoch_earnings SET status = 'CLAIMING'
+                 WHERE lower(wallet_or_node_id) = ANY($1::text[]) AND status = 'UNPAID'
+                 RETURNING amount_usdt
+             )
+             SELECT trunc(COALESCE(SUM(amount_usdt), 0), 6)::text AS claimable FROM r -- never round a payout up
+            `,
+            [ids]
+        );
+        const claimable = parseFloat(reserved.rows[0]?.claimable || 0);
 
         if (claimable < MIN_CLAIM_THRESHOLD_USDT) {
             throw new Error(`Minimum ${MIN_CLAIM_THRESHOLD_USDT} USDT required. Available: ${claimable.toFixed(6)}`);
-        }
-
-        if (usedFallback) {
-            console.log(`[CLAIM] Generating signature for $${claimable.toFixed(6)} via revenue_events_v2 fallback`);
         }
 
         // 2. Get signer key
@@ -111,23 +142,6 @@ export async function generateClaimSignature(nodeId, walletAddress, pool) {
         const claimId = `claim_${nodeId}_${nonce}`;
         const now = Math.floor(Date.now() / 1000);
 
-        // Ensure claims table exists
-        await client.query(`
-            CREATE TABLE IF NOT EXISTS claims (
-                claim_id TEXT PRIMARY KEY,
-                node_id TEXT NOT NULL,
-                wallet TEXT NOT NULL,
-                amount_usdt NUMERIC(18,8) NOT NULL,
-                signature TEXT NOT NULL,
-                nonce BIGINT NOT NULL,
-                expiry BIGINT NOT NULL,
-                status TEXT NOT NULL DEFAULT 'pending',
-                tx_hash TEXT,
-                created_at BIGINT NOT NULL,
-                updated_at BIGINT,
-                claimed_at BIGINT
-            )
-        `);
 
         await client.query(
             `INSERT INTO claims (claim_id, node_id, wallet, amount_usdt, signature, nonce, expiry, status, created_at)
@@ -139,6 +153,7 @@ export async function generateClaimSignature(nodeId, walletAddress, pool) {
                 updated_at = EXCLUDED.created_at`,
             [claimId, nodeId, walletAddress, claimable, signature, nonce, expiry, now]
         );
+        await client.query('COMMIT');
 
         logger.info({
             claimId,
@@ -162,8 +177,12 @@ export async function generateClaimSignature(nodeId, walletAddress, pool) {
             polygonscanContract: `https://polygonscan.com/address/${claimsContractAddress}`
         };
 
+    } catch (err) {
+        // A failed ROLLBACK leaves the connection unusable: destroy it instead of pooling it.
+        await client.query('ROLLBACK').catch((rbErr) => { broken = rbErr; });
+        throw err;
     } finally {
-        client.release();
+        client.release(broken);
     }
 }
 
@@ -199,12 +218,12 @@ export async function markClaimCompleted(claimId, txHash, pool) {
             [txHash, now, claimId]
         );
 
-        // Mark earnings as CLAIMED
+        // Mark exactly the earnings this claim reserved (CLAIMING) as CLAIMED — never rows that
+        // accrued after signing (those stay UNPAID for the next claim).
         await client.query(
             `UPDATE epoch_earnings SET status = 'CLAIMED'
-             WHERE (wallet_or_node_id = $1 OR wallet_or_node_id = $2)
-             AND status = 'UNPAID'`,
-            [claim.node_id, claim.wallet]
+             WHERE lower(wallet_or_node_id) = ANY($1::text[]) AND status = 'CLAIMING'`,
+            [[claim.node_id, claim.wallet].filter(Boolean).map((x) => String(x).toLowerCase())]
         );
 
         await client.query('COMMIT');
@@ -227,6 +246,131 @@ export async function markClaimCompleted(claimId, txHash, pool) {
 }
 
 /**
+ * On-chain facts about a claim signature, read from ClaimsContract (read-only).
+ * Throws on any RPC/config problem: callers fail closed.
+ */
+export function createClaimChainReader({ rpcUrl = process.env.POLYGON_RPC_URL, contract = process.env.CLAIMS_CONTRACT_ADDRESS } = {}) {
+    // One provider, chain id verified, both facts read at the same FINALIZED block: a reorg
+    // cannot replace the deciding block with one that contains the redeem.
+    async function finalized() {
+        if (!rpcUrl || !contract) throw new Error('chain_unconfigured');
+        const provider = new ethers.JsonRpcProvider(rpcUrl);
+        const net = await provider.getNetwork();
+        if (net.chainId !== 137n) throw new Error('wrong_chain');
+        const block = await provider.getBlock('finalized');
+        if (!block) throw new Error('no_finalized_block');
+        return { provider, block };
+    }
+    return {
+        contract,
+        async read(nonce) {
+            const { provider, block } = await finalized();
+            const c = new ethers.Contract(contract, ['function usedNonces(uint256) view returns (bool)'], provider);
+            const used = Boolean(await c.usedNonces(BigInt(nonce), { blockTag: block.number }));
+            return { chainTime: Number(block.timestamp), used };
+        },
+    };
+}
+
+// "2.50000000" -> "2.500000" (string truncation, no float round-trip).
+function truncTo6(numericText) {
+    const [i, f = ''] = String(numericText).split('.');
+    return `${i}.${(f + '000000').slice(0, 6)}`;
+}
+
+function signatureMatchesCurrentContract(claim, contract) {
+    try {
+        const signerKey = process.env.SETTLEMENT_EVM_SIGNER_PRIVATE_KEY;
+        if (!signerKey || !contract) return false;
+        const expected = new ethers.Wallet(signerKey).address;
+        const recovered = ethers.verifyTypedData(
+            { name: 'SatelinkClaims', version: '1', chainId: 137, verifyingContract: contract },
+            { Claim: [{ name: 'nodeId', type: 'string' }, { name: 'wallet', type: 'address' }, { name: 'amount', type: 'uint256' },
+                { name: 'nonce', type: 'uint256' }, { name: 'expiry', type: 'uint256' }] },
+            { nodeId: claim.node_id, wallet: claim.wallet, amount: ethers.parseUnits(truncTo6(claim.amount_usdt), 6),
+              nonce: BigInt(claim.nonce), expiry: BigInt(claim.expiry) },
+            claim.signature);
+        return recovered.toLowerCase() === expected.toLowerCase();
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Staff-only: void a pending claim whose signature can no longer be redeemed, releasing the
+ * earnings it reserved (CLAIMING -> UNPAID) so a new claim can be signed.
+ * Safe only when BOTH hold on-chain: the signature has expired (chain time, since
+ * ClaimsContract.claim() checks block.timestamp < expiry) AND its nonce was never used. Any
+ * chain error refuses (fail closed). A redeemed nonce must be completed, never voided.
+ * @returns {Promise<{ok: true, claimId: string, released: string} | {ok: false, http: number, error: string}>}
+ */
+export async function voidClaim(claimId, pool, { chain = createClaimChainReader() } = {}) {
+    const client = await pool.connect();
+    let broken;
+    try {
+        await client.query('BEGIN');
+        const found = await client.query(
+            `SELECT claim_id, node_id, wallet, amount_usdt::text AS amount_usdt, signature, nonce, expiry, status
+               FROM claims WHERE claim_id = $1 FOR UPDATE`,
+            [claimId]
+        );
+        const claim = found.rows[0];
+        if (!claim) { await client.query('ROLLBACK'); return { ok: false, http: 404, error: 'claim_not_found' }; }
+        if (claim.status !== 'pending') { await client.query('ROLLBACK'); return { ok: false, http: 409, error: `claim_${claim.status}` }; }
+
+        // The claims row does not record which contract it was signed for. The signature does:
+        // it must recover to the current signer under the CURRENT contract's EIP-712 domain,
+        // otherwise usedNonces() on this contract says nothing about that signature.
+        if (!signatureMatchesCurrentContract(claim, chain.contract)) {
+            await client.query('ROLLBACK');
+            return { ok: false, http: 409, error: 'claim_signed_for_other_contract' };
+        }
+
+        let chainNow, used;
+        try {
+            ({ chainTime: chainNow, used } = await chain.read(claim.nonce));
+        } catch {
+            await client.query('ROLLBACK');
+            return { ok: false, http: 503, error: 'chain_unavailable' };
+        }
+        if (!(chainNow >= Number(claim.expiry))) {
+            await client.query('ROLLBACK');
+            return { ok: false, http: 409, error: 'claim_not_expired' };
+        }
+        if (used) {
+            await client.query('ROLLBACK');
+            return { ok: false, http: 409, error: 'claim_redeemed_on_chain' };
+        }
+
+        const ids = [claim.node_id, claim.wallet].filter(Boolean).map((x) => String(x).toLowerCase());
+        await client.query(`UPDATE claims SET status = 'void', updated_at = $2 WHERE claim_id = $1`, [claimId, Math.floor(Date.now() / 1000)]);
+        const released = await client.query(
+            `WITH r AS (
+                UPDATE epoch_earnings SET status = 'UNPAID'
+                 WHERE lower(wallet_or_node_id) = ANY($1::text[]) AND status = 'CLAIMING'
+                 RETURNING amount_usdt
+             ) SELECT trunc(COALESCE(SUM(amount_usdt), 0), 6)::text AS released FROM r`,
+            [ids]
+        );
+        // Release exactly what this claim reserved. A mismatch means CLAIMING rows that belong to
+        // another (e.g. legacy, possibly redeemed) claim: refuse rather than make them signable.
+        const same = await client.query(`SELECT $1::numeric = trunc($2::numeric, 6) AS eq`, [released.rows[0].released, claim.amount_usdt]);
+        if (!same.rows[0].eq) {
+            await client.query('ROLLBACK');
+            return { ok: false, http: 409, error: 'reservation_mismatch' };
+        }
+        await client.query('COMMIT');
+        logger.info({ claimId, released: released.rows[0].released }, 'CLAIM_VOID: expired, unredeemed claim voided');
+        return { ok: true, claimId, released: released.rows[0].released };
+    } catch (err) {
+        await client.query('ROLLBACK').catch((rbErr) => { broken = rbErr; });
+        throw err;
+    } finally {
+        client.release(broken);
+    }
+}
+
+/**
  * Get pending claims for a wallet.
  * @param {string} walletAddress - Wallet address
  * @param {import('pg').Pool} pool - PostgreSQL pool
@@ -244,6 +388,7 @@ export async function getPendingClaims(walletAddress, pool) {
 }
 
 export default {
+    voidClaim,
     generateClaimSignature,
     markClaimCompleted,
     getPendingClaims

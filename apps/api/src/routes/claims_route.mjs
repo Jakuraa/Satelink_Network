@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { ethers } from 'ethers';
 import { verifyJWT } from '../gateway/routes/auth_v2.js';
 import { requireAdminAuth } from '../admin/admin_router.js';
-import { generateClaimSignature } from '../services/claims/claim_processor.js';
+import { generateClaimSignature, voidClaim } from '../services/claims/claim_processor.js';
 import { broadcaster } from '../realtime/broadcaster-instance.js';
 import { discord } from '../services/discord_notify.mjs';
 
@@ -333,6 +333,19 @@ export function createClaimsRouter(pool) {
     next();
   }
 
+  // Staff-only: void an expired, never-redeemed claim (checked on-chain) and release its
+  // reserved earnings. Not gated by dry-run: it only ever reduces what can be paid.
+  router.post('/admin/claims/:claimId/void', requireAdminAuth, async (req, res) => {
+    try {
+      const r = await voidClaim(req.params.claimId, pool);
+      if (!r.ok) return res.status(r.http).json({ success: false, error: r.error });
+      res.json({ success: true, claimId: r.claimId, releasedUsdt: r.released });
+    } catch (err) {
+      console.error('[Claims] void failed:', err.message);
+      res.status(500).json({ success: false, error: 'void_failed' });
+    }
+  });
+
   router.post('/:nodeId/claim', requireAdminAuth, refuseWhileDryRun, async (req, res) => {
     try {
       const { nodeId } = req.params;
@@ -349,12 +362,12 @@ export function createClaimsRouter(pool) {
 
       broadcaster.publish('claim:generated', {
         node_id: nodeId,
-        amount_usdt: result.amount_usdt || 0,
+        amount_usdt: result.amount || 0,
         wallet: walletAddress,
         timestamp: new Date().toISOString()
       });
 
-      discord.claim(nodeId, result.amount_usdt || 0, null).catch(() => {});
+      discord.claim(nodeId, result.amount || 0, null).catch(() => {});
 
       res.json({
         success: true,
@@ -362,6 +375,9 @@ export function createClaimsRouter(pool) {
       });
 
     } catch (err) {
+      if (err.code === 'claim_pending_reconciliation') {
+        return res.status(409).json({ success: false, error: 'claim_pending_reconciliation' });
+      }
       console.error('[Claims] Signature generation failed:', err.message);
       res.status(500).json({
         success: false,
