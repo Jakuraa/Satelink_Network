@@ -49,15 +49,15 @@ describe('claims: staff void (real SQL, chain injected)', function () {
     const c = await mod.generateClaimSignature('node-a', WALLET, pool); // reserves -> CLAIMING
     ({ claimId, expiry, nonce } = c);
   });
-  const chain = ({ now, used = false, fail = false } = {}) => ({
-    async chainTime() { if (fail) throw new Error('rpc down'); return now; },
-    async usedNonce(n) { if (fail) throw new Error('rpc down'); expect(String(n)).to.equal(String(nonce)); return used; },
+  const chain = ({ now, used = false, fail = false, contract = process.env.CLAIMS_CONTRACT_ADDRESS } = {}) => ({
+    contract,
+    async read(n) { if (fail) throw new Error('rpc down'); expect(String(n)).to.equal(String(nonce)); return { chainTime: now, used }; },
   });
   const statuses = async () => (await pool.query(`SELECT string_agg(status, ',') s FROM epoch_earnings`)).rows[0].s;
 
   it('expired by chain time + nonce unused → voided, reserved earnings back to UNPAID, new claim signable', async () => {
     const r = await mod.voidClaim(claimId, pool, { chain: chain({ now: expiry + 1 }) });
-    expect(r).to.include({ ok: true, released: '2.50000000' });
+    expect(r).to.include({ ok: true, released: '2.500000' }); // 6 dp, like the signed amount
     expect(await statuses()).to.equal('UNPAID');
     expect((await pool.query(`SELECT status FROM claims WHERE claim_id = $1`, [claimId])).rows[0].status).to.equal('void');
     const again = await mod.generateClaimSignature('node-a', WALLET, pool);
@@ -96,6 +96,20 @@ describe('claims: staff void (real SQL, chain injected)', function () {
     const res = await request(a).post(`/api/nodes/admin/claims/${claimId}/void`).set('x-admin-token', STAFF);
     expect(res.status).to.equal(503);
     expect(res.body.error).to.equal('chain_unavailable');
+    expect(await statuses()).to.equal('CLAIMING');
+  });
+
+  it('releases only what THIS claim reserved: extra CLAIMING rows (another claim) → 409, nothing released', async () => {
+    await pool.query(`INSERT INTO epoch_earnings VALUES (2, 'node_operator', 'node-a', 9, 'CLAIMING', 0)`); // legacy reservation
+    const r = await mod.voidClaim(claimId, pool, { chain: chain({ now: expiry + 1 }) });
+    expect(r).to.deep.equal({ ok: false, http: 409, error: 'reservation_mismatch' });
+    expect(await statuses()).to.equal('CLAIMING,CLAIMING');
+    expect((await pool.query(`SELECT status FROM claims WHERE claim_id = $1`, [claimId])).rows[0].status).to.equal('pending');
+  });
+
+  it('a claim signed for another contract cannot be voided by checking the current one (409)', async () => {
+    const r = await mod.voidClaim(claimId, pool, { chain: chain({ now: expiry + 1, contract: '0x000000000000000000000000000000000000beef' }) });
+    expect(r).to.deep.equal({ ok: false, http: 409, error: 'claim_signed_for_other_contract' });
     expect(await statuses()).to.equal('CLAIMING');
   });
 });
