@@ -8,6 +8,7 @@
 
 import { broadcaster } from '../../realtime/broadcaster-instance.js';
 import { shadowWriteRevenueLedger } from '../../ledger/shadow_ledger_write.js';
+import { nodeEndpointFetch } from '../../services/node_registry/node_endpoint_fetch.js';
 
 const REQUEST_TIMEOUT_MS = 15000; // 15s to account for serverless cold starts
 const HEARTBEAT_THRESHOLD_SECONDS = 300; // 5 minutes
@@ -181,11 +182,12 @@ export async function forwardToNode(node, rpcRequest) {
   const startTime = Date.now();
 
   try {
-    const response = await fetch(node.endpoint_url, {
+    // Resolve-then-check at connect time, no redirects, size cap (node_endpoint_fetch.js).
+    const response = await nodeEndpointFetch(node.endpoint_url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(rpcRequest),
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+      timeoutMs: REQUEST_TIMEOUT_MS
     });
 
     const latencyMs = Date.now() - startTime;
@@ -210,7 +212,7 @@ export async function forwardToNode(node, rpcRequest) {
     const latencyMs = Date.now() - startTime;
     return {
       success: false,
-      error: err.message,
+      error: err.code || 'unreachable', // fixed category, never raw error text
       latencyMs,
       nodeId: node.node_id
     };
