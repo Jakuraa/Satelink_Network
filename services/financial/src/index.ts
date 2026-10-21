@@ -30,3 +30,9 @@ export { ViemEip3009Verifier } from './infrastructure/adapters/viem-eip3009-veri
 export { PostgresAuthorizationCreationUnitOfWork } from './infrastructure/repositories/postgres/postgres-authorization-creation-unit-of-work.js';
 export { PostgresPrincipalRepository } from './infrastructure/repositories/postgres/postgres-principal-repository.js';
 export { PostgresAuthorizationRepository } from './infrastructure/repositories/postgres/postgres-authorization-repository.js';
+
+// Session B — reservation API (reserve / capture / release / expire). Library only; no route yet.
+export { reserve, capture, release, expireLapsed, ReservationNotFoundError, InvalidReservationInputError } from './application/commands/reservation-service.js';
+export type { ReservationServiceDeps, ReserveCommand, ReservationServiceError } from './application/commands/reservation-service.js';
+export type { ReservationRepository, AvailableBalanceReader } from './application/ports/reservation-repository.js';
+export { InMemoryReservationRepository } from './infrastructure/repositories/in-memory/in-memory-reservation-repository.js';
