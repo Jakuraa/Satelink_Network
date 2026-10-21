@@ -373,7 +373,8 @@ export function createNodeRegistryRouter(db, redis) {
       // failure text are staff-only. Public callers get the operational summary.
       const staff = isStaffRequest(req);
       // The body depends on a request header: never let a cache serve the staff view publicly.
-      res.set('Vary', 'Authorization, X-Admin-Token');
+      res.vary('Authorization'); // append (keeps e.g. Vary: Origin from CORS)
+      res.vary('X-Admin-Token');
       if (staff) res.set('Cache-Control', 'private, no-store');
 
       res.json({
