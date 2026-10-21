@@ -68,21 +68,40 @@ docker run -d \
 
 ### Option C: Manual Registration
 
-If you're running your own RPC proxy:
+If you're running your own RPC proxy, registration must be signed by the payout wallet
+(EIP-191 `personal_sign`) — this proves you control it. Sign this exact message (7 lines,
+`\n`-separated; the wallet in lowercase; `timestamp` is unix milliseconds, valid for 5 minutes):
 
-```bash
-curl -X POST https://rpc.satelink.network/nodes/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "wallet_address": "0xYOUR_POLYGON_WALLET",
-    "node_type": "rpc",
-    "endpoint_url": "http://YOUR_SERVER_IP:8080",
-    "region": "us-east-1",
-    "chain_ids": [137, 1, 42161]
-  }'
+```
+Satelink node registration
+wallet: <lowercase wallet_address>
+node_type: <node_type>
+endpoint: <endpoint_url>
+region: <region>
+chain_ids: <chain_ids joined by ",">
+timestamp: <timestamp>
 ```
 
-Your endpoint must respond to `/health` with HTTP 200.
+```js
+// node >= 18, `npm i ethers`
+import { Wallet } from 'ethers';
+const wallet = new Wallet(process.env.PAYOUT_WALLET_PRIVATE_KEY); // never share or upload this key
+const body = { wallet_address: wallet.address, node_type: 'rpc', endpoint_url: 'https://YOUR_HOST:8080',
+               region: 'us-east-1', chain_ids: [137, 1, 42161], timestamp: Date.now() };
+const message = ['Satelink node registration', `wallet: ${body.wallet_address.toLowerCase()}`,
+  `node_type: ${body.node_type}`, `endpoint: ${body.endpoint_url}`, `region: ${body.region}`,
+  `chain_ids: ${body.chain_ids.join(',')}`, `timestamp: ${body.timestamp}`].join('\n');
+body.signature = await wallet.signMessage(message);
+const res = await fetch('https://rpc.satelink.network/api/nodes/register', {
+  method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+console.log(res.status, await res.json());
+```
+
+Heartbeats are signed the same way (message `Satelink node heartbeat` / `node: <nodeId>` /
+`timestamp: <ms>` / `endpoint: <endpoint_url or ->`; send `timestamp` and `signature`).
+
+The endpoint must be a public `http(s)` address (no private, loopback or metadata addresses,
+no redirects). Your endpoint must respond to `/health` with HTTP 200.
 
 ---
 

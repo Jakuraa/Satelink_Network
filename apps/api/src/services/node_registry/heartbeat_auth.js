@@ -143,6 +143,10 @@ export function validateNodeEndpoint(endpointUrl) {
 //   region: <region>
 //   chain_ids: <ids joined by ",">
 //   timestamp: <unix ms>
+// Registration is a one-off, possibly hand-signed step: a wider window than heartbeats. Replay
+// within it is harmless (same signed fields → the duplicate check answers 409).
+export const REGISTRATION_MAX_AGE_MS = 5 * 60_000;
+
 export function registrationMessage({ walletAddress, nodeType, endpointUrl, region, chainIds, timestamp }) {
   return [
     'Satelink node registration',
@@ -162,7 +166,7 @@ export function verifyNodeRegistration({ walletAddress, nodeType, endpointUrl, r
   }
   const ts = Number(timestamp);
   if (!Number.isSafeInteger(ts)) return { ok: false, http: 400, error: 'invalid_timestamp' };
-  if (now - ts > HEARTBEAT_MAX_AGE_MS) return { ok: false, http: 400, error: 'stale_registration' };
+  if (now - ts > REGISTRATION_MAX_AGE_MS) return { ok: false, http: 400, error: 'stale_registration' };
   if (ts - now > HEARTBEAT_MAX_FUTURE_MS) return { ok: false, http: 400, error: 'future_registration' };
   if (!Array.isArray(chainIds) || !chainIds.every((c) => Number.isSafeInteger(c) && c > 0)) {
     return { ok: false, http: 400, error: 'invalid_chain_ids' };

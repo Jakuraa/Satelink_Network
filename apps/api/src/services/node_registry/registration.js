@@ -205,7 +205,14 @@ export function createNodeRegistryRouter(db, redis, { probeEndpoint = validateEn
         region, chainIds: chain_ids, timestamp, signature,
       });
       if (!proof.ok) {
-        return res.status(proof.http).json({ ok: false, error: proof.error });
+        return res.status(proof.http).json({
+          ok: false,
+          error: proof.error,
+          sign: {
+            method: 'personal_sign (EIP-191) with wallet_address; send timestamp (unix ms) and signature',
+            message_template: 'Satelink node registration\nwallet: <lowercase wallet_address>\nnode_type: <node_type>\nendpoint: <endpoint_url>\nregion: <region>\nchain_ids: <chain_ids joined by ",">\ntimestamp: <timestamp>',
+          },
+        });
       }
 
       const endpointReachable = await probeEndpoint(endpoint_url);
@@ -220,27 +227,46 @@ export function createNodeRegistryRouter(db, redis, { probeEndpoint = validateEn
       const now = Math.floor(Date.now() / 1000);
 
       if (db && db.query) {
-        const existing = await db.query(
-          // Case-insensitive: the signed message lowercases the wallet, so a replay with a
-          // differently-cased address must still hit this duplicate check.
-          'SELECT node_id FROM registered_nodes WHERE lower(wallet) = lower($1) AND endpoint_url = $2',
-          [wallet_address, endpoint_url]
-        );
+        // Duplicate check + insert under one advisory lock per (wallet, endpoint), in one
+        // transaction: two parallel identical requests (a double-click, or a replay inside the
+        // window) cannot both pass the check and insert twice.
+        const client = typeof db.connect === 'function' ? await db.connect() : db;
+        let broken;
+        try {
+          if (client !== db) {
+            await client.query('BEGIN');
+            await client.query('SELECT pg_advisory_xact_lock(hashtext($1))',
+              [`node-register:${String(wallet_address).toLowerCase()}|${endpoint_url}`]);
+          }
+          const existing = await client.query(
+            // Case-insensitive: the signed message lowercases the wallet, so a replay with a
+            // differently-cased address must still hit this duplicate check.
+            'SELECT node_id FROM registered_nodes WHERE lower(wallet) = lower($1) AND endpoint_url = $2',
+            [wallet_address, endpoint_url]
+          );
 
-        if (existing.rows.length > 0) {
-          return res.status(409).json({
-            ok: false,
-            error: 'Node with this wallet and endpoint already registered',
-            existingNodeId: existing.rows[0].node_id
-          });
+          if (existing.rows.length > 0) {
+            if (client !== db) await client.query('ROLLBACK');
+            return res.status(409).json({
+              ok: false,
+              error: 'Node with this wallet and endpoint already registered',
+              existingNodeId: existing.rows[0].node_id
+            });
+          }
+
+          await client.query(
+            `INSERT INTO registered_nodes
+             (node_id, wallet, node_type, endpoint_url, region, chain_ids, hardware_json, status, tier, registered_at, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', 'bronze', $8, $8)`,
+            [nodeId, wallet_address, node_type, endpoint_url, region, JSON.stringify(chain_ids), JSON.stringify(hardware || {}), now]
+          );
+          if (client !== db) await client.query('COMMIT');
+        } catch (err) {
+          if (client !== db) await client.query('ROLLBACK').catch((rbErr) => { broken = rbErr; });
+          throw err;
+        } finally {
+          if (client !== db) client.release(broken);
         }
-
-        await db.query(
-          `INSERT INTO registered_nodes
-           (node_id, wallet, node_type, endpoint_url, region, chain_ids, hardware_json, status, tier, registered_at, updated_at)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', 'bronze', $8, $8)`,
-          [nodeId, wallet_address, node_type, endpoint_url, region, JSON.stringify(chain_ids), JSON.stringify(hardware || {}), now]
-        );
       }
 
       if (redis) {
