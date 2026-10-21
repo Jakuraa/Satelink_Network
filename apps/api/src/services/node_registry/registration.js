@@ -25,7 +25,7 @@ import { getNodeHealthSummary } from '../../scheduler/node_health_monitor.js';
 import { handleNodeComeback } from './offline_detector.js';
 import { getNodeEarnings } from './earnings_aggregator.js';
 import { requireHeaderSecret } from '../../security/header_secret.js';
-import { verifyNodeHeartbeat, validateNodeEndpoint, acceptMonotonicHeartbeat } from './heartbeat_auth.js';
+import { verifyNodeHeartbeat, validateNodeEndpoint, acceptMonotonicHeartbeat, verifyNodeRegistration } from './heartbeat_auth.js';
 import { nodeEndpointFetch } from './node_endpoint_fetch.js';
 
 const VALID_REGIONS = ['ap-south-1', 'us-east-1', 'eu-west-1', 'ap-southeast-1'];
@@ -138,7 +138,7 @@ async function sendDiscordNotification(nodeId, region, walletPrefix) {
   }
 }
 
-export function createNodeRegistryRouter(db, redis) {
+export function createNodeRegistryRouter(db, redis, { probeEndpoint = validateEndpoint } = {}) {
   const router = Router();
 
   ensureTable(db);
@@ -146,7 +146,7 @@ export function createNodeRegistryRouter(db, redis) {
 
   router.post('/register', async (req, res) => {
     try {
-      const { wallet_address, node_type, endpoint_url, region, chain_ids, hardware } = req.body || {};
+      const { wallet_address, node_type, endpoint_url, region, chain_ids, hardware, timestamp, signature } = req.body || {};
 
       if (!wallet_address || !WALLET_REGEX.test(wallet_address)) {
         return res.status(400).json({
@@ -198,7 +198,17 @@ export function createNodeRegistryRouter(db, redis) {
         });
       }
 
-      const endpointReachable = await validateEndpoint(endpoint_url);
+      // Proof of wallet ownership (EIP-191 over every registered field + timestamp), checked
+      // before the endpoint is probed, so unsigned requests cannot trigger outbound fetches.
+      const proof = verifyNodeRegistration({
+        walletAddress: wallet_address, nodeType: node_type, endpointUrl: endpoint_url,
+        region, chainIds: chain_ids, timestamp, signature,
+      });
+      if (!proof.ok) {
+        return res.status(proof.http).json({ ok: false, error: proof.error });
+      }
+
+      const endpointReachable = await probeEndpoint(endpoint_url);
       if (!endpointReachable) {
         return res.status(400).json({
           ok: false,
@@ -211,7 +221,9 @@ export function createNodeRegistryRouter(db, redis) {
 
       if (db && db.query) {
         const existing = await db.query(
-          'SELECT node_id FROM registered_nodes WHERE wallet = $1 AND endpoint_url = $2',
+          // Case-insensitive: the signed message lowercases the wallet, so a replay with a
+          // differently-cased address must still hit this duplicate check.
+          'SELECT node_id FROM registered_nodes WHERE lower(wallet) = lower($1) AND endpoint_url = $2',
           [wallet_address, endpoint_url]
         );
 
