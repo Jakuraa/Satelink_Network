@@ -106,6 +106,7 @@ describe('claims_route — T-02 admin secret (no hard-coded fallback)', () => {
     });
 
     describe('POST /admin/allocate-earnings', () => {
+        afterEach(() => { delete process.env.MANUAL_EARNINGS_ALLOCATION_ENABLED; });
         it('ADMIN_BACKFILL_SECRET unset -> 503, even with the old literal', async () => {
             delete process.env.ADMIN_BACKFILL_SECRET;
             const app = buildApp(makePool());
@@ -136,7 +137,6 @@ describe('claims_route — T-02 admin secret (no hard-coded fallback)', () => {
                 .send({ adminSecret: 'a-real-secret' }); // no nodeId -> proves we reached the next check
             expect(res.status).to.equal(400);
             expect(res.body.error).to.match(/nodeId required/);
-            delete process.env.MANUAL_EARNINGS_ALLOCATION_ENABLED;
         });
 
         it('correct secret but MANUAL_EARNINGS_ALLOCATION_ENABLED unset -> 503 manual_allocation_disabled', async () => {

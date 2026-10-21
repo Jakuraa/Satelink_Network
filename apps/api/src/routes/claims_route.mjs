@@ -103,15 +103,24 @@ export function createClaimsRouter(pool) {
         // The node's payout wallet from the registry, never from the request body: earnings
         // rows may be keyed by node id OR wallet (legacy writers), and claims match both.
         // Looked up before BEGIN (a missing legacy table must not abort the transaction).
-        let wallet = null;
+        // Wallets from BOTH node tables (they can differ); only a missing table/column is
+        // tolerated — any other error aborts, since a silently missing wallet would let rows
+        // keyed by it go uncounted (double allocation).
+        const wallets = [];
         for (const table of ['registered_nodes', 'nodes']) {
-          const w = await client.query(`SELECT wallet FROM ${table} WHERE node_id = $1`, [nodeId]).catch(() => ({ rows: [] }));
-          if (w.rows[0]?.wallet) { wallet = String(w.rows[0].wallet).toLowerCase(); break; }
+          let w;
+          try {
+            w = await client.query(`SELECT wallet FROM ${table} WHERE node_id = $1`, [nodeId]);
+          } catch (e) {
+            if (e.code === '42P01' || e.code === '42703') continue; // undefined table / column
+            throw e;
+          }
+          for (const r of w.rows) if (r.wallet) wallets.push(String(r.wallet).toLowerCase());
         }
 
         await client.query('BEGIN');
-        await client.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`alloc:${nodeId}`]);
-        const ids = [nodeId, wallet].filter(Boolean).map((x) => String(x).toLowerCase());
+        await client.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`alloc:${String(nodeId).toLowerCase()}`]);
+        const ids = [...new Set([nodeId, ...wallets].filter(Boolean).map((x) => String(x).toLowerCase()))];
 
         // All amounts in SQL numeric, truncated to 6 dp (never round a payout up).
         //  share    = 50% of the node's real consumed usage (no test data, deposits, refunds,
@@ -125,6 +134,11 @@ export function createClaimsRouter(pool) {
                   trunc(s.total * 0.5 - x.existing, 6)::text AS to_allocate
              FROM (SELECT COALESCE(SUM(e.amount_usdt), 0) AS total FROM revenue_events_v2 e
                     WHERE e.node_id = $1
+                      -- Only revenue of epochs already CLOSED: the scheduler closes and finalizes an
+                      -- epoch in one transaction, so its node_operator rows are already in
+                      -- epoch_earnings and counted below. Revenue of the open epoch (or not yet
+                      -- assigned to one) is left to the finalizer — counting it here paid it twice.
+                      AND e.epoch_id IN (SELECT id FROM epochs WHERE status = 'CLOSED')
                       AND (e.is_test_data = false OR e.is_test_data IS NULL)
                       AND (${CONSUMED_USAGE_PREDICATE})) s,
                   (SELECT COALESCE(SUM(amount_usdt), 0) AS existing FROM epoch_earnings

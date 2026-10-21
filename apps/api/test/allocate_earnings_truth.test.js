@@ -28,12 +28,15 @@ describe('allocate-earnings: consumed usage only, never twice (real SQL)', funct
     try { await admin.connect(); } catch { admin = null; this.skip(); }
     await admin.query(`CREATE SCHEMA ${schema}`);
     await admin.query(`CREATE TABLE ${schema}.revenue_events_v2 (
-      node_id TEXT, amount_usdt NUMERIC(18,8), is_test_data BOOLEAN, op_type TEXT, is_billable BOOLEAN, request_id TEXT)`);
+      node_id TEXT, amount_usdt NUMERIC(18,8), is_test_data BOOLEAN, op_type TEXT, is_billable BOOLEAN, request_id TEXT,
+      epoch_id INTEGER DEFAULT 1)`);
+    await admin.query(`CREATE TABLE ${schema}.epochs (id INTEGER PRIMARY KEY, status TEXT)`);
     await admin.query(`CREATE TABLE ${schema}.epoch_earnings (
       epoch_id INTEGER NOT NULL, role TEXT NOT NULL, wallet_or_node_id TEXT NOT NULL,
       amount_usdt NUMERIC(18,8) NOT NULL, status TEXT NOT NULL DEFAULT 'UNPAID', created_at BIGINT NOT NULL,
       PRIMARY KEY (epoch_id, role, wallet_or_node_id))`);
     await admin.query(`CREATE TABLE ${schema}.registered_nodes (node_id TEXT PRIMARY KEY, wallet TEXT)`);
+    await admin.query(`CREATE TABLE ${schema}.nodes (node_id TEXT PRIMARY KEY, wallet TEXT)`);
     await admin.query(`INSERT INTO ${schema}.registered_nodes VALUES ('node-a', $1)`, [WALLET]);
     pool = new pg.Pool({ connectionString: url, options: `-c search_path=${schema}`, max: 4 });
     for (const k of ['ADMIN_BACKFILL_SECRET', 'JWT_SECRET', 'MANUAL_EARNINGS_ALLOCATION_ENABLED']) saved[k] = process.env[k];
@@ -50,10 +53,15 @@ describe('allocate-earnings: consumed usage only, never twice (real SQL)', funct
     if (admin) { await admin.query(`DROP SCHEMA IF EXISTS ${schema} CASCADE`).catch(() => {}); await admin.end(); }
   });
 
+  afterEach(() => { process.env.MANUAL_EARNINGS_ALLOCATION_ENABLED = 'true'; });
+
   beforeEach(async () => {
     process.env.MANUAL_EARNINGS_ALLOCATION_ENABLED = 'true';
     await pool.query(`DELETE FROM revenue_events_v2`);
     await pool.query(`DELETE FROM epoch_earnings`);
+    await pool.query(`DELETE FROM epochs`);
+    await pool.query(`DELETE FROM nodes`);
+    await pool.query(`INSERT INTO epochs VALUES (1, 'CLOSED'), (2, 'OPEN')`); // fixture revenue is in closed epoch 1
     await pool.query(`INSERT INTO revenue_events_v2 VALUES
       ('node-a', 2.00,  false, 'rpc_call',             true,  'req-1'),      -- real usage
       ('node-a', 1.00,  NULL,  NULL,                   NULL,  NULL),         -- real usage, NULL flags
@@ -125,5 +133,68 @@ describe('allocate-earnings: consumed usage only, never twice (real SQL)', funct
   it('concurrent calls allocate the share once', async () => {
     await Promise.all([allocate(), allocate(), allocate(), allocate()]);
     expect(await total()).to.equal(1.5);
+  });
+
+  it('only an exact "true" enables the route', async () => {
+    for (const v of ['TRUE', '1', 'yes', ' true']) {
+      process.env.MANUAL_EARNINGS_ALLOCATION_ENABLED = v;
+      expect((await allocate()).status, JSON.stringify(v)).to.equal(503);
+    }
+    expect(await total()).to.equal(0);
+  });
+
+  it('revenue of the OPEN epoch is not allocated manually — the finalizer pays it once at close', async () => {
+    // manual first, finalizer second (the double-pay ordering)
+    await pool.query(`INSERT INTO revenue_events_v2 VALUES ('node-a', 4.00, false, 'rpc_call', true, 'req-open', 2)`);
+    const first = await allocate();
+    expect(first.body.totalRevenue).to.equal(3); // epoch 2 (open) excluded
+    expect(await total()).to.equal(1.5);
+    // the scheduler closes epoch 2 and the finalizer writes its node_operator row in the same txn
+    await pool.query(`UPDATE epochs SET status = 'CLOSED' WHERE id = 2`);
+    await pool.query(`INSERT INTO epoch_earnings VALUES (2, 'node_operator', 'node-a', 2.0, 'UNPAID', 0)`);
+    await allocate();
+    expect(await total(), 'total stays 50% of 7.00, never 1.5 + 2.0 + 2.0').to.equal(3.5);
+  });
+
+  it('revenue not yet assigned to an epoch is left to the finalizer', async () => {
+    await pool.query(`INSERT INTO revenue_events_v2 VALUES ('node-a', 4.00, false, 'rpc_call', true, 'req-orphan', NULL)`);
+    expect((await allocate()).body.totalRevenue).to.equal(3);
+  });
+
+  it('EXPIRED rows count as already allocated', async () => {
+    await pool.query(`INSERT INTO epoch_earnings VALUES (9, 'node_operator', 'node-a', 1.5, 'EXPIRED', 0)`);
+    await allocate();
+    expect(await total(`epoch_id = -1`)).to.equal(0);
+  });
+
+  it('wallets from both node tables are counted', async () => {
+    const other = '0x00000000000000000000000000000000000000aa';
+    await pool.query(`INSERT INTO nodes VALUES ('node-a', $1)`, [other]);
+    await pool.query(`INSERT INTO epoch_earnings VALUES (7, 'node_operator', $1, 1.5, 'UNPAID', 0)`, [other]);
+    await allocate();
+    expect(await total(`epoch_id = -1`)).to.equal(0);
+  });
+
+  it('a wallet-lookup failure aborts (500) instead of silently skipping wallet-keyed rows', async () => {
+    const a = express(); a.use(express.json());
+    const failing = {
+      query: (...q) => pool.query(...q),
+      async connect() {
+        const c = await pool.connect();
+        return {
+          async query(sql, params) {
+            if (/SELECT wallet FROM registered_nodes/.test(sql)) { const e = new Error('permission denied'); e.code = '42501'; throw e; }
+            return c.query(sql, params);
+          },
+          release: (e) => c.release(e),
+        };
+      },
+    };
+    const { createClaimsRouter } = await import('../src/routes/claims_route.mjs');
+    a.use('/api/nodes', createClaimsRouter(failing));
+    const res = await request(a).post('/api/nodes/admin/allocate-earnings')
+      .set('Authorization', `Bearer ${token}`).send({ adminSecret: BACKFILL, nodeId: 'node-a' });
+    expect(res.status).to.equal(500);
+    expect(await total()).to.equal(0);
   });
 });
