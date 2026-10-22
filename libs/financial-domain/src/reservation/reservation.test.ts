@@ -154,6 +154,7 @@ describe('Reservation aggregate', () => {
   });
 
   describe('properties', () => {
+    const RUNS = { numRuns: 1_000 }; // ACCEPTANCE_TESTS Financial OS: 1,000 random sequences
     const amount = fc.bigInt({ min: 1n, max: 10n ** 15n });
 
     it('conservation: in every terminal state captured + released = reserved, all ≥ 0', () => {
@@ -165,21 +166,21 @@ describe('Reservation aggregate', () => {
         expect(x.captured.amount + x.released.amount).toBe(reserved);
         expect(x.captured.amount >= 0n && x.released.amount >= 0n && x.hold.amount === 0n).toBe(true);
         expect(x.captured.amount).toBe(op === 'capture' ? capture : 0n);
-      }));
+      }), RUNS);
     });
 
     it('reserve succeeds iff 0 < amount ≤ available', () => {
       fc.assert(fc.property(fc.bigInt({ min: -10n, max: 10n ** 12n }), fc.bigInt({ min: 0n, max: 10n ** 12n }), (amt, avail) => {
         const r = Reservation.reserve({ id: must(ReservationId.of('rsv_p')), accountId: ACCT, amount: usdt(amt), available: usdt(avail), idempotencyKey: 'k', createdAt: T0, expiresAt: T0 + TTL });
         expect(r.isOk).toBe(amt > 0n && amt <= avail);
-      }));
+      }), RUNS);
     });
 
     it('capture succeeds iff held, before expiry and 0 < capture ≤ reserved', () => {
       fc.assert(fc.property(amount, fc.bigInt({ min: -5n, max: 10n ** 15n + 5n }), fc.integer({ min: 0, max: 2 * TTL }), (reserved, cap, dt) => {
         const r = hold(reserved, reserved).capture(usdt(cap), T0 + dt);
         expect(r.isOk).toBe(cap > 0n && cap <= reserved && dt < TTL);
-      }));
+      }), RUNS);
     });
   });
 });
