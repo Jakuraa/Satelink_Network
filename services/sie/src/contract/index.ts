@@ -29,3 +29,6 @@ export { usdToMicroUsd, MICRO_PER_USD } from './cost.js';
 
 export { withRetries, assertRetryPolicy, MAX_RETRIES_LIMIT } from './retry.js';
 export type { RetryPolicy, RetryEnv } from './retry.js';
+
+export { BudgetExceededError, withBudget, priceEstimator, upperBoundInputTokens } from './budget.js';
+export type { ModelPrice, CostEstimator } from './budget.js';
