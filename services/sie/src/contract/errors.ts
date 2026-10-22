@@ -11,7 +11,8 @@ export type AgentErrorCode =
   | 'ROUTE_NOT_FOUND'
   | 'CONFIG'
   | 'BOUNDARY_VIOLATION'
-  | 'MAX_STEPS';
+  | 'MAX_STEPS'
+  | 'BUDGET_EXCEEDED';
 
 export class AgentError extends Error {
   readonly code: AgentErrorCode;
