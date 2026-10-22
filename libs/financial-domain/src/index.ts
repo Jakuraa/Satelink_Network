@@ -178,3 +178,5 @@ export {
   IdempotencyConflictError,
 } from './reservation/errors.js';
 export type { ReservationError } from './reservation/errors.js';
+export { holdPosting, settlePosting, holdTxnId, settleTxnId, ReservationNotSettledError, InvalidPostingIdError } from './coordination/reservation-postings.js';
+export type { ReservationAccounts, ReservationPostingError } from './coordination/reservation-postings.js';

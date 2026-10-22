@@ -22,10 +22,11 @@ export interface ReservationRepository {
 }
 
 /**
- * The ledger's available balance for an account (posted credits − posted debits − pending debits,
- * libs invariant #3), BEFORE reservation holds. A Postgres implementation must read it under the
- * same transaction and account row lock the reserve is saved in, so two concurrent reserves cannot
- * both spend the same balance.
+ * The customer account's available balance, derived from the ledger (posted_credits −
+ * posted_debits − pending_debits, libs invariant #3). Reservation holds are posted transfers to the
+ * holds account, so this is already net of active holds. A Postgres implementation must read it
+ * under the same transaction and account row lock the reserve commits in, so two concurrent
+ * reserves cannot spend the same balance.
  */
 export interface AvailableBalanceReader {
   available(accountId: string, like: Money): Promise<Result<Money, RepositoryError>>;

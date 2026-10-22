@@ -1,23 +1,26 @@
 /**
- * Reservation application service — the Financial OS reserve / capture / release API.
+ * Reservation application service — the Financial OS reserve / capture / release API (S-5: the
+ * only charging path for new capabilities). Library only: no route uses it yet.
  *
- * Library only: no route uses it yet (Session B). The caller (an RPC or model-call path) does:
  *   reserve(max cost) → upstream call → capture(actual cost)   on success
  *                                     → release()              on failure (nothing charged)
- * and a scheduled job calls expireLapsed() so a crash between reserve and settle never leaves a
- * hold behind (mandate §8 invariant 6).
+ *   expireLapsed() (scheduled)        → releases holds a crash left behind
  *
- * Ledger posting of a capture (pending hold → posted debit) is NOT done here; it belongs to the
- * unit of work that also writes the ledger (see UnitOfWork). This service only owns the hold.
+ * Every state change is committed together with its balanced ledger posting through the
+ * ReservationUnitOfWork (all-or-nothing). Postings (REVENUE_MODEL §2): hold = customer → holds;
+ * capture = holds → revenue + remainder → customer; release = holds → customer.
  *
- * Every operation is idempotent: reserve on the client idempotency key; capture / release /
- * expire on the reservation's state (a replay returns the same reservation).
+ * Idempotent everywhere: reserve on the client idempotency key; capture / release / expire on the
+ * reservation state, and every posting on its deterministic txn id. A replay writes nothing.
+ * Crash-safe: a commit that fails leaves nothing behind (retry is clean); a commit that succeeded
+ * but whose caller crashed is a replay on retry; a hold whose caller never settles is expired.
  */
-import { AccountId, Reservation, ReservationId, sumHeld } from '@satelink/financial-domain';
-import type { ReservationError } from '@satelink/financial-domain';
+import { AccountId, Reservation, ReservationId, holdPosting, settlePosting } from '@satelink/financial-domain';
+import type { ReservationAccounts, ReservationError, ReservationPostingError } from '@satelink/financial-domain';
 import type { Money, Result } from '@satelink/kernel';
 import { ok, err } from '@satelink/kernel';
 import type { AvailableBalanceReader, ReservationRepository } from '../ports/reservation-repository.js';
+import type { ReservationUnitOfWork } from '../ports/reservation-unit-of-work.js';
 import type { RepositoryError, WriteError } from '../ports/repository-errors.js';
 
 export class ReservationNotFoundError {
@@ -34,6 +37,7 @@ export class InvalidReservationInputError {
 
 export type ReservationServiceError =
   | ReservationError
+  | ReservationPostingError
   | RepositoryError
   | WriteError
   | ReservationNotFoundError
@@ -41,7 +45,11 @@ export type ReservationServiceError =
 
 export interface ReservationServiceDeps {
   readonly reservations: ReservationRepository;
+  readonly uow: ReservationUnitOfWork;
+  /** Ledger-derived available balance of the customer account (already net of posted holds). */
   readonly balances: AvailableBalanceReader;
+  /** Which ledger accounts a reservation posts to (customer = its accountId). */
+  readonly accountsFor: (r: Reservation) => ReservationAccounts;
 }
 
 export interface ReserveCommand {
@@ -65,22 +73,18 @@ export async function reserve(deps: ReservationServiceDeps, cmd: ReserveCommand)
   if (prior.isErr) return prior;
   if (prior.value) return prior.value.matchRetry({ accountId: accountId.value, amount: cmd.amount, idempotencyKey: cmd.idempotencyKey });
 
-  const ledgerAvailable = await deps.balances.available(cmd.accountId, cmd.amount);
-  if (ledgerAvailable.isErr) return ledgerAvailable;
-  const held = await deps.reservations.findHeldByAccount(cmd.accountId);
-  if (held.isErr) return held;
-  const holds = sumHeld(cmd.amount, held.value);
-  if (holds.isErr) return holds;
-  const available = ledgerAvailable.value.subtract(holds.value);
-  if (available.isErr) return err(new InvalidReservationInputError(available.error.toString()));
+  const available = await deps.balances.available(cmd.accountId, cmd.amount);
+  if (available.isErr) return available;
 
   const r = Reservation.reserve({
     id: id.value, accountId: accountId.value, amount: cmd.amount, available: available.value,
     idempotencyKey: cmd.idempotencyKey, createdAt: cmd.now, expiresAt: cmd.now + cmd.ttlMs,
   });
   if (r.isErr) return r;
-  const saved = await deps.reservations.save(r.value);
-  if (saved.isErr) return saved;
+  const posting = holdPosting(r.value, deps.accountsFor(r.value));
+  if (posting.isErr) return posting;
+  const committed = await deps.uow.commit(r.value, posting.value);
+  if (committed.isErr) return committed;
   return reload(deps, r.value.id.value);
 }
 
@@ -93,8 +97,8 @@ export function release(deps: ReservationServiceDeps, reservationId: string, now
 }
 
 /**
- * Orphan recovery: expire up to `limit` lapsed holds. Returns the ids expired. A reservation that
- * moved on concurrently (captured/released, stale version) is skipped, never forced.
+ * Orphan recovery: expire (and post the release of) up to `limit` lapsed holds. Returns the ids
+ * expired. A reservation that moved on concurrently (stale version) is skipped, never forced.
  */
 export async function expireLapsed(deps: ReservationServiceDeps, now: number, limit = 100): Promise<Result<string[], RepositoryError>> {
   const lapsed = await deps.reservations.findLapsed(now, limit);
@@ -103,8 +107,10 @@ export async function expireLapsed(deps: ReservationServiceDeps, now: number, li
   for (const r of lapsed.value) {
     const next = r.expire(now);
     if (next.isErr || next.value === r) continue;
-    const saved = await deps.reservations.save(next.value);
-    if (saved.isOk) expired.push(r.id.value);
+    const posting = settlePosting(next.value, deps.accountsFor(next.value));
+    if (posting.isErr) continue;
+    const committed = await deps.uow.commit(next.value, posting.value);
+    if (committed.isOk) expired.push(r.id.value);
   }
   return ok(expired);
 }
@@ -120,8 +126,10 @@ async function transition(
   const next = step(found.value);
   if (next.isErr) return next;
   if (next.value === found.value) return ok(found.value); // idempotent replay: nothing to write
-  const saved = await deps.reservations.save(next.value);
-  if (saved.isErr) return saved;
+  const posting = settlePosting(next.value, deps.accountsFor(next.value));
+  if (posting.isErr) return posting;
+  const committed = await deps.uow.commit(next.value, posting.value);
+  if (committed.isErr) return committed;
   return reload(deps, reservationId);
 }
 

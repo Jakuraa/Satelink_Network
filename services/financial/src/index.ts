@@ -36,3 +36,6 @@ export { reserve, capture, release, expireLapsed, ReservationNotFoundError, Inva
 export type { ReservationServiceDeps, ReserveCommand, ReservationServiceError } from './application/commands/reservation-service.js';
 export type { ReservationRepository, AvailableBalanceReader } from './application/ports/reservation-repository.js';
 export { InMemoryReservationRepository } from './infrastructure/repositories/in-memory/in-memory-reservation-repository.js';
+export type { ReservationUnitOfWork } from './application/ports/reservation-unit-of-work.js';
+export { InMemoryReservationUnitOfWork } from './infrastructure/repositories/in-memory/in-memory-reservation-unit-of-work.js';
+export { LedgerAvailableBalanceReader } from './application/queries/ledger-available-balance.js';
