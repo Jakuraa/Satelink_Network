@@ -1,0 +1,23 @@
+{
+  "name": "@satelink/sie",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The one shared SIE model-provider interface (decision S-1, amended: services/sie) + adapters. Contract in src/contract (pure), adapters in src/infrastructure (transport and key injected). No route uses it yet; SIE_OPENROUTER_ENABLED off.",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.19",
+    "typescript": "^5.9.3",
+    "vitest": "^3.0.0"
+  }
+}

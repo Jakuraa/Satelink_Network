@@ -40,6 +40,7 @@ const WORKSPACE_SOURCES: Record<string, string> = {
   '@satelink/financial-domain': fileURLToPath(
     new URL('./libs/financial-domain/src/index.ts', import.meta.url),
   ),
+  '@satelink/sie': fileURLToPath(new URL('./services/sie/src/index.ts', import.meta.url)),
 };
 
 const workspaceResolver = {
@@ -68,6 +69,28 @@ export default defineConfig({
           include: ['tools/**/*.{test,spec}.ts'],
           exclude: ['**/node_modules/**', '.claude/worktrees/**', ...INTEGRATION_PATTERNS],
           environment: 'node',
+        },
+      },
+      {
+        // Application/infrastructure unit tests (no Docker). DB-backed suites stay in 'integration'.
+        plugins: [workspaceResolver],
+        test: {
+          name: 'services',
+          include: ['services/sie/**/*.{test,spec}.ts'],
+          exclude: ['**/node_modules/**', '.claude/worktrees/**', ...INTEGRATION_PATTERNS, '**/*.live.test.ts'],
+          environment: 'node',
+        },
+      },
+      {
+        // OPT-IN live provider contracts (real network, real cost). Never in CI: run explicitly with
+        // `--project sie-live`; each suite also skips unless its own env gate is set.
+        plugins: [workspaceResolver],
+        test: {
+          name: 'sie-live',
+          include: ['services/sie/**/*.live.test.ts'],
+          exclude: ['**/node_modules/**', '.claude/worktrees/**'],
+          environment: 'node',
+          testTimeout: 90_000,
         },
       },
       {
