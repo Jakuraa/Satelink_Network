@@ -1,11 +1,17 @@
 // Capability Registry v3 (decision S-6, skeleton). The `capabilities` block of
 // config/plan_catalog.v2.json — an extension of the PlanCatalog, not a parallel registry.
-// One entry per sellable or listable capability, in the mandate M2 shape, with an integer
-// price in micro-USD:
+// One entry per sellable or listable capability (mandate M2 fields) whose `pricing` follows the
+// pricing rule shape in docs/build/REVENUE_MODEL.md §3:
 //
-//   price.amount_micro  integer ≥ 0 (1 USD = 1,000,000), or null = WITHHELD
-//   price.withheld      required reason when amount_micro is null (e.g. "F8": founder has not
-//                       confirmed the price); forbidden when a price is present
+//   { unit: request|1k_tokens|call|month, currency: "USD", amount_micro: <int>|null,
+//     quantity: <int ≥ 1>,            // EXTENSION (not in §3): amount_micro buys `quantity` units,
+//                                     // needed for the x402 bundle ($0.10 = 1,000 calls); default 1
+//     basis: fixed|cost_plus, cost_plus: { markup_bps, floor_micro } (only for cost_plus),
+//     included_in: [plan ids], overage: {…}|null, on_failure: "release_all", refund_rule: "reversal",
+//     effective_from: YYYY-MM-DD, version: <int ≥ 1>, status: live|test|withheld }
+//
+// amount_micro is integer micro-USD (1 USD = 1,000,000). amount_micro null ⇔ status "withheld"
+// (not published until F8); a withheld price is never sellable and never shown as a number.
 //
 // Behind CAPABILITY_REGISTRY_V3=1 (read per request) discovery surfaces take their RPC prices
 // from here instead of `rails` (rails.mjs) and list the public capabilities. The values are the
@@ -20,6 +26,9 @@ const COMMERCIAL_RE = /^(sellable|internal|blocked:[a-z0-9_]+)$/;
 const ID_RE = /^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$/;
 const INTERFACE_KEYS = ['rest', 'mcp_tool', 'a2a_skill', 'console'];
 const NOT_PUBLIC_STATUS = new Set(['planned', 'deprecated']);
+const PRICING_UNITS = new Set(['request', '1k_tokens', 'call', 'month']);
+const PRICING_BASES = new Set(['fixed', 'cost_plus']);
+const PRICING_STATUSES = new Set(['live', 'test', 'withheld']);
 
 export const registryEnabled = (env = process.env) => env.CAPABILITY_REGISTRY_V3 === '1';
 
@@ -40,13 +49,17 @@ function usdTextToMicro(text) {
  * X402_BUNDLE_CALLS, so discovery (rails.mjs) shows them — and so must the registry view, or one
  * response would carry two bundle prices.
  */
-function chargedBundlePrice(k, env) {
-  if (k.id !== RPC_X402_BUNDLE_CAPABILITY || k.price.amount_micro === null) return k.price;
-  const micro = env.X402_BUNDLE_PRICE_USD ? usdTextToMicro(env.X402_BUNDLE_PRICE_USD) : k.price.amount_micro;
-  const per = env.X402_BUNDLE_CALLS ? Number(env.X402_BUNDLE_CALLS) : k.price.per;
-  if (micro === undefined || !Number.isSafeInteger(per) || per < 1) return { ...k.price, amount_micro: null, withheld: 'env_override_unparseable' };
-  return { ...k.price, amount_micro: micro, per };
+function chargedBundlePricing(k, env) {
+  const p = k.pricing;
+  if (k.id !== RPC_X402_BUNDLE_CAPABILITY || p.amount_micro === null) return p;
+  const micro = env.X402_BUNDLE_PRICE_USD ? usdTextToMicro(env.X402_BUNDLE_PRICE_USD) : p.amount_micro;
+  const quantity = env.X402_BUNDLE_CALLS ? Number(env.X402_BUNDLE_CALLS) : qty(p);
+  // An override that cannot be stated exactly is withheld, never shown as a rounded number.
+  if (micro === undefined || !Number.isSafeInteger(quantity) || quantity < 1) return { ...p, amount_micro: null, status: 'withheld' };
+  return { ...p, amount_micro: micro, quantity };
 }
+
+const qty = (p) => p.quantity ?? 1;
 
 const isStrOrNull = (v) => v === null || (typeof v === 'string' && v.length > 0);
 
@@ -57,6 +70,7 @@ export function validateCapabilities(c) {
   if (caps === undefined) return errs; // optional until v3 is adopted everywhere
   if (!Array.isArray(caps)) return ['capabilities must be an array'];
   const products = new Map((c.products || []).map((p) => [p.id, p]));
+  const planIds = new Set((c.plans || []).map((p) => p.id));
   const ids = new Set();
   for (const [i, k] of caps.entries()) {
     const at = `capabilities[${i}]${k?.id ? ` (${k.id})` : ''}`;
@@ -80,17 +94,30 @@ export function validateCapabilities(c) {
     if (typeof k.commercial_status !== 'string' || !COMMERCIAL_RE.test(k.commercial_status)) e('commercial_status must be sellable|internal|blocked:<reason>');
     if (!isStrOrNull(k.resale_rights_ref)) e('resale_rights_ref must be a string or null');
     if (!isStrOrNull(k.docs_url)) e('docs_url must be a string or null');
-    const p = k.price;
-    if (!p || typeof p !== 'object') { e('price required'); continue; }
-    if (p.currency !== 'USD') e('price.currency must be USD (amounts are micro-USD)');
-    if (!Number.isInteger(p.per) || p.per < 1) e('price.per must be an integer ≥ 1');
-    if (typeof p.metering_unit !== 'string' || !p.metering_unit) e('price.metering_unit required');
+    const p = k.pricing;
+    if (!p || typeof p !== 'object') { e('pricing required (REVENUE_MODEL §3 shape)'); continue; }
+    const pe = (m) => e(`pricing.${m}`);
+    if (!PRICING_UNITS.has(p.unit)) pe('unit must be request|1k_tokens|call|month');
+    if (p.currency !== 'USD') pe('currency must be USD (amounts are micro-USD)');
+    if (p.quantity !== undefined && (!Number.isSafeInteger(p.quantity) || p.quantity < 1)) pe('quantity must be an integer ≥ 1');
+    if (!PRICING_BASES.has(p.basis)) pe('basis must be fixed|cost_plus');
+    if (p.basis === 'cost_plus') {
+      const cp = p.cost_plus;
+      if (!cp || !Number.isSafeInteger(cp.markup_bps) || cp.markup_bps < 0 || !Number.isSafeInteger(cp.floor_micro) || cp.floor_micro < 0) pe('cost_plus needs integer markup_bps ≥ 0 and floor_micro ≥ 0');
+    } else if (p.cost_plus !== undefined) pe('cost_plus only allowed with basis cost_plus');
+    if (!Array.isArray(p.included_in) || !p.included_in.every((x) => planIds.has(x))) pe('included_in must list catalog plan ids');
+    if (p.overage !== null && (typeof p.overage !== 'object' || Array.isArray(p.overage))) pe('overage must be an object or null');
+    if (p.on_failure !== 'release_all') pe('on_failure must be release_all');
+    if (p.refund_rule !== 'reversal') pe('refund_rule must be reversal');
+    if (typeof p.effective_from !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(p.effective_from) || Number.isNaN(Date.parse(p.effective_from))) pe('effective_from must be YYYY-MM-DD');
+    if (!Number.isInteger(p.version) || p.version < 1) pe('version must be an integer ≥ 1');
+    if (!PRICING_STATUSES.has(p.status)) pe('status must be live|test|withheld');
     if (p.amount_micro === null) {
-      if (typeof p.withheld !== 'string' || !p.withheld) e('price.amount_micro null requires price.withheld (reason)');
+      if (p.status !== 'withheld') pe('amount_micro null requires status withheld');
       if (k.commercial_status === 'sellable') e('a withheld price cannot be sellable');
     } else {
-      if (!Number.isSafeInteger(p.amount_micro) || p.amount_micro < 0) e('price.amount_micro must be an integer ≥ 0 (micro-USD) or null');
-      if (p.withheld !== undefined) e('price.withheld only allowed when amount_micro is null');
+      if (!Number.isSafeInteger(p.amount_micro) || p.amount_micro < 0) pe('amount_micro must be an integer ≥ 0 (micro-USD) or null');
+      if (p.status === 'withheld') pe('status withheld requires amount_micro null');
     }
   }
   // Discovery reads these two whenever CAPABILITY_REGISTRY_V3=1: a block without them must fail at
@@ -98,7 +125,7 @@ export function validateCapabilities(c) {
   for (const id of [RPC_CREDITS_CAPABILITY, RPC_X402_BUNDLE_CAPABILITY]) {
     const k = caps.find((x) => x?.id === id);
     if (!k) errs.push(`capabilities: ${id} required (discovery prices come from it)`);
-    else if (k.price?.amount_micro === null) errs.push(`capabilities: ${id} cannot be withheld (discovery lists it)`);
+    else if (k.pricing?.amount_micro === null) errs.push(`capabilities: ${id} cannot be withheld (discovery lists it)`);
   }
   return errs;
 }
@@ -122,26 +149,26 @@ export function registryRpcPrices(c) {
   const need = (id) => {
     const k = caps.get(id);
     if (!k) throw new Error(`capability registry: ${id} missing`);
-    if (k.price.amount_micro === null) throw new Error(`capability registry: ${id} is withheld but discovery lists it`);
-    return k.price;
+    if (k.pricing.amount_micro === null) throw new Error(`capability registry: ${id} is withheld but discovery lists it`);
+    return k.pricing;
   };
   const credit = need(RPC_CREDITS_CAPABILITY);
   const bundle = need(RPC_X402_BUNDLE_CAPABILITY);
   return {
-    rpc_credits: { price_usd_per_call: microToUsd(credit.amount_micro) / credit.per },
-    rpc_x402_bundle: { price_usd: microToUsd(bundle.amount_micro), calls: bundle.per },
+    rpc_credits: { price_usd_per_call: microToUsd(credit.amount_micro) / qty(credit) },
+    rpc_x402_bundle: { price_usd: microToUsd(bundle.amount_micro), calls: qty(bundle) },
   };
 }
 
 /**
  * Public view for discovery: capabilities whose product is not internal and whose status is
- * not planned/deprecated. A withheld price is shown as { withheld: reason } — never a number.
+ * not planned/deprecated. A withheld price is shown as { status: 'withheld' } — never a number.
  */
 export function publicCapabilities(c, env = process.env) {
   const products = new Map((c.products || []).map((p) => [p.id, p]));
   return (c.capabilities || [])
     .filter((k) => products.get(k.product)?.audience !== 'internal' && !NOT_PUBLIC_STATUS.has(k.status))
-    .map((k) => ({ ...k, price: chargedBundlePrice(k, env) }))
+    .map((k) => ({ ...k, pricing: chargedBundlePricing(k, env) }))
     .map((k) => ({
       id: k.id,
       version: k.version,
@@ -151,9 +178,13 @@ export function publicCapabilities(c, env = process.env) {
       status: k.status,
       audience: [...k.audience],
       interfaces: { ...k.interfaces },
-      price: k.price.amount_micro === null
-        ? { withheld: k.price.withheld }
-        : { amount_micro: k.price.amount_micro, currency: k.price.currency, per: k.price.per, metering_unit: k.price.metering_unit },
+      pricing: k.pricing.amount_micro === null
+        ? { status: 'withheld', unit: k.pricing.unit, currency: k.pricing.currency }
+        : {
+          unit: k.pricing.unit, currency: k.pricing.currency, amount_micro: k.pricing.amount_micro, quantity: qty(k.pricing),
+          basis: k.pricing.basis, on_failure: k.pricing.on_failure, refund_rule: k.pricing.refund_rule,
+          effective_from: k.pricing.effective_from, version: k.pricing.version, status: k.pricing.status,
+        },
       docs_url: k.docs_url,
     }));
 }

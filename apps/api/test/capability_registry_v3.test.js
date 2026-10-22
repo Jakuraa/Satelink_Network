@@ -55,7 +55,7 @@ describe('Capability Registry v3 (S-6 skeleton)', () => {
       assert.ok(errs.some((e) => re.test(e)), `expected ${re} in ${JSON.stringify(errs)}`);
     };
     const rpc = (x) => x.capabilities.find((k) => k.id === RPC_CREDITS_CAPABILITY);
-    const ti = (x) => x.capabilities.find((k) => k.price.amount_micro === null);
+    const ti = (x) => x.capabilities.find((k) => k.pricing.amount_micro === null);
     bad((x) => { x.capabilities.push(clone(rpc(x))); }, /duplicate id/);
     bad((x) => { rpc(x).id = 'RPC Call'; }, /id must be dotted/);
     bad((x) => { rpc(x).status = 'production-verified'; }, /status must be one of/);
@@ -63,19 +63,31 @@ describe('Capability Registry v3 (S-6 skeleton)', () => {
     bad((x) => { rpc(x).audience = ['robots']; }, /audience/);
     bad((x) => { rpc(x).interfaces.mcp_tool = 'funding_rate_heatmap'; }, /not in product polygon_rpc\.mcp_tools/);
     bad((x) => { delete rpc(x).interfaces.console; }, /interfaces must have exactly/);
-    bad((x) => { rpc(x).price.amount_micro = 0.5; }, /amount_micro must be an integer/);
-    bad((x) => { rpc(x).price.amount_micro = -1; }, /amount_micro must be an integer/);
-    bad((x) => { rpc(x).price.amount_micro = '30'; }, /amount_micro must be an integer/);
-    bad((x) => { rpc(x).price.currency = 'USDT'; }, /currency must be USD/);
-    bad((x) => { rpc(x).price.per = 0; }, /price\.per/);
-    bad((x) => { rpc(x).price.withheld = 'F8'; }, /withheld only allowed/);
-    bad((x) => { delete ti(x).price.withheld; }, /requires price\.withheld/);
+    bad((x) => { rpc(x).pricing.amount_micro = 0.5; }, /amount_micro must be an integer/);
+    bad((x) => { rpc(x).pricing.amount_micro = -1; }, /amount_micro must be an integer/);
+    bad((x) => { rpc(x).pricing.amount_micro = '30'; }, /amount_micro must be an integer/);
+    bad((x) => { rpc(x).pricing.currency = 'USDT'; }, /currency must be USD/);
+    bad((x) => { rpc(x).pricing.unit = 'bundle'; }, /pricing\.unit/);
+    bad((x) => { rpc(x).pricing.quantity = 0; }, /pricing\.quantity/);
+    bad((x) => { rpc(x).pricing.basis = 'auction'; }, /pricing\.basis/);
+    bad((x) => { rpc(x).pricing.basis = 'cost_plus'; }, /cost_plus needs/);
+    bad((x) => { rpc(x).pricing.cost_plus = { markup_bps: 100, floor_micro: 1 }; }, /cost_plus only allowed/);
+    bad((x) => { rpc(x).pricing.included_in = ['no_such_plan']; }, /included_in/);
+    bad((x) => { rpc(x).pricing.overage = []; }, /overage/);
+    bad((x) => { rpc(x).pricing.on_failure = 'keep'; }, /on_failure/);
+    bad((x) => { rpc(x).pricing.refund_rule = 'delete'; }, /refund_rule/);
+    bad((x) => { rpc(x).pricing.effective_from = '22/10/2026'; }, /effective_from/);
+    bad((x) => { rpc(x).pricing.version = 0; }, /pricing\.version/);
+    bad((x) => { rpc(x).pricing.status = 'published'; }, /pricing\.status/);
+    bad((x) => { rpc(x).pricing.status = 'withheld'; }, /status withheld requires amount_micro null/);
+    bad((x) => { ti(x).pricing.status = 'live'; }, /amount_micro null requires status withheld/);
+    bad((x) => { delete rpc(x).pricing; }, /pricing required/);
     bad((x) => { ti(x).commercial_status = 'sellable'; }, /withheld price cannot be sellable/);
     bad((x) => { rpc(x).commercial_status = 'for sale'; }, /commercial_status/);
     bad((x) => { rpc(x).approval_mode = 'auto'; }, /approval_mode/);
     bad((x) => { x.capabilities = {}; }, /must be an array/);
     bad((x) => { x.capabilities = x.capabilities.filter((k) => k.id !== RPC_X402_BUNDLE_CAPABILITY); }, /x402_bundle required/);
-    bad((x) => { Object.assign(rpc(x).price, { amount_micro: null, withheld: 'F8' }); rpc(x).commercial_status = 'internal'; }, /rpc\.polygon\.call cannot be withheld/);
+    bad((x) => { Object.assign(rpc(x).pricing, { amount_micro: null, status: 'withheld' }); rpc(x).commercial_status = 'internal'; }, /rpc\.polygon\.call cannot be withheld/);
     // no registry block at all: valid, and the flag is a no-op (never a 500)
     const { capabilities: _c, ...noBlock } = clone(c);
     assert.deepEqual(validateCapabilities(noBlock), []);
@@ -114,22 +126,22 @@ describe('Capability Registry v3 (S-6 skeleton)', () => {
       const body = await withFlag('1', async () => (await request(app()).get('/v1/pricing')).body);
       const cap = body.capabilities.find((k) => k.id === RPC_X402_BUNDLE_CAPABILITY);
       assert.deepEqual([body.rails.rpc_x402_bundle.price_usd, body.rails.rpc_x402_bundle.calls], [0.25, 2000]);
-      assert.deepEqual([cap.price.amount_micro, cap.price.per], [250_000, 2000]);
+      assert.deepEqual([cap.pricing.amount_micro, cap.pricing.quantity], [250_000, 2000]);
       process.env.X402_BUNDLE_PRICE_USD = '0.1234567'; // > 6 decimals: never shown as a rounded number
       const odd = publicCapabilities(c, process.env).find((k) => k.id === RPC_X402_BUNDLE_CAPABILITY);
-      assert.deepEqual(odd.price, { withheld: 'env_override_unparseable' });
+      assert.deepEqual(odd.pricing, { status: 'withheld', unit: 'call', currency: 'USD' });
     } finally {
       for (const [k, v] of [['X402_BUNDLE_PRICE_USD', saved.p], ['X402_BUNDLE_CALLS', saved.n]]) { if (v === undefined) delete process.env[k]; else process.env[k] = v; }
     }
   });
 
-  it('v2c: a withheld price on a public, live capability is listed as { withheld } with no amount', () => {
+  it('v2c: a withheld price on a public, live capability is listed as { status: withheld } with no amount', () => {
     const x = clone(c);
     x.capabilities.push({ ...clone(x.capabilities[0]), id: 'rpc.polygon.trace', commercial_status: 'internal',
-      price: { amount_micro: null, withheld: 'F8', currency: 'USD', per: 1, metering_unit: 'call' } });
+      pricing: { ...clone(x.capabilities[0].pricing), amount_micro: null, status: 'withheld' } });
     assert.deepEqual(validateCapabilities(x), []);
     const view = publicCapabilities(x, {}).find((k) => k.id === 'rpc.polygon.trace');
-    assert.deepEqual(view.price, { withheld: 'F8' });
+    assert.deepEqual(view.pricing, { status: 'withheld', unit: 'call', currency: 'USD' });
     assert.ok(!JSON.stringify(view).includes('amount_micro'));
   });
 
@@ -146,9 +158,9 @@ describe('Capability Registry v3 (S-6 skeleton)', () => {
     const listed = new Map(body.capabilities.map((k) => [k.id, k]));
     const credit = listed.get(RPC_CREDITS_CAPABILITY);
     const bundle = listed.get(RPC_X402_BUNDLE_CAPABILITY);
-    assert.equal(microToUsd(credit.price.amount_micro) / credit.price.per, body.price_per_call_usdt);
-    assert.equal(microToUsd(bundle.price.amount_micro), body.rails.rpc_x402_bundle.price_usd);
-    assert.equal(bundle.price.per, body.rails.rpc_x402_bundle.calls);
+    assert.equal(microToUsd(credit.pricing.amount_micro) / credit.pricing.quantity, body.price_per_call_usdt);
+    assert.equal(microToUsd(bundle.pricing.amount_micro), body.rails.rpc_x402_bundle.price_usd);
+    assert.equal(bundle.pricing.quantity, body.rails.rpc_x402_bundle.calls);
 
     // registry ↔ MCP tools
     const { TOOL_PRODUCTS, advertisedTools } = await import('../../mcp-server/src/server-factory.mjs');
@@ -161,13 +173,13 @@ describe('Capability Registry v3 (S-6 skeleton)', () => {
       'MCP advertises exactly the tools of public capabilities');
 
     // withheld (F8) entries: internal, never priced on any public surface
-    const withheld = c.capabilities.filter((k) => k.price.amount_micro === null);
+    const withheld = c.capabilities.filter((k) => k.pricing.amount_micro === null);
     assert.ok(withheld.length >= 4, 'Trading Intelligence stays withheld until F8');
     const surfaces = await withFlag('1', async () => JSON.stringify([
       (await request(app()).get('/v1/pricing')).body, (await request(app()).get('/.well-known/satelink.json')).body,
     ]));
     for (const k of withheld) {
-      assert.equal(k.price.withheld, 'F8');
+      assert.equal(k.pricing.status, 'withheld');
       assert.ok(!listed.has(k.id), `${k.id}: withheld capability not listed publicly`);
       assert.ok(!surfaces.includes(`"${k.id}"`), `${k.id}: absent from public surfaces`);
     }

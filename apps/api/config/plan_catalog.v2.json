@@ -430,7 +430,7 @@
       "mcp_tools": []
     }
   ],
-  "capabilities_note": "Capability Registry v3 (S-6 skeleton). price.amount_micro is integer micro-USD (1 USD = 1,000,000) or null = withheld (price.withheld names why, e.g. F8). Discovery reads it only when CAPABILITY_REGISTRY_V3=1; test/capability_registry_v3.test.js fails CI if it disagrees with rails, /v1/pricing or the MCP tool list.",
+  "capabilities_note": "Capability Registry v3 (S-6 skeleton). `pricing` follows docs/build/REVENUE_MODEL.md §3; amount_micro is integer micro-USD (1 USD = 1,000,000) or null with status \"withheld\" (F8). `quantity` (extension) = units bought for amount_micro. Discovery reads it only when CAPABILITY_REGISTRY_V3=1; test/capability_registry_v3.test.js fails CI if it disagrees with rails, /v1/pricing or the MCP tool list.",
   "capabilities": [
     {
       "id": "rpc.polygon.call",
@@ -451,11 +451,18 @@
         "console": null
       },
       "pricing_rule_ref": "rails.rpc_credits",
-      "price": {
-        "amount_micro": 30,
+      "pricing": {
+        "unit": "call",
         "currency": "USD",
-        "per": 1,
-        "metering_unit": "call"
+        "amount_micro": 30,
+        "basis": "fixed",
+        "included_in": [],
+        "overage": null,
+        "on_failure": "release_all",
+        "refund_rule": "reversal",
+        "effective_from": "2026-10-22",
+        "version": 1,
+        "status": "live"
       },
       "risk_level": "low",
       "approval_mode": "none",
@@ -482,11 +489,19 @@
         "console": null
       },
       "pricing_rule_ref": "rails.rpc_x402_bundle",
-      "price": {
-        "amount_micro": 100000,
+      "pricing": {
+        "unit": "call",
         "currency": "USD",
-        "per": 1000,
-        "metering_unit": "call"
+        "amount_micro": 100000,
+        "quantity": 1000,
+        "basis": "fixed",
+        "included_in": [],
+        "overage": null,
+        "on_failure": "release_all",
+        "refund_rule": "reversal",
+        "effective_from": "2026-10-22",
+        "version": 1,
+        "status": "live"
       },
       "risk_level": "low",
       "approval_mode": "none",
@@ -512,12 +527,18 @@
         "console": null
       },
       "pricing_rule_ref": "meters.intelligence_request",
-      "price": {
-        "amount_micro": null,
-        "withheld": "F8",
+      "pricing": {
+        "unit": "request",
         "currency": "USD",
-        "per": 1,
-        "metering_unit": "request"
+        "amount_micro": null,
+        "basis": "fixed",
+        "included_in": [],
+        "overage": null,
+        "on_failure": "release_all",
+        "refund_rule": "reversal",
+        "effective_from": "2026-10-22",
+        "version": 1,
+        "status": "withheld"
       },
       "risk_level": "low",
       "approval_mode": "none",
@@ -543,12 +564,18 @@
         "console": null
       },
       "pricing_rule_ref": "meters.intelligence_request",
-      "price": {
-        "amount_micro": null,
-        "withheld": "F8",
+      "pricing": {
+        "unit": "request",
         "currency": "USD",
-        "per": 1,
-        "metering_unit": "request"
+        "amount_micro": null,
+        "basis": "fixed",
+        "included_in": [],
+        "overage": null,
+        "on_failure": "release_all",
+        "refund_rule": "reversal",
+        "effective_from": "2026-10-22",
+        "version": 1,
+        "status": "withheld"
       },
       "risk_level": "low",
       "approval_mode": "none",
@@ -574,12 +601,18 @@
         "console": null
       },
       "pricing_rule_ref": "meters.intelligence_request",
-      "price": {
-        "amount_micro": null,
-        "withheld": "F8",
+      "pricing": {
+        "unit": "request",
         "currency": "USD",
-        "per": 1,
-        "metering_unit": "request"
+        "amount_micro": null,
+        "basis": "fixed",
+        "included_in": [],
+        "overage": null,
+        "on_failure": "release_all",
+        "refund_rule": "reversal",
+        "effective_from": "2026-10-22",
+        "version": 1,
+        "status": "withheld"
       },
       "risk_level": "low",
       "approval_mode": "none",
@@ -605,12 +638,18 @@
         "console": null
       },
       "pricing_rule_ref": "meters.intelligence_request",
-      "price": {
-        "amount_micro": null,
-        "withheld": "F8",
+      "pricing": {
+        "unit": "request",
         "currency": "USD",
-        "per": 1,
-        "metering_unit": "request"
+        "amount_micro": null,
+        "basis": "fixed",
+        "included_in": [],
+        "overage": null,
+        "on_failure": "release_all",
+        "refund_rule": "reversal",
+        "effective_from": "2026-10-22",
+        "version": 1,
+        "status": "withheld"
       },
       "risk_level": "low",
       "approval_mode": "none",

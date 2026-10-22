@@ -17,11 +17,17 @@
       "a2a_skill": null,
       "console": null
     },
-    "price": {
-      "amount_micro": 30,
+    "pricing": {
+      "unit": "call",
       "currency": "USD",
-      "per": 1,
-      "metering_unit": "call"
+      "amount_micro": 30,
+      "quantity": 1,
+      "basis": "fixed",
+      "on_failure": "release_all",
+      "refund_rule": "reversal",
+      "effective_from": "2026-10-22",
+      "version": 1,
+      "status": "live"
     },
     "docs_url": "https://api.satelink.network/v1/pricing"
   },
@@ -42,11 +48,17 @@
       "a2a_skill": null,
       "console": null
     },
-    "price": {
-      "amount_micro": 100000,
+    "pricing": {
+      "unit": "call",
       "currency": "USD",
-      "per": 1000,
-      "metering_unit": "call"
+      "amount_micro": 100000,
+      "quantity": 1000,
+      "basis": "fixed",
+      "on_failure": "release_all",
+      "refund_rule": "reversal",
+      "effective_from": "2026-10-22",
+      "version": 1,
+      "status": "live"
     },
     "docs_url": "https://api.satelink.network/.well-known/x402"
   }
