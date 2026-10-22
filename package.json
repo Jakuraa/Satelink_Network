@@ -64,7 +64,7 @@
     "test:arch": "vitest run --project tools",
     "test:libs": "vitest run --project libs --project services",
     "test:integration": "vitest run --project integration",
-    "typecheck:libs": "npm run typecheck --workspace=@satelink/kernel && npm run typecheck --workspace=@satelink/financial-domain && npm run typecheck --workspace=@satelink/financial && npm run typecheck --workspace=@satelink/sie && npm run typecheck --workspace=@satelink/sie-providers",
+    "typecheck:libs": "npm run typecheck --workspace=@satelink/kernel && npm run typecheck --workspace=@satelink/financial-domain && npm run typecheck --workspace=@satelink/financial && npm run typecheck --workspace=@satelink/sie",
     "typecheck:workers": "npm run typecheck --workspace=@satelink/reconciler"
   },
   "dependencies": {

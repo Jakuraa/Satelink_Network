@@ -22,7 +22,7 @@ import {
   AIProvider, ProviderConnectionResetError, ProviderError, ProviderMalformedResponseError, ProviderStreamTruncatedError,
   ProviderTimeoutError, assertRetryPolicy, providerErrorForStatus, usdToMicroUsd, withRetries,
   type ChatMessage, type ChatOptions, type ChatResult, type StreamChunk, type StreamFinal, type ToolCall,
-} from '@satelink/sie';
+} from '../contract/index.js';
 
 export const OPENROUTER_DEFAULT_BASE_URL = 'https://openrouter.ai/api/v1';
 const PROVIDER = 'openrouter';

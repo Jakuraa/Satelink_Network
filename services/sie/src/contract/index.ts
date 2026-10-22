@@ -1,9 +1,7 @@
 /**
- * @satelink/sie — Satelink Intelligence Engine contract (decision S-1, feature-flagged off).
- *
- * Pure: no I/O, no app code, no SDKs. Provider adapters live in services/sie and receive their
- * transport (fetch) and key from a composition root. Enforced by .dependency-cruiser.cjs
- * (domain-no-node-core, domain-no-io-packages, libs-not-to-services).
+ * SIE provider contract (decision S-1, amended: lives in services/sie). Pure: no I/O, no app
+ * code, no SDKs (S-2). Adapters in ../infrastructure receive their transport (fetch) and key
+ * from a composition root.
  */
 export {
   AgentError,

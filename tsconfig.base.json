@@ -25,7 +25,7 @@
     "paths": {
       "@satelink/kernel": ["./libs/kernel/src/index.ts"],
       "@satelink/financial-domain": ["./libs/financial-domain/src/index.ts"],
-      "@satelink/sie": ["./libs/sie/src/index.ts"]
+      "@satelink/sie": ["./services/sie/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "dist", "build", "coverage", ".next"]

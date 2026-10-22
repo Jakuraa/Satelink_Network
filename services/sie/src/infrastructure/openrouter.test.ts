@@ -2,7 +2,7 @@
 // on trading-agent/integration) onto @satelink/sie, plus served-model/generation-id/cost and total-deadline
 // tests. No network: every call goes to an injected fake fetch.
 import { describe, expect, it } from 'vitest';
-import { ProviderError, isFallbackEligible, type ChatMessage, type StreamChunk } from '@satelink/sie';
+import { ProviderError, isFallbackEligible, type ChatMessage, type StreamChunk } from '../contract/index.js';
 import { OPENROUTER_DEFAULT_BASE_URL, OpenRouterProvider, type FetchLike, type HttpRequestInit, type HttpResponseLike, type OpenRouterOptions } from './openrouter.js';
 import { createOpenRouterProvider } from '../composition.js';
 

@@ -40,7 +40,7 @@ const WORKSPACE_SOURCES: Record<string, string> = {
   '@satelink/financial-domain': fileURLToPath(
     new URL('./libs/financial-domain/src/index.ts', import.meta.url),
   ),
-  '@satelink/sie': fileURLToPath(new URL('./libs/sie/src/index.ts', import.meta.url)),
+  '@satelink/sie': fileURLToPath(new URL('./services/sie/src/index.ts', import.meta.url)),
 };
 
 const workspaceResolver = {
