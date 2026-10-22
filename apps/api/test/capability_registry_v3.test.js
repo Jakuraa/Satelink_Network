@@ -69,6 +69,10 @@ describe('Capability Registry v3 (S-6 skeleton)', () => {
     bad((x) => { rpc(x).pricing.currency = 'USDT'; }, /currency must be USD/);
     bad((x) => { rpc(x).pricing.unit = 'bundle'; }, /pricing\.unit/);
     bad((x) => { rpc(x).pricing.quantity = 0; }, /pricing\.quantity/);
+    const bundle = (x) => x.capabilities.find((k) => k.id === RPC_X402_BUNDLE_CAPABILITY);
+    bad((x) => { bundle(x).pricing.amount_micro = 100_001; }, /not a whole number of micro-USD per unit at quantity 1000/);
+    bad((x) => { bundle(x).pricing.unit = 'month'; }, /quantity > 1 needs a countable unit/);
+    bad((x) => { Object.assign(bundle(x).pricing, { basis: 'cost_plus', cost_plus: { markup_bps: 0, floor_micro: 0 } }); }, /cannot be combined with basis cost_plus/);
     bad((x) => { rpc(x).pricing.basis = 'auction'; }, /pricing\.basis/);
     bad((x) => { rpc(x).pricing.basis = 'cost_plus'; }, /cost_plus needs/);
     bad((x) => { rpc(x).pricing.cost_plus = { markup_bps: 100, floor_micro: 1 }; }, /cost_plus only allowed/);
@@ -127,6 +131,8 @@ describe('Capability Registry v3 (S-6 skeleton)', () => {
       const cap = body.capabilities.find((k) => k.id === RPC_X402_BUNDLE_CAPABILITY);
       assert.deepEqual([body.rails.rpc_x402_bundle.price_usd, body.rails.rpc_x402_bundle.calls], [0.25, 2000]);
       assert.deepEqual([cap.pricing.amount_micro, cap.pricing.quantity], [250_000, 2000]);
+      process.env.X402_BUNDLE_PRICE_USD = '0.250001'; // 250001 micro / 2000 calls: not a whole micro per call → withheld
+      assert.deepEqual(publicCapabilities(c, process.env).find((k) => k.id === RPC_X402_BUNDLE_CAPABILITY).pricing.status, 'withheld');
       process.env.X402_BUNDLE_PRICE_USD = '0.1234567'; // > 6 decimals: never shown as a rounded number
       const odd = publicCapabilities(c, process.env).find((k) => k.id === RPC_X402_BUNDLE_CAPABILITY);
       assert.deepEqual(odd.pricing, { status: 'withheld', unit: 'call', currency: 'USD' });

@@ -4,8 +4,11 @@
 // pricing rule shape in docs/build/REVENUE_MODEL.md §3:
 //
 //   { unit: request|1k_tokens|call|month, currency: "USD", amount_micro: <int>|null,
-//     quantity: <int ≥ 1>,            // EXTENSION (not in §3): amount_micro buys `quantity` units,
-//                                     // needed for the x402 bundle ($0.10 = 1,000 calls); default 1
+//     quantity: <int ≥ 1>,            // S-6a (approved 2026-10-22): amount_micro buys `quantity` of
+//                                     // `unit` (x402 bundle: 100000 micro = 1,000 calls); default 1.
+//                                     // >1 only for countable units (call|request|1k_tokens), never
+//                                     // with cost_plus, and amount_micro must divide evenly so the
+//                                     // per-unit price is a whole number of micro-USD
 //     basis: fixed|cost_plus, cost_plus: { markup_bps, floor_micro } (only for cost_plus),
 //     included_in: [plan ids], overage: {…}|null, on_failure: "release_all", refund_rule: "reversal",
 //     effective_from: YYYY-MM-DD, version: <int ≥ 1>, status: live|test|withheld }
@@ -27,6 +30,7 @@ const ID_RE = /^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$/;
 const INTERFACE_KEYS = ['rest', 'mcp_tool', 'a2a_skill', 'console'];
 const NOT_PUBLIC_STATUS = new Set(['planned', 'deprecated']);
 const PRICING_UNITS = new Set(['request', '1k_tokens', 'call', 'month']);
+const COUNTABLE_UNITS = new Set(['request', '1k_tokens', 'call']);
 const PRICING_BASES = new Set(['fixed', 'cost_plus']);
 const PRICING_STATUSES = new Set(['live', 'test', 'withheld']);
 
@@ -55,7 +59,7 @@ function chargedBundlePricing(k, env) {
   const micro = env.X402_BUNDLE_PRICE_USD ? usdTextToMicro(env.X402_BUNDLE_PRICE_USD) : p.amount_micro;
   const quantity = env.X402_BUNDLE_CALLS ? Number(env.X402_BUNDLE_CALLS) : qty(p);
   // An override that cannot be stated exactly is withheld, never shown as a rounded number.
-  if (micro === undefined || !Number.isSafeInteger(quantity) || quantity < 1) return { ...p, amount_micro: null, status: 'withheld' };
+  if (micro === undefined || !Number.isSafeInteger(quantity) || quantity < 1 || micro % quantity !== 0) return { ...p, amount_micro: null, status: 'withheld' };
   return { ...p, amount_micro: micro, quantity };
 }
 
@@ -100,6 +104,12 @@ export function validateCapabilities(c) {
     if (!PRICING_UNITS.has(p.unit)) pe('unit must be request|1k_tokens|call|month');
     if (p.currency !== 'USD') pe('currency must be USD (amounts are micro-USD)');
     if (p.quantity !== undefined && (!Number.isSafeInteger(p.quantity) || p.quantity < 1)) pe('quantity must be an integer ≥ 1');
+    const q = qty(p);
+    if (Number.isSafeInteger(q) && q > 1) {
+      if (!COUNTABLE_UNITS.has(p.unit)) pe(`quantity > 1 needs a countable unit (call|request|1k_tokens), not ${p.unit}`);
+      if (p.basis === 'cost_plus') pe('quantity > 1 cannot be combined with basis cost_plus');
+      if (Number.isSafeInteger(p.amount_micro) && p.amount_micro % q !== 0) pe(`amount_micro ${p.amount_micro} is not a whole number of micro-USD per unit at quantity ${q}`);
+    }
     if (!PRICING_BASES.has(p.basis)) pe('basis must be fixed|cost_plus');
     if (p.basis === 'cost_plus') {
       const cp = p.cost_plus;
