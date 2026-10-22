@@ -21,6 +21,11 @@ export const LEDGER_KINDS = [
   'adjustment',
   'reversal',
   'refund',
+  // Reservation postings (S-5, migration 020): hold = customer → holds; capture / release
+  // settle the hold (capture → revenue + remainder back; release → all back).
+  'hold',
+  'capture',
+  'release',
 ] as const;
 
 export type LedgerKind = (typeof LEDGER_KINDS)[number];
