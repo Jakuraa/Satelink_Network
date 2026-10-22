@@ -42,7 +42,7 @@ Scope: founder prompt "SESSION A: DEPLOY TRUTH + P0 FINISH + SIE FOUNDATION".
 - #565: commented with the rebuild plan on #583 (Reservation). It closes when the rebuild PR exists.
 
 ### Step 3 — architecture docs
-**Blocked**: the files were not attached. S-1…S-6 were not recorded as decisions (not approved).
+All three founder-supplied docs committed verbatim with verified/changed notes: **#585 merged `8585d309`**. S-1…S-6 are not recorded as decisions (still PROPOSED). REVENUE_MODEL §3 → #582 `pricing` realigned (`b264f2b1`); ACCEPTANCE_TESTS → #583 properties at 1,000 runs (`352f2ba3`).
 
 ### Step 4 — SIE foundation: draft **#581**
 - **Packages:**
