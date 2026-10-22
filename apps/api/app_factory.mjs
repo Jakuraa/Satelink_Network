@@ -565,5 +565,36 @@ app.get("/api/mode", (req, res) => {
   // is the auth). Does not touch any existing route or the live money path.
   app.use("/vnext", createVnextKernelRouter(pool, { adminAuth: requireAdminAuth }));
 
+  // Global error handler for body-parser syntax errors and unexpected exceptions
+  // Sanitizes stack traces and returns JSON-RPC 2.0 error for /rpc routes
+  app.use((err, req, res, next) => {
+    if (res.headersSent) return next(err);
+    const isRpc = req.originalUrl?.startsWith('/rpc') || req.path?.startsWith('/rpc');
+    if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+      if (isRpc) {
+        return res.status(400).json({
+          jsonrpc: '2.0',
+          id: null,
+          error: {
+            code: -32700,
+            message: 'Parse error',
+          },
+        });
+      }
+      return res.status(400).json({ ok: false, error: 'Invalid JSON payload' });
+    }
+    if (isRpc) {
+      return res.status(500).json({
+        jsonrpc: '2.0',
+        id: null,
+        error: {
+          code: -32603,
+          message: 'Internal error',
+        },
+      });
+    }
+    return res.status(err.status || 500).json({ ok: false, error: 'Internal server error' });
+  });
+
   return app;
 }
