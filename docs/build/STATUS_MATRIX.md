@@ -1,6 +1,6 @@
 # Status matrix — Satelink AI Assistance
 
-Baseline: `origin/main` @ `8679dd61` (#547) · Step 0 run 2026-10-20 · updated each session.
+Baseline: `origin/main` @ `8679dd61` (#547) · Step 0 run 2026-10-20 · updated each session (last: Session A, 2026-10-22).
 One status per row, from the mandate §4.7 vocabulary. Evidence is mandatory.
 Security-sensitive findings are recorded as **categories only** (R14, public repo). The detailed
 evidence lives in `docs/build/evidence/private/` (gitignored, local to the build machine).
@@ -26,6 +26,7 @@ Evidence keys: **P** = production probe 2026-10-20 (curl transcript in the ledge
 | Capability | Status | Evidence | Disagreement → resolution |
 |---|---|---|---|
 | `plan_catalog.v2.json` + `product_registry.test.js` | IMPLEMENTED AND VERIFIED IN A TEST ENVIRONMENT | #527; R | — |
+| Capability Registry v3 skeleton (`capabilities` block, validator, `CAPABILITY_REGISTRY_V3` flag) | TESTED BUT NOT DEPLOYED | Draft PR #582 (Session A): flag on = flag off except the added list; registry = rails = `/v1/pricing` = MCP tools; snapshot; 6/6 mutations killed. No live price changed; TI withheld (F8) | Waits on S-6; next: console/web/llms/OpenAPI derive from it |
 | Single source of prices across surfaces | BROKEN OR CONTRADICTORY | DU §2: four tier price sets live (`/v1/plans`, `/v2/plans`, `/api/keys/tiers`, `rate_limiter.js`); Pro yearly $120 in catalog vs $190 in docs/seed; "save ~16.7%" label is really ~47%; INR rates ₹52.6–₹84 per $ | W2: registry v3, every surface derives; founder confirms prices (F8) |
 | `.well-known/satelink.json` | COMPLETED AND VERIFIED IN PRODUCTION | P 200 | Describes "Satelink RPC Gateway / DePIN" → W2 rewrite to D14 |
 | `/v1/capabilities`, `/v1/pricing` | COMPLETED AND VERIFIED IN PRODUCTION | P 200 | RPC-only content → W2 |
@@ -36,7 +37,8 @@ Evidence keys: **P** = production probe 2026-10-20 (curl transcript in the ledge
 | Capability | Status | Evidence | Disagreement → resolution |
 |---|---|---|---|
 | Old OpenAI-compatible AI gateway | BROKEN OR CONTRADICTORY | P `GET /v1/models` 200 (llama3 list), `POST /v1/chat/completions` 401; code mapped gpt-4o/claude ids → Groq llama3 | Mandate said "unmounted Oct 15": **false**. Removed in PR #548 (pending merge) |
-| AIProvider abstraction, model catalog, router, served_by, evals, model_traces | DOCUMENTED BUT NOT IMPLEMENTED (on main) | R: none on main; Stage 6/12 AIProvider exists only on `trading-agent/integration` | W6 |
+| AIProvider contract (`libs/sie`) + OpenRouter adapter (`services/sie`) | TESTED BUT NOT DEPLOYED | Draft PR #581 (Session A): 14 + 19 tests, 8/8 mutations killed, arch clean; flag `SIE_OPENROUTER_ENABLED` off, no route. Live contract test not run (no `OPENROUTER_API_KEY` in Railway names) | Waits on S-1 approval; `trading-agent/integration` must rebase onto it (#579 stays open there) |
+| Model catalog, router, served_by, evals, model_traces | DOCUMENTED BUT NOT IMPLEMENTED (on main) | R | W6 |
 
 ## M4 Response / Decision API
 
@@ -79,6 +81,8 @@ Evidence keys: **P** = production probe 2026-10-20 (curl transcript in the ledge
 | `/api/economics/summary` public revenue (S4) | COMPLETED AND VERIFIED IN PRODUCTION | #551 (`b1d6f5f7`) + #559 (`839e3497`): P money fields null, `/api/revenue*`, `/api/epochs`, treasury/settlement/`/system` money reads 401 | SEC-4b `GET /api/nodes/:nodeId` wallet exposure open |
 | `/api/financial/truth` admin-only, `/api/public/stats` sanitized | COMPLETED AND VERIFIED IN PRODUCTION | P 401 / 200 (6 fields, no money) | — |
 | PaymentAdapter + single-tx ingest (#520) | TESTED BUT NOT DEPLOYED | PR #520 draft; 266/266 per PR | W4 rebase |
+| Reservation aggregate (reserve → capture / release / expire) | TESTED BUT NOT DEPLOYED | Draft PR #583 (Session A step 6): 21 tests incl. 3 properties, 5/5 mutations killed; library only | Session B: repository + migration (F14), service, recovery job, then the #565 rebuild |
+| RPC refund on upstream failure (#565) | BROKEN OR CONTRADICTORY | #565 refunds by direct `credit_balances` UPDATE; founder: rebuild as release/reversal through Financial OS | Rebuild on #583 (Session B), then close #565 |
 | Dodo V2 webhook | BROKEN OR CONTRADICTORY | RT: global JSON parser runs before the raw-body parser, so signature verification likely always fails (fails closed); RW flag absent | W4/W5 |
 | Console Pricing V2 / Usage Units (#547) | BROKEN OR CONTRADICTORY | MP/DU: hardcoded client prices, ₹84 fixed FX + GST in client, shared Dodo test product ids collapse tiers, custom INR pack 404s, UU shown from invented fallback numbers | W5 |
 | `revenue_events_v2.amount_usdt` type (B-07) | UNKNOWN AND REQUIRING INSPECTION | MP: REAL in `init.sql`, NUMERIC in `server.js` bootstrap | Founder runs `\d revenue_events_v2` (sat-db) → W4 plan |
@@ -117,14 +121,16 @@ Evidence keys: **P** = production probe 2026-10-20 (curl transcript in the ledge
 | Capability | Status | Evidence | Disagreement → resolution |
 |---|---|---|---|
 | Node claim signing route | COMPLETED AND VERIFIED IN PRODUCTION | #549 (`7581f207`): staff-only + dry-run refusal in route and signer; P anon/non-staff → 401 | On-chain signer unrotated → F21 OPEN-CRITICAL (`runbooks/SIGNER_ROTATION.md`) |
-| Other unauthenticated money-adjacent reads/writes | PARTIALLY IMPLEMENTED | Fixed: public money reads (#551, #559), parity (#553), node-token (#553). Open: deposit-notify, node register/heartbeat, `GET /api/nodes/:nodeId` wallet | W1 |
+| Other unauthenticated money-adjacent reads/writes | PARTIALLY IMPLEMENTED | Fixed in prod: public money reads (#551, #559), parity (#553), node-token (#553). Merged, **not deployed** (Railway pause): `GET /api/nodes/:nodeId` wallet (#569 `ed18f23d`), signed heartbeats (#570 `6e34d3ba`), one claim signature per balance (#567 `33bdf7f4`). Open: deposit-notify, node register (#571/#572) | Deploy + probe, then Step 2 queue |
 | KMS / KeyProvider | DOCUMENTED BUT NOT IMPLEMENTED | R | W7 (F4) |
 | Outbox + worker | PARTIALLY IMPLEMENTED | DU §5: interval jobs + node-cron live; ~12 orphaned queue files; `worker.js` / reconciler deploy status unknown | W6 decision record |
 | Kill switches (`platform_flags`) | PARTIALLY IMPLEMENTED | R | W3 |
 | Staging environment | BLOCKED (F3) | No staging env exists | Founder provisions |
 | Committed `.claude/settings.json` autoApprove (B-04) | IMPLEMENTED BUT NOT FULLY INTEGRATION-VERIFIED | W0 PR removes it | — |
 | CI as a real gate (B-10) | PARTIALLY IMPLEMENTED | BASELINE.md (pending) | W0 |
-| `apps/api` lockfile | BROKEN OR CONTRADICTORY | Mandate §3; #541 override | W0 |
+| `apps/api` lockfile | COMPLETED AND VERIFIED IN PRODUCTION | #557 (`58d5996b`); live deployment `b90ff9e5` build log: Nixpacks `install │ npm ci` (`evidence/RAILWAY_DEPLOY_ROOT_CAUSE_2026-10-21.md`) | Root lock separately out of sync with `apps/web` next 15.5.28 (OPEN_QUESTIONS) |
+| API auto-deploy from `main` (Railway) | BLOCKED | Railway incident since 2026-10-21 07:24 UTC (builds paused; Hobby re-enabled last). Last API deploy `0ce443ff` 2026-10-20 15:08 UTC; #569/#567/#570/#580 merged, not live (`evidence/RAILWAY_DEPLOY_ROOT_CAUSE_2026-10-21.md`) | Deploy main explicitly once Hobby builds return, then probe |
+| `/health` reports deployed commit | IMPLEMENTED AND VERIFIED IN A TEST ENVIRONMENT | #580 (`52448b91`) merged: `commit` from `RAILWAY_GIT_COMMIT_SHA`; 4 tests | Verify in production after the next deploy |
 
 ## M13 Repo hygiene
 
