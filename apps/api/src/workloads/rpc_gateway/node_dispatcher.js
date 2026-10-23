@@ -185,6 +185,7 @@ export async function forwardToNode(node, rpcRequest) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(rpcRequest),
+      redirect: 'manual', // never follow a node's redirect into the private network (SSRF)
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
     });
 

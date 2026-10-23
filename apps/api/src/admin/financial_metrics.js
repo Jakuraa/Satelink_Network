@@ -7,7 +7,7 @@
 // (missing table, query error) is value:null + status 'unavailable' — NEVER 0.
 // Categories are kept apart and never summed into one "revenue" number.
 import { FOUNDER_WALLETS } from '../payments/founder_wallets.js';
-import { INTERNAL_PREDICATE } from '../services/financial/truth.js';
+import { INTERNAL_PREDICATE, CONSUMED_USAGE_PREDICATE } from '../services/financial/truth.js';
 import { PRICE_PER_CALL_USDT } from '../billing/credit_service.mjs';
 
 const EXTERNAL_PAYER = `NOT (lower(coalesce(payer, '')) = ANY ($1::text[]))`;
@@ -29,10 +29,11 @@ export const METRIC_DEFS = [
   },
   {
     id: 'consumed_usage', label: 'Consumed usage (metered)', currency: 'USDT',
-    definition: 'Metered value of calls served to external customers (revenue_events_v2, excluding test data and founder/treasury usage).',
+    definition: 'Metered value of calls served to external customers (revenue_events_v2, excluding test data, founder/treasury usage, deposits, refund reversals, unbilled rows and x402 bundle purchases).',
     sql: `SELECT COALESCE(SUM(e.amount_usdt),0)::float AS value FROM revenue_events_v2 e
             LEFT JOIN api_credits t ON t.api_key = e.client_id
-           WHERE (e.is_test_data = false OR e.is_test_data IS NULL) AND NOT ${INTERNAL_PREDICATE}`,
+           WHERE (e.is_test_data = false OR e.is_test_data IS NULL) AND NOT ${INTERNAL_PREDICATE}
+             AND (${CONSUMED_USAGE_PREDICATE})`,
     params: () => [FOUNDER_WALLETS],
   },
   {

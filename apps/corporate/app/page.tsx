@@ -10,7 +10,6 @@ import {
 } from "@/components/Page";
 import { MotionReveal } from "@/components/gsap/MotionReveal";
 import { SystemsCompass } from "@/components/SystemsCompass";
-import { ConversationVideo } from "@/components/ConversationVideo";
 
 const steps: { step: number; title: string; desc: string }[] = [
   {
@@ -142,7 +141,7 @@ export default function HomePage() {
                     </div>
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-green/10 px-2.5 py-1 font-mono text-[10px] font-medium text-green">
                       <span className="size-1.5 rounded-full bg-green animate-pulse" />
-                      Mainnet Operational
+                      Payments live · settlement dry-run
                     </span>
                   </div>
 
@@ -279,7 +278,7 @@ export default function HomePage() {
                   <div className="border-t border-stone-1 pt-4">
                     <h4 className="font-serif text-lg font-medium text-ink">Prepaid Credit Vault</h4>
                     <p className="mt-1 text-sm text-stone-4 font-sans">
-                      Permissionless USDT deposits committed directly to RevenueVaultV2 on Polygon PoS for sub-second micro-settlement.
+                      Permissionless USDT deposits to RevenueVaultV2 on Polygon PoS, credited as prepaid, metered usage.
                     </p>
                   </div>
                 </div>
@@ -597,11 +596,11 @@ export default function HomePage() {
                   </span>
                   <h3 className="mt-4 font-serif text-xl text-ink">Model Context Protocol (MCP)</h3>
                   <p className="mt-2 text-sm leading-relaxed text-stone-4 font-sans">
-                    Standardized tool calling and context servers, allowing LLM agents to inspect wallet balances, query orderbooks, and trigger payments securely.
+                    An MCP server (satelink-mcp) exposes Satelink tools to agents that speak the Model Context Protocol. Actions that move money require approval.
                   </p>
                 </div>
                 <div className="mt-6 border-t border-stone-1 pt-3 font-mono text-[11px] text-stone-3">
-                  Claude & Anthropic MCP compatible
+                  npm package: publication pending
                 </div>
               </div>
             </MotionReveal>
@@ -618,7 +617,7 @@ export default function HomePage() {
                   </p>
                 </div>
                 <div className="mt-6 border-t border-stone-1 pt-3 font-mono text-[11px] text-stone-3">
-                  Sub-50ms endpoint response
+                  Live latency: api.satelink.network/api/status
                 </div>
               </div>
             </MotionReveal>
@@ -631,11 +630,11 @@ export default function HomePage() {
                   </span>
                   <h3 className="mt-4 font-serif text-xl text-ink">Provider Feeds</h3>
                   <p className="mt-2 text-sm leading-relaxed text-stone-4 font-sans">
-                    Direct streaming of market depth, cryptographic transaction logs, and hardware telemetry without third-party aggregators.
+                    Market and network data from named upstream providers, with the source of every feed stated.
                   </p>
                 </div>
                 <div className="mt-6 border-t border-stone-1 pt-3 font-mono text-[11px] text-stone-3">
-                  Verifiable oracle feeds
+                  Source labelled per feed
                 </div>
               </div>
             </MotionReveal>
@@ -648,11 +647,11 @@ export default function HomePage() {
                   </span>
                   <h3 className="mt-4 font-serif text-xl text-ink">Settlement Connectors</h3>
                   <p className="mt-2 text-sm leading-relaxed text-stone-4 font-sans">
-                    Native integration with Base, Polygon PoS, and EVM smart contracts via zero-dependency client libraries.
+                    Settlement on Base (USDC, x402) and Polygon PoS (USDT, RevenueVaultV2) using standard EVM tooling.
                   </p>
                 </div>
                 <div className="mt-6 border-t border-stone-1 pt-3 font-mono text-[11px] text-stone-3">
-                  Zero external SDK dependency
+                  x402 V2 · EIP-3009 · ERC-20
                 </div>
               </div>
             </MotionReveal>
@@ -681,7 +680,7 @@ export default function HomePage() {
                 Expanding toward universal autonomous assistance.
               </h2>
               <p className="mt-4 text-base sm:text-lg text-stone-4 font-sans leading-relaxed">
-                While AI trading agents and machine-to-machine commerce are Satelink's initial focus,
+                While AI trading agents and machine-to-machine commerce are Satelink&apos;s initial focus,
                 our long-term architectural roadmap expands toward an institutional autonomous assistant capable of executing
                 complex multi-step operations across enterprise workflows.
               </p>
@@ -723,7 +722,7 @@ export default function HomePage() {
           <MotionReveal delay={220}>
             <div className="mt-8 rounded-xl border border-stone-2/70 bg-ivory p-4 font-mono text-xs text-stone-4">
               <span className="text-amber-ink font-semibold">ARCHITECTURAL STATUS NOTE: </span>
-              The universal AI assistant layer is in active research and architectural development. It is part of Jakuraa's long-term technical roadmap, while machine-to-machine payment infrastructure and trading intelligence systems are in active deployment.
+              The universal AI assistant layer is in active research and architectural development. It is part of Jakuraa&apos;s long-term technical roadmap, while machine-to-machine payment infrastructure and trading intelligence systems are in active deployment.
             </div>
           </MotionReveal>
         </Container>
@@ -799,7 +798,7 @@ export default function HomePage() {
       >
         <Container>
           <div className="grid gap-12 lg:grid-cols-12 lg:items-center">
-            <div className="lg:col-span-5 space-y-5">
+            <div className="lg:col-span-12 space-y-5">
               <MotionReveal>
                 <span className="font-mono text-xs uppercase tracking-wider text-green font-semibold">
                   CONVERSATION & MARKET PERSPECTIVE
@@ -821,7 +820,7 @@ export default function HomePage() {
                   </div>
                   <div className="flex items-start gap-2">
                     <span className="text-green font-semibold">02</span>
-                    <span>Sub-second, sub-cent transaction settlement on Base and Polygon PoS.</span>
+                    <span>Per-call pricing in fractions of a cent, paid in USDC on Base or USDT on Polygon PoS.</span>
                   </div>
                   <div className="flex items-start gap-2">
                     <span className="text-green font-semibold">03</span>
@@ -831,18 +830,6 @@ export default function HomePage() {
               </MotionReveal>
             </div>
 
-            <div className="lg:col-span-7">
-              <MotionReveal delay={150}>
-                <ConversationVideo
-                  videoId="YrnxGs00OHg"
-                  title="The $5 Trillion M2M Economy AI Agents Are Building Right Now"
-                  author="ScaleUp Sage"
-                  description="An in-depth analysis exploring how autonomous AI agents, machine-to-machine payment protocols, Model Context Protocol (MCP), and streaming cryptographic money are creating an entirely new programmatic economy that bypasses traditional banking rails."
-                  posterSrc="/media/video/m2m-economy-agents-poster.jpg"
-                  youtubeUrl="https://www.youtube.com/watch?v=YrnxGs00OHg"
-                />
-              </MotionReveal>
-            </div>
           </div>
         </Container>
       </section>
@@ -883,7 +870,7 @@ export default function HomePage() {
                     Complete Operating Chronology
                   </h3>
                   <p className="mt-3 text-sm sm:text-base leading-relaxed text-stone-4 font-sans">
-                    Explore the complete chronological archive of Jakuraa's commercial ventures, physical experiments,
+                    Explore the complete chronological archive of Jakuraa&apos;s commercial ventures, physical experiments,
                     operational learnings, and architectural evolution from physical trade to autonomous software.
                   </p>
                 </div>

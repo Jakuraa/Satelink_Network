@@ -16,12 +16,9 @@ describe("pricing parity (§12)", () => {
     expect(STARTER_PACK_USD).toBe(9.99);
   });
 
-  it("Trading Intelligence product JSON prices equal the catalog metric prices", () => {
+  it("Trading Intelligence product JSON publishes no price until F8 (see ti-pricing-withheld.test.ts)", () => {
     const pj = buildProductJson("trading-intelligence", catalog);
-    const byMetric = Object.fromEntries(pj.pricing.map((p) => [p.metric, p.price]));
-    for (const m of catalog.metrics) {
-      expect(byMetric[m.slug], `price for ${m.slug}`).toBe(m.priceUsd);
-    }
+    expect(pj.pricing).toEqual([]);
   });
 
   it("RPC / metering / machine-commerce bill at the flat per-call rate", () => {
@@ -36,9 +33,12 @@ describe("pricing parity (§12)", () => {
     expect(pj.pricing[0].price).toBe(X402_BUNDLE.priceUsd);
   });
 
-  it("pricing.json lists every product with at least one price line", () => {
+  it("pricing.json lists every product; each has a price line except Trading Intelligence (withheld until F8)", () => {
     const pricing = buildPricingJson(catalog);
     expect(pricing.products.map((p) => p.slug).sort()).toEqual([...PRODUCT_ORDER].sort());
-    for (const p of pricing.products) expect(p.prices.length).toBeGreaterThan(0);
+    for (const p of pricing.products) {
+      if (p.slug === "trading-intelligence") expect(p.prices).toEqual([]);
+      else expect(p.prices.length, p.slug).toBeGreaterThan(0);
+    }
   });
 });

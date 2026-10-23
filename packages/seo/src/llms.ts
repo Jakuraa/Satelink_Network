@@ -10,7 +10,7 @@ export type LlmsInput = {
 };
 
 function priceList(prices: PriceLine[]): string {
-  if (!prices.length) return "  (pricing: see /pricing)";
+  if (!prices.length) return "  (pricing: not published)";
   return prices
     .map((p) => `  - ${p.metric}: $${p.price} / ${p.unit} (${p.currency})`)
     .join("\n");
@@ -42,7 +42,6 @@ export function generateLlmsTxt(input: LlmsInput): string {
   }
   lines.push("## Discovery & payment");
   lines.push(`- Discovery: ${DISCOVERY.wellKnown}`);
-  lines.push(`- Catalog: ${DISCOVERY.catalog}`);
   lines.push("- Auth: API key or x402 (HTTP 402 returns machine-readable payment requirements).");
   lines.push("- After 402: pay per the returned requirements, or buy credits, then retry.");
   lines.push("");

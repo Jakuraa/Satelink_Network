@@ -31,13 +31,13 @@ async function adminFetch(path: string) {
 
 interface Economics {
   ok: boolean;
-  totalRevenueUsdt: number;
-  totalNodePoolUsdt: number;
-  totalPlatformShareUsdt: number;
-  totalDistributorShareUsdt: number;
+  totalRevenueUsdt: number | null;
+  totalNodePoolUsdt: number | null;
+  totalPlatformShareUsdt: number | null;
+  totalDistributorShareUsdt: number | null;
   splitRatio: { nodeOperators: number; platform: number; distributors: number };
   lastEpochId: number;
-  lastEpochRevenueUsdt: number;
+  lastEpochRevenueUsdt: number | null;
   lastEpochClosedAt: string | null;
 }
 
@@ -52,7 +52,7 @@ interface Treasury {
 }
 
 const usd5 = (n: number | null | undefined) =>
-  `$${(n ?? 0).toLocaleString("en-US", { minimumFractionDigits: 5, maximumFractionDigits: 5 })}`;
+  n == null ? "—" : `$${n.toLocaleString("en-US", { minimumFractionDigits: 5, maximumFractionDigits: 5 })}`;
 
 export default function RewardEpochsView() {
   const [eco, setEco] = useState<Economics | null>(null);

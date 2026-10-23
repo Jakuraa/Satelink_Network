@@ -139,7 +139,7 @@ export default function CorporatePage() {
               advice.
             </Disclosure>
             <p className="mt-4 text-sm leading-relaxed text-sl-text-muted">
-              We don't publish standard SLAs or uptime guarantees — engagement terms are scoped on the
+              We don&apos;t publish standard SLAs or uptime guarantees — engagement terms are scoped on the
               call and written into your agreement, so you get commitments that match what you actually
               need.
             </p>

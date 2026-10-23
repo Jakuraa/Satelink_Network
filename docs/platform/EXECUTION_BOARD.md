@@ -1,7 +1,7 @@
 # Satelink Execution Board — 2026-10-12 escalation round
 
 Single source of state for this round. Evidence columns hold only verifiable references
-(commit, PR, test output, curl result). Last updated: 2026-10-15 ~12:10 IST (round 2026-10-15, see below).
+(commit, PR, test output, curl result). Last updated: 2026-10-15 ~23:05 IST (round 2026-10-15 evening — traffic analytics, see below).
 
 Status values: NOT STARTED / IN PROGRESS / BLOCKED / READY FOR REVIEW / MERGED / DEPLOYED / PRODUCTION VERIFIED
 
@@ -112,13 +112,43 @@ already checked and found correct, see item 1's evidence column.
 | GitHub environment `trading-testnet` does not exist on the new repo | informational | expected — it's part of the unmerged `trading-agent/integration` branch (Gate 0 not passed); not urgent |
 | `packages/sdk/README.md` advertised "AI inference: $0.000001 per input token" — no backing code anywhere (`ai_api.js`/`ai_gateway` routes are unmounted, the SDK's inference client is a comment with no implementation) | low (doc accuracy) | fixed this round — line removed, MEV relay pricing corrected to its real $0.00005–$0.005 range (code-review caught the first fix still misstating the floor) |
 
+## Round 2026-10-15 (evening): unpaid-traffic → first external payment
+
+Goal: turn the ~94k/day `/rpc/polygon` traffic into the first real external payment, deciding
+from persistent data. No revenue is promised; at $0.10/1,000 calls, all of today's volume paying
+would be $9.40/day.
+
+| step | deliverable | status | PR / commit | evidence |
+|---|---|---|---|---|
+| A satelink-mcp bin | root cause of `"bin[satelink-mcp]" script name index.js was invalid and removed` + fix, 2.1.2 | MERGED (**not published** — founder) | **#539** → `275e635c` | Root cause: npm's `@npmcli/package-json` normalize warns whenever it *rewrites* a bin target. It rewrote `"./index.js"`→`"index.js"` (the repo had `./`). The bin was kept, not removed. Ruled out: npm 10 vs 11.6.2 (`npm pack` keeps bin on both), workspace root (no `bin`), `files` (both listed), shebang (present). Exec bit: `http.mjs` was 644 → fixed. On the packed 2.1.2: `npm publish --dry-run` 0 warnings (npm 10 + 11); clean-dir install links both bins; `npx satelink-mcp` handshake → serverInfo `satelink-mcp 2.1.2`, tools `[polygon_rpc]`. `test/bin.test.mjs` mutation-verified. |
+| B persistent traffic analytics | `rpc_traffic_daily` + recorder + `GET /admin/traffic/rpc` | **PRODUCTION VERIFIED** | **#538** → `2c685968` | 21/21 tests (no raw IP stored/logged, 401 without token, row cap + overflow sums exact, flush failure never throws, DB outage leaves RPC status/body identical, hung write never takes a 2nd pool connection [mutation red], real-SQL report on local throwaway schema). Latency before/after on a live HTTP server: p50 0.368→0.394ms (+0.026ms), rerun −0.015ms. `engineering:code-review`: 2 real findings fixed (pool starvation on hung flush; `Promise.all` taking 10 pool connections). |
+| B-deploy | API deploy of #538 | **PRODUCTION VERIFIED** — hotfix #541 → `63275585`, deploy `438b4ac3` SUCCESS | **#541** hotfix | Railway deploys `90f43209` (#538) and `5e790cac` (#539) FAILED at `npm i`: `Cannot read properties of null (reading 'edgesOut')`. Root cause: `apps/api` has **no lockfile**; better-auth's optional peer `vitest@*` resolved to **vitest 4.1.12 (published 14:51 UTC today)**, whose peer set loops back to 4.1.11 and crashes npm 10.8.2's arborist. Not caused by #538 — last-good `94161ef7` fails identically (reproduced: apps/api alone, Node 20.20.2, npm 10.8.2, fresh cache). Fix: `overrides.vitest = 4.1.11` → install exit 0, app_factory imports. Prod kept serving the previous image the whole time (`/health` 200). (#540 was opened first; GitHub never computed its mergeability so CI never ran → replaced by #541.) |
+| C segments | `docs/growth/TRAFFIC_SEGMENTS.md` | WAITING FOR DATA (runbook + pre-registered rules) | this PR | needs ≥ 48h of `rpc_traffic_daily` after B-deploy; founder runs the 3-line collect command in §1 and pastes the JSON |
+| D one conversion change | chosen by the §4 decision table | NOT STARTED (by design) | — | choosing now would be a guess; the decision table maps each data outcome to exactly one change + its funnel metric |
+| E board | this section | DONE | this PR | — |
+| B live check | first minutes after deploy (2026-10-15 ~17:31 UTC) | DONE | — | post-merge: `/health` 200, `/api/status` 200, `/admin/traffic/rpc` 401 (no/wrong token), anon `/rpc/polygon` 402. Admin read: 117 rows / 244 req / 83 distinct hashed clients, overflow 0, **0 IPv4-like strings in the response**; all `auth_state=none`. Not a sample to decide on — Step C waits for 48h. |
+
+### New findings this round
+| finding | severity | state |
+|---|---|---|
+| `apps/api` builds without a lockfile — every Railway build resolves the full tree from the registry; one upstream publish blocked all API deploys today | **high (deploy integrity / supply chain)** | mitigated by #541 (pin vitest); real fix = commit a lockfile for the API build or build with `npm ci` from the root lockfile — founder decision |
+| GitHub left #540's mergeability at `null` (no CI); a fresh PR with the same commit ran normally | low (platform) | worked around |
+| expected anonymous 402s to have unparsed bodies (method `unread`); in production the body is already parsed upstream on this path, so methods are captured for 402'd traffic too (0 `unread` in the first sample) | informational | `unread` stays as the fallback label; nothing to change |
+
+### Founder actions (this round, in order)
+1. **Publish `satelink-mcp@2.1.2`** from a fresh clone of `main` (delete any local `satelink-mcp-2.1.1.tgz` — stale):
+   `cd apps/mcp-server && npm whoami && npm test && npm publish --dry-run && npm publish --access public --otp=<code>`.
+   Then tell Claude → it verifies `npm view satelink-mcp version` = 2.1.2 and a fresh `npx` install.
+2. **After ≥ 48h of data:** run the collect command in `docs/growth/TRAFFIC_SEGMENTS.md` §1 and paste the JSON.
+3. Decide on pinning the API build (lockfile or root `npm ci`).
+
 ## Security blockers (open)
 
 | id | finding | severity | evidence | proposed fix | owner |
 |---|---|---|---|---|---|
 | S1 | `POST /api/keys` binds **any** `wallet_address` without a signature | **high** | `billing/api_keys_route.mjs` | **RESOLVED & DEPLOYED** in #533 (`50c5a52e`) | Done |
 | S2 | recover challenge was an account-enumeration oracle (404 vs 200) | medium | `key_recovery_router.js` on main | **RESOLVED & DEPLOYED** in #530 (`c64e1f18`) | Done |
-| S3 | `satelink-mcp` npm name unclaimed while docs say `npx -y satelink-mcp` | medium (supply chain) | npm 404 | publish **2.1.1** (bumped this round, repo-move fix — see below; `MCP_PUBLISH.md`) | founder action |
+| S3 | `satelink-mcp` npm name unclaimed while docs say `npx -y satelink-mcp` | medium (supply chain) | npm 404 (re-checked 2026-10-15 evening) | publish **2.1.2** (#539: bin-warning fix; supersedes 2.1.1 — `MCP_PUBLISH.md`) | founder action |
 | S6 | `/api/financial/truth` (`src/services/financial/truth.js`) sums `revenue_events_v2.amount_usdt` with no `op_type` filter — same bug Q5 had in the reconciliation SQL (counts Dodo `subscription_payment`/`pack_purchase` deposits and `refund_reversal` rows as "metered usage") | medium (reporting, live endpoint) | source read, 2026-10-15; not reproduced against prod (no DB access this round) | exclude the same 3 op_types Q5 now excludes; needs its own review since it's money-adjacent, deployed code | founder decision |
 | S4 | `/api/economics/summary` is public and returns `totalRevenueUsdt` | medium (reporting) | live endpoint | gate with admin token or drop revenue fields | founder decision |
 | S5 | an unrecognised/exhausted x402 key causes client deadlock | medium (repeat usage) | `rpc.mjs` | **RESOLVED** in branch `fix/funnel-repeat-x402-and-messaging` (MCP client resets dead sessionKey on 402) | In PR |
@@ -126,7 +156,7 @@ already checked and found correct, see item 1's evidence column.
 ## Founder actions (in priority order)
 
 1. ~~Merge and deploy PR for `fix/funnel-repeat-x402-and-messaging`~~ — **DONE**, merged as #534/#535 (`e7d307d1`, `7d77e01b`).
-2. Publish `satelink-mcp@2.1.1` to npm per `MCP_PUBLISH.md` (bumped from 2.1.0 this round — the
+2. ~~Publish `satelink-mcp@2.1.1`~~ → publish **2.1.2** instead (see Round 2026-10-15 evening, step A). Original note: (bumped from 2.1.0 this round — the
    `package.json` `repository`/`bugs` fields pointed at the old `Satelink-Protocol/Satelink_Network`
    location, which would have made npm's OIDC trusted-publisher provenance check fail against the
    actual repo; fixed, version test green, `npm pack --dry-run` verified 11 files).

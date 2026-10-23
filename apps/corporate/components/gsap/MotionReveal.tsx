@@ -67,7 +67,7 @@ export function MotionReveal({
   const Component = as;
 
   return (
-    <Component ref={elementRef as any} className={className}>
+    <Component ref={elementRef as never} className={className}>
       {children}
     </Component>
   );

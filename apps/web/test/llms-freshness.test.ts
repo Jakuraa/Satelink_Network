@@ -17,9 +17,9 @@ describe("llms.txt freshness (§12)", () => {
     }
   });
 
-  it("advertises discovery, the catalog, and payment", () => {
+  it("advertises discovery and payment (the TI price catalog is withheld until F8)", () => {
     expect(txt).toContain("Discovery:");
-    expect(txt).toContain("Catalog:");
+    expect(txt).not.toContain("/v1/intelligence");
     expect(txt.toLowerCase()).toContain("x402");
   });
 

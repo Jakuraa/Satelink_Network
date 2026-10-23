@@ -1,11 +1,10 @@
 import express from "express";
+import { createHealthHandler } from "./src/core/health_route.js";
 import compression from 'compression';
 import { attachBaseMiddleware } from "./src/security/middleware.js";
 import revenueRoutes from "./src/routes/revenue.js";
 import { createRpcGateway } from "./src/workloads/rpc_gateway/rpc_gateway.js";
 import { createMevRelayRouter } from "./src/workloads/mev_relay/index.js";
-import { createAiGatewayRouter } from "./src/workloads/ai_gateway/index.js";
-import { createBandwidthRouter } from "./src/workloads/bandwidth_proxy/index.js";
 import { createLangChainAdapterRouter } from "./src/workloads/ai_gateway/langchain_adapter.js";
 import { createPluginManifestRouter, createOpenApiRouter } from "./src/workloads/ai_gateway/plugin_manifest.js";
 import { createSimpleApiKeysRouter } from "./src/billing/api_keys_route.mjs";
@@ -43,7 +42,6 @@ import { bumpConversionStage } from "./src/middleware/upgrade_context.js";
 import { createX402Middleware } from "./src/payments/x402/middleware.js";
 import { createFunnelHandler } from "./src/payments/x402/funnel.js";
 import { createUnifiedAuthRouter as createUserAuthRouter } from "./src/gateway/routes/auth_v2.js";
-import { createUnifiedAuthRouter } from './src/routes/node_auth_route.mjs';
 import { createAuthController } from './src/auth/auth_controller.js';
 import { mountBetterAuth } from './src/auth/better_auth.mjs';
 import { isConsoleAccountsEnabled } from './src/console_accounts/flag.mjs';
@@ -56,6 +54,20 @@ import { createAdminRouter, requireAdminAuth } from './src/admin/admin_router.js
 import { createRpcTrafficRecorder } from './src/analytics/rpc_traffic_recorder.mjs';
 import { ensureAdminTables } from './src/admin/ensure_admin_tables.js';
 import { createVnextKernelRouter } from './src/vnext/http/kernel_router.js';
+
+export const STAFF_ONLY_MONEY_READS = [
+  "/api/treasury/status",
+  "/api/settlement/history",
+  "/api/settlement/epoch/:id",
+  "/api/nodes/:nodeId/earnings",
+  "/os/events",
+  "/system/treasury",
+  "/system/treasury-settlement",
+  "/system/revenue-anomalies",
+  "/system/economy",
+  "/system/settlement-anchor",
+  "/system/epoch-scheduler",
+];
 
 export function createApp(pool, redis) {
   // Initialize the payment gate. Free RPC removed (Phase 2, 2026-09): with
@@ -71,6 +83,11 @@ export function createApp(pool, redis) {
   attachBaseMiddleware(app);
   app.use(compression({ level: 6, threshold: 1024 }));
 
+  // SEC-4 (W1, 2026-10-20): reads that expose money figures, payout wallets or treasury
+  // state are staff-only. Registered first so it also covers routes defined later in this
+  // file and in server.js (/system/*). Path-scoped: nothing else under these prefixes changes.
+  app.get(STAFF_ONLY_MONEY_READS, requireAdminAuth);
+
   // Ensure Admin Command Center tables exist before routes are mounted.
   // IF NOT EXISTS — safe on every boot. Fire-and-forget with a logged catch
   // (same pattern as ensureWebhookTable below); the Railway Postgres host is
@@ -82,22 +99,8 @@ export function createApp(pool, redis) {
   // Core health endpoints
   app.get("/healthz", (req, res) => res.status(200).json({ status: "ok" }));
 
-  // Enhanced public health endpoint — ALWAYS returns 200 for Railway
-  app.get("/health", async (req, res) => {
-    res.setHeader("Cache-Control", "no-cache");
-    const checks = { server: 'ok', db: 'unknown', uptime: Math.floor(process.uptime()) };
-    try {
-      await pool.query('SELECT 1');
-      checks.db = 'ok';
-    } catch (e) {
-      checks.db = 'degraded: ' + (e.message || 'unknown').slice(0, 50);
-    }
-    res.status(200).json({
-      ok: true,
-      ...checks,
-      timestamp: new Date().toISOString()
-    });
-  });
+  // Public health endpoint — ALWAYS returns 200 for Railway; includes the deployed commit
+  app.get("/health", createHealthHandler(pool));
 
 app.get("/api/mode", (req, res) => {
     res.status(200).json({
@@ -195,11 +198,11 @@ app.get("/api/mode", (req, res) => {
   app.get("/api/diagnostics", async (req, res) => {
     const t0 = Date.now();
     try {
-      const [dbPing, nodeCount, epochCount, revenueSum] = await Promise.all([
-        pool.query('SELECT 1').then(() => ({ ok: true, latencyMs: Date.now() - t0 })).catch(e => ({ ok: false, error: e.message })),
+      // S4 (W1): public, so no revenue figures and no raw DB error text.
+      const [dbPing, nodeCount, epochCount] = await Promise.all([
+        pool.query('SELECT 1').then(() => ({ ok: true, latencyMs: Date.now() - t0 })).catch(() => ({ ok: false })),
         pool.query(`SELECT COUNT(*) AS cnt FROM registered_nodes WHERE status = 'active'`).catch(() => ({ rows: [{ cnt: 0 }] })),
-        pool.query(`SELECT COUNT(*) AS cnt FROM epochs`).catch(() => ({ rows: [{ cnt: 0 }] })),
-        pool.query(`SELECT COALESCE(SUM(amount_usdt), 0) AS total FROM revenue_events_v2 WHERE is_test_data = false`).catch(() => ({ rows: [{ total: 0 }] }))
+        pool.query(`SELECT COUNT(*) AS cnt FROM epochs`).catch(() => ({ rows: [{ cnt: 0 }] }))
       ]);
 
       res.json({
@@ -214,7 +217,7 @@ app.get("/api/mode", (req, res) => {
         counts: {
           activeNodes:        parseInt(nodeCount.rows[0]?.cnt  || 0),
           epochs:             parseInt(epochCount.rows[0]?.cnt || 0),
-          totalRevenueUsdt:   parseFloat(revenueSum.rows[0]?.total || 0)
+          totalRevenueUsdt:   null
         },
         health: {
           database:   dbPing.ok ? 'healthy' : 'degraded',
@@ -223,7 +226,8 @@ app.get("/api/mode", (req, res) => {
         responseTimeMs: Date.now() - t0
       });
     } catch (e) {
-      res.status(500).json({ ok: false, error: e.message });
+      console.error('[diagnostics] failed:', e.message);
+      res.status(500).json({ ok: false, error: 'diagnostics_unavailable' });
     }
   });
 
@@ -333,8 +337,8 @@ app.get("/api/mode", (req, res) => {
     });
   });
 
-  // Node operator auth endpoint (public, rate-limited)
-  app.use("/api/auth", createUnifiedAuthRouter());
+  // POST /api/auth/node-token was removed (W1, 2026-10-20): it minted a node_operator JWT
+  // for a public node id and a caller-chosen wallet, with no proof of either.
 
   // Unified auth router — login, register, /me
   // Adapt pg pool to match the db interface expected by auth modules
@@ -466,10 +470,14 @@ app.get("/api/mode", (req, res) => {
     startPricingReconcile(pool);
   }
 
-  // AI Inference Gateway (S3-002) — OpenAI-compatible, per-token billing
-  app.use("/v1", createAiGatewayRouter(pool, redis));
+  // The S3-002 OpenAI-compatible AI gateway was removed (2026-10-20, mandate W1): it served
+  // Groq Llama under gpt-4o/Claude model ids (relabelling, R4). Satelink inference returns
+  // through the Response API (/v1/responses) with truthful served_by, not this path.
 
-  app.use("/api/bandwidth", createBandwidthRouter(pool, redis));  // LangChain Tool Adapter (S3-004) — AI agent tool definitions
+  // The /api/bandwidth proxy workload was removed (2026-10-20, W1): unauthenticated
+  // outbound fetch with phantom (non-billable) revenue rows and no product behind it.
+
+  // LangChain Tool Adapter (S3-004) — RPC tool definitions for agents
   app.use("/v1/tools", createLangChainAdapterRouter(pool, redis));
 
   // OpenAI Plugin Manifest (S3-005) — AI ecosystem integration
@@ -527,6 +535,10 @@ app.get("/api/mode", (req, res) => {
 
   // M3 — ledger shadow: read-only parity measurement (nothing reads the ledger
   // for a decision). GET /internal/ledger-parity.
+  // Staff-only (W1): parity reports expose revenue and ledger sums. Path-scoped so the
+  // /internal/dodo routes below keep their own shared-secret auth.
+  // app.use (not app.get): every method and sub-path under these prefixes is gated too.
+  app.use(["/internal/ledger-parity", "/internal/draw-parity", "/internal/capacity-parity"], requireAdminAuth);
   app.use("/internal", createLedgerParityRouter(pool));
   app.use("/internal", createDrawParityRouter(pool));
   // M8 — capacity enforcement cutover: dual-evaluation parity + latency.

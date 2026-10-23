@@ -4,11 +4,6 @@ export interface SatelinkRPCOptions {
   baseUrl?: string;
 }
 
-export interface SatelinkAIOptions {
-  apiKey: string;
-  baseUrl?: string;
-}
-
 export interface JsonRpcRequest {
   jsonrpc: '2.0';
   method: string;
@@ -25,42 +20,6 @@ export interface JsonRpcResponse<T = unknown> {
     message: string;
     data?: unknown;
   };
-}
-
-export interface ChatMessage {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
-}
-
-export interface ChatCompletionOptions {
-  model?: string;
-  max_tokens?: number;
-  temperature?: number;
-  stream?: boolean;
-}
-
-export interface ChatCompletionResponse {
-  id: string;
-  object: 'chat.completion';
-  created: number;
-  model: string;
-  choices: Array<{
-    index: number;
-    message: ChatMessage;
-    finish_reason: string;
-  }>;
-  usage: {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
-  };
-}
-
-export interface Model {
-  id: string;
-  object: 'model';
-  owned_by: string;
-  created: number;
 }
 
 export interface TransactionRequest {

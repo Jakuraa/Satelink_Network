@@ -36,6 +36,8 @@
       "@/styles/tokens.css": [
         "../../packages/web-ui/src/styles/tokens.css"
       ],
+      "next": ["./node_modules/next"],
+      "next/*": ["./node_modules/next/*"],
       "@/*": [
         "./src/*"
       ]

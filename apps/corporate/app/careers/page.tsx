@@ -45,12 +45,12 @@ const satelinkDisciplines = [
   },
   {
     area: "MCP & Developer Connectivity",
-    desc: "Engineering Model Context Protocol (MCP) tool-calling context servers, zero-dependency SDKs, and streaming REST/WebSocket gateways.",
+    desc: "Engineering Model Context Protocol (MCP) tool-calling context servers, client SDKs, and streaming REST/WebSocket gateways.",
     contact: "careers@satelink.network",
   },
   {
     area: "Distributed Cloud & Network Reliability",
-    desc: "Operating resilient RPC clusters, real-time telemetry pipelines, sub-second metering engines, and high-availability gateway nodes.",
+    desc: "Operating resilient RPC clusters, real-time telemetry pipelines, per-call metering engines, and high-availability gateway nodes.",
     contact: "careers@satelink.network",
   },
 ];

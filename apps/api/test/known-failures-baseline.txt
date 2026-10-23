@@ -1,51 +1,19 @@
-# Known-failing tests — baseline allowlist (2026-07-16).
+# Known-failing tests — baseline allowlist (rewritten 2026-10-20, Step 5.2).
 # scripts/ci-baseline-check.sh fails only on test failures NOT listed here.
 # One exact mocha fullTitle per line; lines starting with # are comments.
-# Union of two environments (the guard is advisory-noted, never fatal, for
-# listed titles that happen to pass in the current environment):
-#   LOCAL = apps/api/.env present (real DATABASE_URL + CDP facilitator creds)
-#   CI    = no .env; DATABASE_URL is a dummy unreachable localhost URL
-#           (satisfies validateEnv presence check; connections fail fast)
 #
-# ── Fail everywhere: the pre-existing baseline failures (CLAUDE.md 128/9) ──
-DepositListener — canonical crediting + hardening restart mid-block-range resumes from the DB cursor (no gap, no rescan-credit)
-EpochScheduler closes one OPEN epoch, aggregates revenue, applies 50/30/20 split, and opens the next epoch
-instant trial machine key t1: instant mode issues a wallet-less trial key
-instant trial machine key t2: third instant mint from one IP in a day → 429
-instant trial machine key t3: wallet path unchanged — missing signature returns sign_message
+# CI now runs the suite against a real Postgres service container with
+# apps/api/test/schema/billing_test_schema.sql applied (DB-backed suites RUN,
+# they no longer skip). 13 entries that only "failed" because CI had no DB were
+# pruned: they pass against the service DB (verified locally, 3 runs).
 #
-# ── Withdrawal API: LOCAL fails the 3 tests; CI fails their before-all hook ──
-Withdrawal API should create a withdrawal successfully
-Withdrawal API should fail with invalid wallet
-Withdrawal API should fail with invalid amount
-Withdrawal API "before all" hook for "should create a withdrawal successfully"
-#
-# ── x402: need live CDP facilitator creds (401 without) and/or a real DB. ──
-# Pass in LOCAL with .env. Tighten by adding CDP_API_KEY_ID/SECRET secrets
-# and a real test DB in CI (founder decision — money-path creds).
-# t2/t9 are NOT a guard for the 2026-08-20 402 outage: CI's lockfile install
-# never has the @x402/* version skew Railway's lockfile-free build had. That
-# failure is caught offline by test/x402_dependency_skew.test.js (T-04).
+# ── x402: need live CDP facilitator creds (401 without). Founder decision to add
+# CDP_API_KEY_ID/SECRET as CI secrets (money-path creds). Offline 402 regressions
+# are caught by test/x402_dependency_skew.test.js (T-04). ──
 x402 payment rail t2: flag ON — 402 carries x402 accepts AND alternativePayment USDT instructions
 x402 payment rail t9: keyless handler 402 (under-limit anonymous) is upgraded with x402 accepts
-x402 payment rail t3: duplicate settlement tx_hash → 409, exactly one payment_sources row
 x402 payment rail ledger integrity + bundle credits t13: exhausted credits → alias not applied → normal x402 402
-x402 payment rail ledger integrity + bundle credits "before all" hook for "founder check: mainnet settlement from a founder wallet is is_test_data=true"
-x402 payment rail ledger integrity + bundle credits "after all" hook for "t15: keyed and free-tier traffic untouched (x-payer-address never overrides a key)"
 #
-# ── C1 / P0-wallet-auth regression suites: same DB-dependent pattern as the
-# x402 block above (real DATABASE_URL needed; CI's is a dummy unreachable
-# localhost URL, so their before()/after() hooks fail fast and deterministically). ──
-C1: x-payer-address credit theft is closed "before all" hook for "NEGATIVE: unauthenticated caller with x-payer-address:A never charges A"
-C1: x-payer-address credit theft is closed "after all" hook for "REPLAY: the same settlement submitted twice → 409, no double credit"
-P0-wallet-auth: x-wallet-address can no longer drive billing "before all" hook in "P0-wallet-auth: x-wallet-address can no longer drive billing"
-P0-wallet-auth: x-wallet-address can no longer drive billing "after all" hook in "P0-wallet-auth: x-wallet-address can no longer drive billing"
-#
-# ── PRUNED 2026-09-17: T-02 claims_route admin secret (#361), 9 tests.
-# The old rationale ("CI does not set JWT_SECRET") was stale — .github/
-# workflows/ci.yml sets JWT_SECRET for the baseline job, so all 9 tests RUN
-# and PASS in CI (verified green across #382/#383/#384 baseline runs) and
-# pass in LOCAL (test/claims_route_admin_secret.test.js: 11 passing). They
-# were the union-file's only truly-reliably-passing entries, so they are
-# removed from the allowlist rather than left as advisory noise. ──
-
+# ── F8 price conflict (founder decision, do not "fix" either side): the catalog
+# says Pro yearly $120, this test expects $190 (docs/build/BUILD_LEDGER.md F8). ──
+console onboarding — server-side, resumable (real Postgres) review requires the recurring-charge authorisation, records it, then hands off to Dodo

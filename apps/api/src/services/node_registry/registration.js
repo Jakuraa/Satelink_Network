@@ -24,6 +24,8 @@ import {
 import { getNodeHealthSummary } from '../../scheduler/node_health_monitor.js';
 import { handleNodeComeback } from './offline_detector.js';
 import { getNodeEarnings } from './earnings_aggregator.js';
+import { requireHeaderSecret, isStaffRequest } from '../../security/header_secret.js';
+import { verifyNodeHeartbeat, validateNodeEndpoint, acceptMonotonicHeartbeat } from './heartbeat_auth.js';
 
 const VALID_REGIONS = ['ap-south-1', 'us-east-1', 'eu-west-1', 'ap-southeast-1'];
 const VALID_NODE_TYPES = ['rpc', 'bandwidth', 'compute'];
@@ -105,6 +107,7 @@ async function validateEndpoint(url, timeoutMs = 5000) {
     const healthUrl = url.endsWith('/') ? `${url}health` : `${url}/health`;
     const response = await fetch(healthUrl, {
       method: 'GET',
+      redirect: 'manual', // a redirect could lead into the private network (SSRF)
       signal: controller.signal
     });
     clearTimeout(timeoutId);
@@ -180,6 +183,12 @@ export function createNodeRegistryRouter(db, redis) {
           ok: false,
           error: 'Invalid endpoint_url format'
         });
+      }
+
+      // SSRF guard (SEC-5): the endpoint is fetched below (validateEndpoint) before anything
+      // else proves ownership, so loopback / private / metadata / circular hosts are refused.
+      if (validateNodeEndpoint(endpoint_url)) {
+        return res.status(400).json({ ok: false, error: 'invalid_endpoint' });
       }
 
       if (!region || !VALID_REGIONS.includes(region)) {
@@ -368,17 +377,27 @@ export function createNodeRegistryRouter(db, redis) {
       }
 
       const row = result.rows[0];
+      // SEC-4b (W1 follow-up): the payout wallet, the raw endpoint (IP:port), hardware and
+      // failure text are staff-only. Public callers get the operational summary.
+      const staff = isStaffRequest(req);
+      // The body depends on a request header: never let a cache serve the staff view publicly.
+      res.vary('Authorization'); // append (keeps e.g. Vary: Origin from CORS)
+      res.vary('X-Admin-Token');
+      if (staff) res.set('Cache-Control', 'private, no-store');
 
       res.json({
         ok: true,
         node: {
           nodeId: row.node_id,
-          wallet: row.wallet,
+          ...(staff ? {
+            wallet: row.wallet,
+            endpointUrl: row.endpoint_url,
+            hardware: row.hardware_json,
+            lastFailureReason: row.last_failure_reason || null,
+          } : {}),
           nodeType: row.node_type,
-          endpointUrl: row.endpoint_url,
           region: row.region,
           chainIds: row.chain_ids,
-          hardware: row.hardware_json,
           status: row.status,
           tier: row.tier,
           reputationScore: row.reputation_score,
@@ -389,8 +408,7 @@ export function createNodeRegistryRouter(db, redis) {
           consecutiveFailures: row.consecutive_failures || 0,
           totalRequestsServed: row.total_requests_served || 0,
           avgLatencyMs: row.avg_latency_ms || null,
-          lastFailureAt: row.last_failure_at || null,
-          lastFailureReason: row.last_failure_reason || null
+          lastFailureAt: row.last_failure_at || null
         }
       });
     } catch (err) {
@@ -430,7 +448,7 @@ export function createNodeRegistryRouter(db, redis) {
 
   router.post('/heartbeat', async (req, res) => {
     try {
-      const { nodeId, node_id, cpu_pct, ram_pct, uptime_seconds, rpc_calls_served, endpoint_url } = req.body || {};
+      const { nodeId, node_id, cpu_pct, ram_pct, uptime_seconds, rpc_calls_served, endpoint_url, timestamp, signature } = req.body || {};
       const actualNodeId = nodeId || node_id;
 
       if (!actualNodeId) {
@@ -442,12 +460,28 @@ export function createNodeRegistryRouter(db, redis) {
       }
 
       const nodeResult = await db.query(
-        'SELECT node_id, status FROM registered_nodes WHERE node_id = $1',
+        'SELECT node_id, status, wallet FROM registered_nodes WHERE node_id = $1',
         [actualNodeId]
       );
 
       if (nodeResult.rows.length === 0) {
         return res.status(404).json({ ok: false, error: 'Node not found' });
+      }
+
+      // SEC-5: only the wallet the node registered with may heartbeat it (signature over
+      // node id + timestamp + endpoint). Checked before any status or endpoint write.
+      const auth = verifyNodeHeartbeat({
+        nodeId: actualNodeId, wallet: nodeResult.rows[0].wallet, timestamp, signature, endpointUrl: endpoint_url,
+      });
+      if (!auth.ok) {
+        return res.status(auth.http).json({ ok: false, error: auth.error });
+      }
+      if (endpoint_url) {
+        const endpointError = validateNodeEndpoint(endpoint_url);
+        if (endpointError) return res.status(400).json({ ok: false, error: endpointError });
+      }
+      if (!(await acceptMonotonicHeartbeat(nodeResult.rows[0].node_id, timestamp, redis))) {
+        return res.status(409).json({ ok: false, error: 'heartbeat_replayed' });
       }
 
       const now = Math.floor(Date.now() / 1000);
@@ -456,7 +490,10 @@ export function createNodeRegistryRouter(db, redis) {
       let comebackInfo = null;
 
       // Handle offline/suspended node comeback
-      if (currentStatus === 'offline' || currentStatus === 'suspended') {
+      // Only 'offline' is revived by a heartbeat. 'suspended' may be a staff sanction (PATCH)
+      // and cannot be told apart from the automatic >24h suspension, so it stays until staff
+      // reactivate the node.
+      if (currentStatus === 'offline') {
         comebackInfo = await handleNodeComeback(actualNodeId, db);
         newStatus = 'active';
       } else if (currentStatus === 'pending') {
@@ -465,10 +502,7 @@ export function createNodeRegistryRouter(db, redis) {
 
       // Update node with heartbeat
       if (endpoint_url) {
-        const lowerUrl = endpoint_url.toLowerCase();
-        if (lowerUrl.includes('satelink.network') || lowerUrl.includes('localhost') || lowerUrl.includes('127.0.0.1')) {
-          return res.status(400).json({ ok: false, error: 'Invalid endpoint: circular reference not allowed' });
-        }
+        // endpoint_url was validated (and covered by the signature) above
         await db.query(
           `UPDATE registered_nodes
            SET last_heartbeat_at = $1, status = $2, updated_at = $1, endpoint_url = $4, consecutive_failures = 0
@@ -514,19 +548,35 @@ export function createNodeRegistryRouter(db, redis) {
   router.post('/:nodeId/heartbeat', async (req, res) => {
     try {
       const { nodeId } = req.params;
-      const { cpu_pct, ram_pct, uptime_seconds, rpc_calls_served, endpoint_url } = req.body || {};
+      const { cpu_pct, ram_pct, uptime_seconds, rpc_calls_served, endpoint_url, timestamp, signature } = req.body || {};
 
       if (!db || !db.query) {
         return res.status(503).json({ ok: false, error: 'Database unavailable' });
       }
 
       const nodeResult = await db.query(
-        'SELECT node_id, status FROM registered_nodes WHERE node_id = $1',
+        'SELECT node_id, status, wallet FROM registered_nodes WHERE node_id = $1',
         [nodeId]
       );
 
       if (nodeResult.rows.length === 0) {
         return res.status(404).json({ ok: false, error: 'Node not found' });
+      }
+
+      // SEC-5: only the wallet the node registered with may heartbeat it (signature over
+      // node id + timestamp + endpoint). Checked before any status or endpoint write.
+      const auth = verifyNodeHeartbeat({
+        nodeId: nodeId, wallet: nodeResult.rows[0].wallet, timestamp, signature, endpointUrl: endpoint_url,
+      });
+      if (!auth.ok) {
+        return res.status(auth.http).json({ ok: false, error: auth.error });
+      }
+      if (endpoint_url) {
+        const endpointError = validateNodeEndpoint(endpoint_url);
+        if (endpointError) return res.status(400).json({ ok: false, error: endpointError });
+      }
+      if (!(await acceptMonotonicHeartbeat(nodeResult.rows[0].node_id, timestamp, redis))) {
+        return res.status(409).json({ ok: false, error: 'heartbeat_replayed' });
       }
 
       const now = Math.floor(Date.now() / 1000);
@@ -535,7 +585,10 @@ export function createNodeRegistryRouter(db, redis) {
       let comebackInfo = null;
 
       // Handle offline/suspended node comeback
-      if (currentStatus === 'offline' || currentStatus === 'suspended') {
+      // Only 'offline' is revived by a heartbeat. 'suspended' may be a staff sanction (PATCH)
+      // and cannot be told apart from the automatic >24h suspension, so it stays until staff
+      // reactivate the node.
+      if (currentStatus === 'offline') {
         comebackInfo = await handleNodeComeback(nodeId, db);
         newStatus = 'active';
       } else if (currentStatus === 'pending') {
@@ -544,11 +597,7 @@ export function createNodeRegistryRouter(db, redis) {
 
       // Update node with heartbeat, reset circuit breaker, optionally update endpoint_url
       if (endpoint_url) {
-        // Validate endpoint URL - reject circular references
-        const lowerUrl = endpoint_url.toLowerCase();
-        if (lowerUrl.includes('satelink.network') || lowerUrl.includes('localhost') || lowerUrl.includes('127.0.0.1')) {
-          return res.status(400).json({ ok: false, error: 'Invalid endpoint: circular reference not allowed' });
-        }
+        // endpoint_url was validated (and covered by the signature) above
         await db.query(
           `UPDATE registered_nodes
            SET last_heartbeat_at = $1, status = $2, updated_at = $1, endpoint_url = $4, consecutive_failures = 0
@@ -594,14 +643,9 @@ export function createNodeRegistryRouter(db, redis) {
   });
 
   // PATCH /api/nodes/:nodeId — Update node configuration (admin only)
-  router.patch('/:nodeId', async (req, res) => {
+  router.patch('/:nodeId', requireHeaderSecret('x-admin-key', ['MASTER_ADMIN_TOKEN', 'ADMIN_API_KEY']), async (req, res) => {
     try {
       const { nodeId } = req.params;
-      const adminKey = req.headers['x-admin-key'];
-
-      if (adminKey !== process.env.MASTER_ADMIN_TOKEN && adminKey !== process.env.ADMIN_API_KEY) {
-        return res.status(403).json({ ok: false, error: 'Admin access required' });
-      }
 
       if (!db || !db.query) {
         return res.status(503).json({ ok: false, error: 'Database unavailable' });
@@ -711,14 +755,9 @@ export function createNodeRegistryRouter(db, redis) {
     }
   });
 
-  router.post('/:nodeId/reputation/update', async (req, res) => {
+  router.post('/:nodeId/reputation/update', requireHeaderSecret('x-admin-key', ['ADMIN_API_KEY']), async (req, res) => {
     try {
       const { nodeId } = req.params;
-      const adminKey = req.headers['x-admin-key'];
-
-      if (adminKey !== process.env.ADMIN_API_KEY) {
-        return res.status(403).json({ ok: false, error: 'Admin access required' });
-      }
 
       if (!db || !db.query) {
         return res.status(503).json({ ok: false, error: 'Database unavailable' });

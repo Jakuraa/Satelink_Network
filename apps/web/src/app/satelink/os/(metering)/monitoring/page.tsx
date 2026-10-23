@@ -116,7 +116,7 @@ export default function MonitoringPage() {
     try {
       const [s, t, f, r] = await Promise.all([
         fetch("/api/status").then((r) => r.json()).catch(() => null),
-        fetch("/api/treasury/status").then((r) => r.json()).catch(() => null),
+        fetch("/api/treasury/status").then((r) => (r.ok ? r.json() : null)).catch(() => null), // staff-only since SEC-4
         fetch("/stats/free-tier").then((r) => r.json()).catch(() => null),
         fetch("/rpc/health").then((r) => r.json()).catch(() => null),
       ]);

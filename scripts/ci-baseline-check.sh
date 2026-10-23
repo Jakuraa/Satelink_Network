@@ -37,9 +37,9 @@ if [ ! -f "$RESULTS" ]; then
   exit 1
 fi
 
-node - "$RESULTS" "$ROOT/apps/api/test/known-failures-baseline.txt" <<'EOF'
+node - "$RESULTS" "$ROOT/apps/api/test/known-failures-baseline.txt" "$ROOT/apps/api/test/known-skips-baseline.txt" <<'EOF'
 const fs = require('fs');
-const [,, resultsPath, baselinePath] = process.argv;
+const [,, resultsPath, baselinePath, skipsPath] = process.argv;
 const r = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
 const known = fs.readFileSync(baselinePath, 'utf8')
   .split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'));
@@ -63,4 +63,19 @@ if (newFailures.length) {
   process.exit(1);
 }
 console.log('OK: no new failures outside the known baseline.');
+
+// Skip gate (2026-10-20): with a real test DB (REQUIRE_DB_TESTS=1, set in CI) a
+// skipped test means a suite silently stopped running. Only listed skips pass.
+if (process.env.REQUIRE_DB_TESTS === '1') {
+  const knownSkips = fs.readFileSync(skipsPath, 'utf8')
+    .split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'));
+  const skipped = (r.pending || []).map(p => p.fullTitle);
+  const unexpected = skipped.filter(t => !knownSkips.includes(t));
+  if (unexpected.length) {
+    console.error(`FAIL: ${unexpected.length} UNEXPECTED skipped test(s) (not in apps/api/test/known-skips-baseline.txt):`);
+    unexpected.forEach(t => console.error('  ⏭ ' + t));
+    process.exit(1);
+  }
+  console.log(`OK: ${skipped.length} skipped test(s), all listed in known-skips-baseline.txt.`);
+}
 EOF

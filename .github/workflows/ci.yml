@@ -29,12 +29,21 @@ jobs:
 
       - name: TypeScript check
         run: |
-          cd apps/web && npx tsc --noEmit 2>&1 | head -20
-          echo "TypeScript check complete"
+          set -o pipefail
+          cd apps/web && npx tsc --noEmit 2>&1 | tail -60
+
+      - name: TypeScript check (console)
+        working-directory: apps/console
+        run: npx tsc --noEmit -p .
+
+      - name: TypeScript check (corporate)
+        working-directory: apps/corporate
+        run: npx tsc --noEmit -p .
 
       - name: Lint
-        run: npm run lint --if-present 2>&1 | tail -5
-        continue-on-error: true
+        run: |
+          set -o pipefail
+          npm run lint --if-present 2>&1 | tail -60
 
       # Honest-positioning gate (Phase 7): fails the job on any finding. Deliberately NOT piped
       # through tail/head, so the script's exit code is the step's exit code.
@@ -64,7 +73,9 @@ jobs:
         run: npm ci --prefer-offline
 
       - name: Run tests
-        run: npm test --if-present 2>&1 | tail -20
+        run: |
+          set -o pipefail
+          npm test --if-present 2>&1 | tail -80
         env:
           NODE_ENV: test
           JWT_SECRET: test-secret-for-ci-only
@@ -73,6 +84,22 @@ jobs:
     name: API Test Baseline Guard
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # Real Postgres for the DB-backed suites (throwaway, CI-only credentials;
+    # 127.0.0.1 passes test/_guard/prod_db_guard.cjs, which refuses remote hosts).
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci -d ci_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
 
     steps:
       - uses: actions/checkout@v7
@@ -85,18 +112,45 @@ jobs:
       - name: Install dependencies
         run: npm ci --prefer-offline
 
-      # Fails ONLY on test failures outside apps/api/test/known-failures-baseline.txt
-      # (pre-existing failures + entries that need CDP facilitator creds / a real
-      # DB to pass — see the annotated groups in the baseline file).
+      - name: Prepare test database schema
+        run: psql -v ON_ERROR_STOP=1 -q -f apps/api/test/schema/billing_test_schema.sql "postgresql://ci:ci@127.0.0.1:5432/ci_test"
+
+      # Runs the full apps/api suite against the Postgres service (DB-backed suites
+      # RUN; they used to skip silently). Fails on test failures outside
+      # apps/api/test/known-failures-baseline.txt and, with REQUIRE_DB_TESTS=1, on
+      # any skipped test outside apps/api/test/known-skips-baseline.txt.
       - name: Baseline guard
         run: bash scripts/ci-baseline-check.sh
         env:
           NODE_ENV: test
           JWT_SECRET: test-secret-for-ci-only
-          # Dummy: validateEnv() hard-exits without DATABASE_URL. Nothing
-          # listens on this port — DB tests fail fast and deterministically
-          # and are covered by the baseline allowlist.
-          DATABASE_URL: postgresql://ci:ci@127.0.0.1:54329/ci_test
+          DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/ci_test
+          CONSOLE_ACCOUNTS_TEST_DB: postgresql://ci:ci@127.0.0.1:5432/ci_test
+          RPC_TRAFFIC_TEST_PG: postgresql://ci:ci@127.0.0.1:5432/ci_test
+          REQUIRE_DB_TESTS: '1'
+
+  api-deploy-install:
+    name: API deploy install (apps/api lockfile)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Railway builds apps/api in isolation (rootDirectory=/apps/api) with `npm ci` from
+    # apps/api/package-lock.json (D15). Reproduce that install outside the workspace:
+    # npm ci fails if the lock is out of sync with package.json; then import the app.
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '20'
+      - name: Isolated npm ci + import smoke
+        run: |
+          set -euo pipefail
+          D="$RUNNER_TEMP/api"
+          mkdir -p "$D"
+          rsync -a --exclude node_modules apps/api/ "$D/"
+          cd "$D"
+          npm ci --ignore-scripts --no-audit --no-fund
+          DATABASE_URL=postgres://none:none@127.0.0.1:1/none JWT_SECRET=ci-only-dummy-secret-0123456789abcdef NODE_ENV=test \
+            node -e "setTimeout(()=>process.exit(2),60000);import('./app_factory.mjs').then(()=>{console.log('import ok');process.exit(0)}).catch(e=>{console.error(e);process.exit(1)})"
 
   security:
     name: Secret Scan
@@ -122,6 +176,13 @@ jobs:
           fi
           echo "No secrets detected"
 
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Pre-commit secret scanner tests (real keys still caught; masked placeholder allowed)
+        run: node --test scripts/security/secret_scan.test.mjs
+
   build:
     name: Build Verification
     runs-on: ubuntu-latest
@@ -144,8 +205,9 @@ jobs:
 
       - name: Build frontend
         run: |
+          set -o pipefail
           cd apps/web
-          NODE_ENV=production npm run build 2>&1 | tail -15
+          NODE_ENV=production npm run build 2>&1 | tail -60
         env:
           NEXT_PUBLIC_WALLETCONNECT_ID: ${{ secrets.NEXT_PUBLIC_WALLETCONNECT_ID }}
 
