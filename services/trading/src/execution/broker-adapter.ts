@@ -80,6 +80,12 @@ export interface ReconcileDecision {
   readonly reason: string;
 }
 
+export interface OrderQueryable {
+  getOrderByIdempotencyKey(
+    idempotencyKey: string,
+  ): Promise<BrokerOrderSnapshot | PaperOrder | null> | BrokerOrderSnapshot | PaperOrder | null;
+}
+
 /**
  * UnknownOrderReconciler — handles indeterminate network states.
  *
@@ -89,16 +95,32 @@ export interface ReconcileDecision {
  * This reconciler queries the exchange before allowing any retry.
  */
 export class UnknownOrderReconciler {
-  constructor(private readonly broker: BrokerAdapter) {}
+  constructor(private readonly broker: OrderQueryable) {}
 
   async reconcile(idempotencyKey: string): Promise<ReconcileDecision> {
     try {
       const existing = await this.broker.getOrderByIdempotencyKey(idempotencyKey);
       if (existing) {
+        const orderId =
+          ('brokerOrderId' in existing && existing.brokerOrderId) ||
+          ('orderId' in existing && existing.orderId) ||
+          'UNKNOWN';
+        const snapshot: BrokerOrderSnapshot = {
+          brokerOrderId: orderId,
+          idempotencyKey: existing.idempotencyKey,
+          instrumentId: existing.instrumentId,
+          side: existing.side,
+          orderType: existing.orderType,
+          requestedQuantity: 'requestedQuantity' in existing ? (existing as BrokerOrderSnapshot).requestedQuantity : (existing as PaperOrder).quantity,
+          filledQuantity: existing.filledQuantity,
+          filledPriceMinor: existing.filledPriceMinor,
+          status: existing.status,
+          updatedAt: existing.updatedAt,
+        };
         return {
           action: 'ADOPT_EXISTING',
-          existingOrder: existing,
-          reason: `Found existing order ${existing.brokerOrderId} with status ${existing.status}`,
+          existingOrder: snapshot,
+          reason: `Found existing order ${orderId} with status ${existing.status}`,
         };
       }
 

@@ -18,10 +18,16 @@ const PAPER_LICENSING: LicensingMetadata = {
 export class PaperDataProvider extends MarketDataProvider {
   readonly #prices = new Map<string, bigint>(); // instrumentId → lastMinor
   readonly #subscribers = new Map<string, Set<(e: MarketDataEvent) => void>>();
+  readonly #candleHistory = new Map<string, Candle[]>();
 
   get id(): string { return 'paper'; }
   get supportedAssetClasses(): readonly string[] { return ['EQUITY','EQUITY_OPTION','CRYPTO_SPOT','CRYPTO_PERP','FX_SPOT','INDEX_FUTURE','CURRENCY_FUTURE']; }
   get licensing(): LicensingMetadata { return PAPER_LICENSING; }
+
+  /** Set custom historical candles for an instrument (for scenario/signal testing). */
+  setCandles(instrument: Instrument, candles: Candle[]): void {
+    this.#candleHistory.set(instrument.id, [...candles]);
+  }
 
   /** Set the current price for an instrument (test / paper scenario setup). */
   setPrice(instrument: Instrument, priceMinor: bigint): void {
@@ -64,6 +70,10 @@ export class PaperDataProvider extends MarketDataProvider {
   }
 
   async candles(instrument: Instrument, period: CandlePeriod, count: number): Promise<Candle[]> {
+    const custom = this.#candleHistory.get(instrument.id);
+    if (custom && custom.length > 0) {
+      return custom.slice(-count);
+    }
     const priceMinor = this.#prices.get(instrument.id) ?? 100_00n;
     const now = new Date().toISOString();
     return Array.from({ length: count }, (_, i): Candle => ({

@@ -25,6 +25,7 @@ export type OrderStatus = typeof OrderStatus[keyof typeof OrderStatus];
 
 export interface PaperOrder {
   readonly orderId: string;
+  readonly brokerOrderId?: string | undefined;
   readonly idempotencyKey: string;
   readonly instrumentId: string;
   readonly exchange: string;
@@ -82,6 +83,7 @@ export class PaperBrokerAdapter {
 
     const order: PaperOrder = {
       orderId,
+      brokerOrderId: orderId,
       idempotencyKey: intent.idempotencyKey,
       instrumentId: intent.instrumentId,
       exchange: intent.exchange,
