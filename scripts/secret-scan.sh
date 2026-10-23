@@ -42,6 +42,11 @@ scan_range() {
   diff_out="$(git diff "$range" -- . 2>/dev/null)" || return 0
   [ -z "$diff_out" ] && return 0
 
+  # Fast pre-filter: if diff has no pattern match at all, skip line-by-line loop
+  if ! echo "$diff_out" | grep -qE "$PATTERNS"; then
+    return 0
+  fi
+
   # Added lines only, with the file header they belong to.
   local file=""
   while IFS= read -r line; do
