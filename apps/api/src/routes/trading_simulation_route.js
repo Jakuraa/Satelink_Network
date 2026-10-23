@@ -24,7 +24,11 @@ import { fileURLToPath } from 'node:url';
 import { keyRef } from '../security/key_mask.mjs';
 import { authorizeAndMeter, resolveAccount, precheckCharge } from '../billing/credit_service.mjs';
 import { recordRpcRevenue } from '../workloads/rpc_gateway/rpc_billing.js';
-import { IdempotencyStore } from '../vnext/kernel/idempotency.js';
+import {
+  DurableIdempotencyStore,
+  IdempotencyPayloadMismatchError,
+  IdempotencyConflictError,
+} from '../trading/durable_idempotency.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CATALOG_PATH = path.join(__dirname, '..', '..', 'config', 'plan_catalog.v2.json');
@@ -289,7 +293,7 @@ async function defaultRunSimulation(body, tradingPkg) {
  */
 export function createTradingSimulationRouter(pool, deps = {}) {
   const router = Router();
-  const idempotencyStore = deps.idempotencyStore || new IdempotencyStore();
+  const idempotencyStore = deps.idempotencyStore || new DurableIdempotencyStore(pool);
   const simulationTimeoutMs = deps.simulationTimeoutMs ?? 15_000;
   const runSimulationFn = deps.runSimulationFn || defaultRunSimulation;
   const now = deps.now || (() => Date.now());
@@ -393,112 +397,176 @@ export function createTradingSimulationRouter(pool, deps = {}) {
 
     // 4. Idempotency execution guard: scoped to authenticated principal + payload verification
     const currentPayloadHash = hashSimulationPayload(body);
-    const idemKey = `trading:paper_sim:${apiKey}:${idempotencyKey.trim()}`;
+    const principalRef = keyRef(apiKey);
+    const idemKey = `trading:paper_sim:${principalRef}:${idempotencyKey.trim()}`;
 
     try {
-      const execResult = await idempotencyStore.run(idemKey, async () => {
-        // (a) Execute simulation first (with timeout)
-        let report;
-        try {
-          const tradingPkg = deps.tradingPkg || (await getTradingPackage());
-          const simPromise = runSimulationFn(body, tradingPkg);
-          report = await withTimeout(simPromise, simulationTimeoutMs);
-        } catch (simErr) {
-          simErr.isSimulationFailure = true;
-          throw simErr;
-        }
-
-        // (b) Atomically deduct credits after simulation succeeds
-        let meter;
-        try {
-          meter = await authorizeAndMeter(pool, {
-            apiKey,
-            methodPrice: priceUsdt,
-            product: 'trading',
-          });
-        } catch (meterErr) {
-          meterErr.isBillingFailure = true;
-          throw meterErr;
-        }
-
-        if (!meter.ok) {
-          const billingErr = new Error(meter.message || 'Payment required');
-          billingErr.meter = meter;
-          billingErr.isBillingFailure = true;
-          throw billingErr;
-        }
-
-        // (c) Record revenue event if cost was deducted
-        let reqId = null;
-        if (meter.cost > 0) {
-          reqId = `sim:${keyRef(apiKey)}:${now()}:${crypto.randomBytes(3).toString('hex')}`;
-          try {
-            await recordRpcRevenue({
-              pool,
-              chain: null,
-              method: 'paper_simulate',
-              apiKey: meter.apiKey || apiKey,
-              source: 'trading',
-              requestId: reqId,
-              amountUsdt: meter.cost,
-              opType: 'paper_simulation',
-            });
-          } catch (err) {
-            console.error(`[TradingSim] Revenue logging error: ${err.message}`);
+      const runner = (key, opts, fn) => {
+        if (typeof idempotencyStore.run === 'function') {
+          if (idempotencyStore.run.length >= 3 || idempotencyStore instanceof DurableIdempotencyStore) {
+            return idempotencyStore.run(key, opts, fn);
           }
+          return idempotencyStore.run(key, fn);
         }
+        throw new Error('Invalid idempotencyStore');
+      };
 
-        // (d) Assemble clean customer-facing report
-        const customerReport = {
-          ok: true,
-          disclaimer: SIMULATION_DISCLAIMER,
-          service: 'Satelink Multi-Market Trading AI',
-          billed_usdt: meter.cost,
-          price_usdt: priceUsdt,
-          tier: meter.tier,
-          idempotency_key: idempotencyKey,
-          instrument_id: instrumentId,
-          strategy,
-          revenue_receipt: reqId
-            ? {
-                revenue_request_id: reqId,
-                amount_usdt: meter.cost,
-                recorded: true,
-              }
-            : null,
-          simulation: {
-            workflow_id: report.workflowId,
-            executed_at: report.executedAt,
-            status: report.performance?.status || 'COMPLETED',
-            summary: report.performance?.summary || 'Simulation completed',
-            market_data: {
-              source: report.marketDataValidation?.source,
-              freshness: report.marketDataValidation?.freshness,
-              data_age_sec: report.marketDataValidation?.dataAgeSec,
-              licensing_valid: report.marketDataValidation?.licensingValid,
-            },
-            strategy_baseline: report.strategyBaseline,
-            model_proposal: report.modelProposal,
-            consensus: report.consensus,
-            risk_authorization: {
-              authorized: report.riskAuthorization?.authorized,
-              passed_gates: report.riskAuthorization?.passed,
-              failed_gate: report.riskAuthorization?.failedGate,
-              reason: report.riskAuthorization?.reason,
-            },
-            order_execution: report.orderExecution,
-            financial_settlement: {
-              ...report.financialSettlement,
-              revenueRequestId: reqId,
-            },
-          },
-        };
-
-        return {
+      const execResult = await runner(
+        idemKey,
+        {
           payloadHash: currentPayloadHash,
-          response: customerReport,
-        };
-      });
+          principalId: principalRef,
+          action: 'paper_simulation',
+          timeoutMs: simulationTimeoutMs,
+        },
+        async () => {
+          // (a) Execute simulation first (with timeout)
+          let report;
+          try {
+            const tradingPkg = deps.tradingPkg || (await getTradingPackage());
+            const simPromise = runSimulationFn(body, tradingPkg);
+            report = await withTimeout(simPromise, simulationTimeoutMs);
+          } catch (simErr) {
+            simErr.isSimulationFailure = true;
+            throw simErr;
+          }
+
+          // (b) Atomically deduct credits after simulation succeeds inside transaction if client available
+          let client = null;
+          let inTx = false;
+          if (pool && typeof pool.connect === 'function') {
+            try {
+              client = await pool.connect();
+              await client.query('BEGIN');
+              inTx = true;
+            } catch {
+              client = pool;
+              inTx = false;
+            }
+          } else {
+            client = pool;
+            inTx = false;
+          }
+
+          let meter;
+          let reqId = null;
+          let customerReport;
+          try {
+            try {
+              meter = await authorizeAndMeter(client, {
+                apiKey,
+                methodPrice: priceUsdt,
+                product: 'trading',
+              });
+            } catch (meterErr) {
+              meterErr.isBillingFailure = true;
+              throw meterErr;
+            }
+
+            if (!meter.ok) {
+              const billingErr = new Error(meter.message || 'Payment required');
+              billingErr.meter = meter;
+              billingErr.isBillingFailure = true;
+              throw billingErr;
+            }
+
+            // (c) Record revenue event if cost was deducted
+            if (meter.cost > 0) {
+              reqId = `sim:${principalRef}:${now()}:${crypto.randomBytes(3).toString('hex')}`;
+              try {
+                await recordRpcRevenue({
+                  pool: client,
+                  chain: null,
+                  method: 'paper_simulate',
+                  apiKey: meter.apiKey || apiKey,
+                  source: 'trading',
+                  requestId: reqId,
+                  amountUsdt: meter.cost,
+                  opType: 'paper_simulation',
+                });
+              } catch (err) {
+                console.error(`[TradingSim] Revenue logging error: ${err.message}`);
+              }
+            }
+
+            // (d) Assemble clean customer-facing report
+            customerReport = {
+              ok: true,
+              disclaimer: SIMULATION_DISCLAIMER,
+              service: 'Satelink Multi-Market Trading AI',
+              billed_usdt: meter.cost,
+              price_usdt: priceUsdt,
+              tier: meter.tier,
+              idempotency_key: idempotencyKey,
+              instrument_id: instrumentId,
+              strategy,
+              revenue_receipt: reqId
+                ? {
+                    revenue_request_id: reqId,
+                    amount_usdt: meter.cost,
+                    recorded: true,
+                  }
+                : null,
+              simulation: {
+                workflow_id: report.workflowId,
+                executed_at: report.executedAt,
+                status: report.performance?.status || 'COMPLETED',
+                summary: report.performance?.summary || 'Simulation completed',
+                market_data: {
+                  source: report.marketDataValidation?.source,
+                  freshness: report.marketDataValidation?.freshness,
+                  data_age_sec: report.marketDataValidation?.dataAgeSec,
+                  licensing_valid: report.marketDataValidation?.licensingValid,
+                },
+                strategy_baseline: report.strategyBaseline,
+                model_proposal: report.modelProposal,
+                consensus: report.consensus,
+                risk_authorization: {
+                  authorized: report.riskAuthorization?.authorized,
+                  passed_gates: report.riskAuthorization?.passed,
+                  failed_gate: report.riskAuthorization?.failedGate,
+                  reason: report.riskAuthorization?.reason,
+                },
+                order_execution: report.orderExecution,
+                financial_settlement: {
+                  ...report.financialSettlement,
+                  revenueRequestId: reqId,
+                },
+              },
+            };
+
+            // (e) Update durable idempotency inside transaction
+            if (inTx) {
+              await client.query(
+                `UPDATE trading_idempotency
+                 SET state = 'succeeded', receipt_ref = $2, response = $3, updated_at = NOW()
+                 WHERE key = $1`,
+                [idemKey, reqId, JSON.stringify(customerReport)]
+              );
+              await client.query('COMMIT');
+              inTx = false;
+            }
+          } catch (chargeErr) {
+            if (inTx) {
+              try {
+                await client.query('ROLLBACK');
+              } catch {}
+              inTx = false;
+            }
+            throw chargeErr;
+          } finally {
+            if (client && client !== pool && typeof client.release === 'function') {
+              client.release();
+            }
+          }
+
+          return {
+            payloadHash: currentPayloadHash,
+            response: customerReport,
+            receiptRef: reqId,
+          };
+        }
+      );
 
       // If replay: verify payload hash matches the original request
       if (!execResult.fresh) {
@@ -518,6 +586,23 @@ export function createTradingSimulationRouter(pool, deps = {}) {
 
       return res.json(execResult.value.response);
     } catch (err) {
+      if (err.code === 'idempotency_payload_mismatch' || err.name === 'IdempotencyPayloadMismatchError') {
+        return res.status(422).json({
+          ok: false,
+          error: 'idempotency_payload_mismatch',
+          message: 'Idempotency key was previously used with a different request payload.',
+          disclaimer: SIMULATION_DISCLAIMER,
+        });
+      }
+
+      if (err.code === 'idempotency_in_progress' || err.name === 'IdempotencyConflictError') {
+        return res.status(409).json({
+          ok: false,
+          error: 'idempotency_in_progress',
+          message: err.message || 'A simulation with this idempotency key is currently in progress. Retry shortly.',
+          disclaimer: SIMULATION_DISCLAIMER,
+        });
+      }
       if (err.isBillingFailure) {
         if (err.meter) {
           const m = err.meter;
