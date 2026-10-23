@@ -62,6 +62,20 @@ export const ALLOWED_STRATEGIES = Object.freeze([
 
 export const SIMULATION_DISCLAIMER = 'SIMULATED_PAPER_EXECUTION: NOT_ACTUAL_RETURNS';
 
+/**
+ * Hash normalized simulation parameters for idempotency conflict detection.
+ */
+export function hashSimulationPayload(body = {}) {
+  const norm = {
+    instrumentId: body.instrumentId || null,
+    strategy: body.strategy || 'sma-crossover',
+    strategyParams: body.strategyParams || {},
+    orderQuantity: Number(body.orderQuantity) || 1,
+    simulateUnknownOrder: Boolean(body.simulateUnknownOrder),
+  };
+  return crypto.createHash('sha256').update(JSON.stringify(norm)).digest('hex');
+}
+
 function paymentGuidance() {
   return {
     how_to_pay: [
@@ -377,8 +391,9 @@ export function createTradingSimulationRouter(pool, deps = {}) {
       return res.status(http).json(resp);
     }
 
-    // 4. Idempotency execution guard
-    const idemKey = `trading:paper_sim:${idempotencyKey.trim()}`;
+    // 4. Idempotency execution guard: scoped to authenticated principal + payload verification
+    const currentPayloadHash = hashSimulationPayload(body);
+    const idemKey = `trading:paper_sim:${apiKey}:${idempotencyKey.trim()}`;
 
     try {
       const execResult = await idempotencyStore.run(idemKey, async () => {
@@ -414,24 +429,27 @@ export function createTradingSimulationRouter(pool, deps = {}) {
         }
 
         // (c) Record revenue event if cost was deducted
+        let reqId = null;
         if (meter.cost > 0) {
-          const reqId = `sim:${keyRef(apiKey)}:${now()}:${crypto.randomBytes(3).toString('hex')}`;
-          recordRpcRevenue({
-            pool,
-            chain: null,
-            method: 'paper_simulate',
-            apiKey: meter.apiKey || apiKey,
-            source: 'trading',
-            requestId: reqId,
-            amountUsdt: meter.cost,
-            opType: 'paper_simulation',
-          }).catch((err) => {
+          reqId = `sim:${keyRef(apiKey)}:${now()}:${crypto.randomBytes(3).toString('hex')}`;
+          try {
+            await recordRpcRevenue({
+              pool,
+              chain: null,
+              method: 'paper_simulate',
+              apiKey: meter.apiKey || apiKey,
+              source: 'trading',
+              requestId: reqId,
+              amountUsdt: meter.cost,
+              opType: 'paper_simulation',
+            });
+          } catch (err) {
             console.error(`[TradingSim] Revenue logging error: ${err.message}`);
-          });
+          }
         }
 
         // (d) Assemble clean customer-facing report
-        return {
+        const customerReport = {
           ok: true,
           disclaimer: SIMULATION_DISCLAIMER,
           service: 'Satelink Multi-Market Trading AI',
@@ -441,6 +459,13 @@ export function createTradingSimulationRouter(pool, deps = {}) {
           idempotency_key: idempotencyKey,
           instrument_id: instrumentId,
           strategy,
+          revenue_receipt: reqId
+            ? {
+                revenue_request_id: reqId,
+                amount_usdt: meter.cost,
+                recorded: true,
+              }
+            : null,
           simulation: {
             workflow_id: report.workflowId,
             executed_at: report.executedAt,
@@ -462,20 +487,36 @@ export function createTradingSimulationRouter(pool, deps = {}) {
               reason: report.riskAuthorization?.reason,
             },
             order_execution: report.orderExecution,
-            financial_settlement: report.financialSettlement,
+            financial_settlement: {
+              ...report.financialSettlement,
+              revenueRequestId: reqId,
+            },
           },
+        };
+
+        return {
+          payloadHash: currentPayloadHash,
+          response: customerReport,
         };
       });
 
-      // If fresh execution, return as is. If replay, attach idempotent_replay flag.
+      // If replay: verify payload hash matches the original request
       if (!execResult.fresh) {
+        if (execResult.value?.payloadHash && execResult.value.payloadHash !== currentPayloadHash) {
+          return res.status(422).json({
+            ok: false,
+            error: 'idempotency_payload_mismatch',
+            message: 'Idempotency key was previously used with a different request payload.',
+            disclaimer: SIMULATION_DISCLAIMER,
+          });
+        }
         return res.json({
-          ...execResult.value,
+          ...execResult.value.response,
           idempotent_replay: true,
         });
       }
 
-      return res.json(execResult.value);
+      return res.json(execResult.value.response);
     } catch (err) {
       if (err.isBillingFailure) {
         if (err.meter) {
