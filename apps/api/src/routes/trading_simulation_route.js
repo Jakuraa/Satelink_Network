@@ -118,14 +118,32 @@ function withTimeout(promise, ms) {
 }
 
 /**
- * Lazy-load the compiled trading engine from @satelink/trading.
+ * Lazy-load the compiled trading engine.
+ *
+ * Resolution strategy:
+ * 1. Attempt to resolve `@satelink/trading` (e.g. monorepo workspace environment).
+ * 2. Fall back to internal bundled engine (`../trading/engine/index.js`) for isolated deployments
+ *    (such as Railway API container where rootDirectory=/apps/api isolates the API from monorepo packages).
+ * 3. Fail with a descriptive error if neither is available.
  */
 let _tradingPkg = null;
-async function getTradingPackage() {
-  if (!_tradingPkg) {
+export async function getTradingPackage() {
+  if (_tradingPkg) return _tradingPkg;
+  try {
     _tradingPkg = await import('@satelink/trading');
+    return _tradingPkg;
+  } catch (pkgErr) {
+    try {
+      _tradingPkg = await import('../trading/engine/index.js');
+      return _tradingPkg;
+    } catch (localErr) {
+      const err = new Error(
+        `Trading engine runtime resolution failed: '@satelink/trading' (${pkgErr.message}); local engine (${localErr.message})`
+      );
+      err.code = 'trading_engine_unavailable';
+      throw err;
+    }
   }
-  return _tradingPkg;
 }
 
 /**
