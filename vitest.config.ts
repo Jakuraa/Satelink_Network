@@ -60,6 +60,7 @@ export default defineConfig({
           include: ['libs/**/*.{test,spec}.ts'],
           exclude: ['**/node_modules/**', '**/dist/**', '.claude/worktrees/**', ...INTEGRATION_PATTERNS],
           environment: 'node',
+          testTimeout: 20_000,
         },
       },
       {

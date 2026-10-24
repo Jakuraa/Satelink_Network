@@ -9,6 +9,10 @@
     "intelligence_request": {
       "uu": 10,
       "note": "Trading Intelligence request, list $0.01"
+    },
+    "paper_simulation": {
+      "uu": 50,
+      "note": "Paper trading simulation, list $0.05"
     }
   },
   "rails": {
