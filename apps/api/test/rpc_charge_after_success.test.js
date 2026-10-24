@@ -109,7 +109,7 @@ describe('RPC charge-after-success (fix/rpc-charge-after-success)', function () 
     globalThis.fetch = async () => new Response(JSON.stringify({ jsonrpc: '2.0', id: 7, result: '0xSECRETDATA' }), { status: 200, headers: { 'content-type': 'application/json' } });
     const res = await call(pool);
     expect(res.status).to.equal(402);
-    expect(res.body.error).to.equal('insufficient_credits');
+    expect(res.body.error?.data?.error_code || res.body.error).to.equal('insufficient_credits');
     expect(JSON.stringify(res.body)).to.not.contain('0xSECRETDATA');
     expect(pool.state.deductions).to.deep.equal([]);
     expect(pool.state.revenueInserts).to.equal(0);
@@ -136,7 +136,7 @@ describe('RPC charge-after-success (fix/rpc-charge-after-success)', function () 
     globalThis.fetch = async () => { upstreamCalls += 1; return new Response('{}', { status: 200 }); };
     const res = await call(pool);
     expect(res.status).to.equal(402);
-    expect(res.body.error).to.equal('insufficient_credits');
+    expect(res.body.error?.data?.error_code || res.body.error).to.equal('insufficient_credits');
     expect(upstreamCalls).to.equal(0);
     expect(pool.state.deductions).to.deep.equal([]);
   });
