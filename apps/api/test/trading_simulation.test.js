@@ -21,6 +21,8 @@ import {
   ALLOWED_INSTRUMENTS,
 } from '../src/routes/trading_simulation_route.js';
 import { IdempotencyStore } from '../src/vnext/kernel/idempotency.js';
+import { authorizeAndMeter } from '../src/billing/credit_service.mjs';
+import { __resetSchemaCache } from '../src/console_accounts/schema.mjs';
 
 const TEST_API_KEY = 'sk_trading_test_key_001';
 
@@ -30,13 +32,55 @@ function mockPool({ account, credits = 5.0, accounts, rejectQuery } = {}) {
     : account
       ? { [account.api_key || TEST_API_KEY]: { ...account, credits } }
       : {};
-  const state = { credits, revenueInserts: [], usageInserts: [], chargeCount: 0 };
+  const state = { credits, revenueInserts: [], usageInserts: [], chargeCount: 0, connectCalls: 0 };
   const pool = {
     state,
     accountsMap,
     async query(sql, params = []) {
       if (rejectQuery) throw new Error('Postgres connection failed');
       const s = sql.replace(/\s+/g, ' ').trim();
+
+      // DDL and transaction control
+      if (
+        s === 'BEGIN' ||
+        s === 'COMMIT' ||
+        s === 'ROLLBACK' ||
+        s.startsWith('CREATE TABLE') ||
+        s.startsWith('CREATE UNIQUE INDEX') ||
+        s.startsWith('CREATE INDEX')
+      ) {
+        return { rows: [], rowCount: 1 };
+      }
+
+      // Console accounts context SQL
+      if (s.includes('FROM api_credits c') && s.includes('account_api_keys')) {
+        const keyParam = params[0];
+        const acc = accountsMap[keyParam];
+        if (acc) {
+          return {
+            rows: [
+              {
+                api_key_id: 1,
+                account_id: 'acc_test_owner',
+                paused: false,
+                scopes: null,
+                daily_cap_usdt: null,
+                agent_monthly_cap_usdt: null,
+                monthly_spend_cap_usdt: null,
+                credit_auto_use: true,
+                tz: 'UTC',
+              },
+            ],
+            rowCount: 1,
+          };
+        }
+        return { rows: [], rowCount: 0 };
+      }
+
+      // Console accounts spend counters SQL
+      if (s.includes('account_spend_counters')) {
+        return { rows: [{ spent_usdt: 0.05 }], rowCount: 1 };
+      }
 
       // Account lookup
       if (s.includes('FROM api_credits WHERE api_key')) {
@@ -81,6 +125,24 @@ function mockPool({ account, credits = 5.0, accounts, rejectQuery } = {}) {
       }
 
       return { rows: [] };
+    },
+    async connect() {
+      state.connectCalls++;
+      let connected = true;
+      const client = {
+        async query(sql, params) {
+          return pool.query(sql, params);
+        },
+        release() {
+          connected = false;
+        },
+        async connect() {
+          if (connected) {
+            throw new Error('Client has already been connected. You cannot reuse a client.');
+          }
+        },
+      };
+      return client;
     },
   };
   return pool;
@@ -789,6 +851,151 @@ describe('Trading Simulation API — POST /v1/trading/paper/simulate', () => {
       expect(intruderRes.body.instrument_id).to.equal('NSE:NIFTY50');
       expect(intruderRes.body.idempotent_replay).to.be.undefined;
       expect(intruderPool.accountsMap[intruderKey].credits).to.be.closeTo(9.95, 0.0001);
+    });
+  });
+
+  describe('Phase 5 — CONSOLE_ACCOUNTS_V1 Connected-Client Failure & Pool-Based Fix Regression', () => {
+    beforeEach(() => {
+      process.env.CONSOLE_ACCOUNTS_V1 = 'true';
+      __resetSchemaCache();
+    });
+
+    afterEach(() => {
+      delete process.env.CONSOLE_ACCOUNTS_V1;
+      __resetSchemaCache();
+    });
+
+    it('reproduces connected-client failure when an already-connected pg.Client is passed to authorizeAndMeter with CONSOLE_ACCOUNTS_V1', async () => {
+      const pool = mockPool({ account: ACTIVE_ACCOUNT, credits: 5.0 });
+      // In PR #591, route acquired a client from pool.connect() and passed client instead of pool
+      const client = await pool.connect();
+      expect(typeof client.connect).to.equal('function');
+
+      let thrownError = null;
+      try {
+        await authorizeAndMeter(client, {
+          apiKey: TEST_API_KEY,
+          methodPrice: 0.05,
+          product: 'trading',
+        });
+      } catch (err) {
+        thrownError = err;
+      }
+
+      // Proves the exact bug identified in production: deductWithAccountLimits invokes .connect() on the client
+      expect(thrownError).to.be.an('error');
+      expect(thrownError.message).to.include('Client has already been connected. You cannot reuse a client.');
+    });
+
+    it('verifies the pool-based fix: POST /v1/trading/paper/simulate succeeds when pool is passed under CONSOLE_ACCOUNTS_V1', async () => {
+      const pool = mockPool({ account: ACTIVE_ACCOUNT, credits: 5.0 });
+      const store = new IdempotencyStore();
+      const app = buildTestApp(pool, { idempotencyStore: store });
+
+      const res = await request(app)
+        .post('/v1/trading/paper/simulate')
+        .set('x-api-key', TEST_API_KEY)
+        .send({
+          idempotencyKey: 'idem-console-accounts-001',
+          instrumentId: 'BINANCE:BTCUSDT',
+          strategy: 'sma-crossover',
+        });
+
+      expect(res.status).to.equal(200);
+      expect(res.body.ok).to.equal(true);
+      expect(res.body.billed_usdt).to.equal(0.05);
+      expect(res.body.revenue_receipt).to.be.an('object');
+      expect(res.body.revenue_receipt.amount_usdt).to.equal(0.05);
+
+      // Verify deduction & revenue recording executed cleanly via pool connection lifecycle
+      expect(pool.state.chargeCount).to.equal(1);
+      expect(pool.state.credits).to.be.closeTo(4.95, 0.0001);
+      expect(pool.state.revenueInserts.length).to.equal(1);
+    });
+
+    it('verifies idempotent replay under CONSOLE_ACCOUNTS_V1 returns cached result with zero extra charges', async () => {
+      const pool = mockPool({ account: ACTIVE_ACCOUNT, credits: 5.0 });
+      const store = new IdempotencyStore();
+      const app = buildTestApp(pool, { idempotencyStore: store });
+
+      const payload = {
+        idempotencyKey: 'idem-console-accounts-replay-001',
+        instrumentId: 'BINANCE:BTCUSDT',
+        strategy: 'sma-crossover',
+      };
+
+      const r1 = await request(app)
+        .post('/v1/trading/paper/simulate')
+        .set('x-api-key', TEST_API_KEY)
+        .send(payload);
+
+      expect(r1.status).to.equal(200);
+      expect(r1.body.idempotent_replay).to.be.undefined;
+      expect(pool.state.chargeCount).to.equal(1);
+      expect(pool.state.credits).to.be.closeTo(4.95, 0.0001);
+
+      // Replay
+      const r2 = await request(app)
+        .post('/v1/trading/paper/simulate')
+        .set('x-api-key', TEST_API_KEY)
+        .send(payload);
+
+      expect(r2.status).to.equal(200);
+      expect(r2.body.ok).to.equal(true);
+      expect(r2.body.idempotent_replay).to.equal(true);
+      expect(r2.body.revenue_receipt.revenue_request_id).to.equal(r1.body.revenue_receipt.revenue_request_id);
+      expect(pool.state.chargeCount).to.equal(1);
+      expect(pool.state.credits).to.be.closeTo(4.95, 0.0001);
+    });
+
+    it('verifies payload mismatch under CONSOLE_ACCOUNTS_V1 is rejected with 422 and zero deduction', async () => {
+      const pool = mockPool({ account: ACTIVE_ACCOUNT, credits: 5.0 });
+      const store = new IdempotencyStore();
+      const app = buildTestApp(pool, { idempotencyStore: store });
+
+      const r1 = await request(app)
+        .post('/v1/trading/paper/simulate')
+        .set('x-api-key', TEST_API_KEY)
+        .send({
+          idempotencyKey: 'idem-console-accounts-mismatch-001',
+          instrumentId: 'BINANCE:BTCUSDT',
+        });
+
+      expect(r1.status).to.equal(200);
+      expect(pool.state.chargeCount).to.equal(1);
+
+      // Mismatch
+      const r2 = await request(app)
+        .post('/v1/trading/paper/simulate')
+        .set('x-api-key', TEST_API_KEY)
+        .send({
+          idempotencyKey: 'idem-console-accounts-mismatch-001',
+          instrumentId: 'NSE:NIFTY50',
+        });
+
+      expect(r2.status).to.equal(422);
+      expect(r2.body.error).to.equal('idempotency_payload_mismatch');
+      expect(pool.state.chargeCount).to.equal(1);
+      expect(pool.state.credits).to.be.closeTo(4.95, 0.0001);
+    });
+
+    it('verifies insufficient balance under CONSOLE_ACCOUNTS_V1 is rejected with 402 and zero deduction', async () => {
+      const pool = mockPool({ account: ACTIVE_ACCOUNT, credits: 0.02 });
+      const store = new IdempotencyStore();
+      const app = buildTestApp(pool, { idempotencyStore: store });
+
+      const res = await request(app)
+        .post('/v1/trading/paper/simulate')
+        .set('x-api-key', TEST_API_KEY)
+        .send({
+          idempotencyKey: 'idem-console-accounts-insufficient-001',
+          instrumentId: 'BINANCE:BTCUSDT',
+        });
+
+      expect(res.status).to.equal(402);
+      expect(res.body.error).to.equal('insufficient_credits');
+      expect(pool.state.chargeCount).to.equal(0);
+      expect(pool.state.credits).to.equal(0.02);
     });
   });
 });
