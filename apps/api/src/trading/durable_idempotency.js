@@ -51,7 +51,7 @@ export class DurableIdempotencyStore {
     this.defaultTimeoutMs = options.defaultTimeoutMs ?? 15_000;
     this.now = options.now || (() => Date.now());
     this._local = new Map(); // key -> Promise<{ value, fresh }>
-    this._memoryStore = new Map(); // fallback when pool is null
+    this._memoryStore = options.memoryStore || new Map(); // fallback when pool is null
     this._ensured = false;
   }
 

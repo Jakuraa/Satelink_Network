@@ -22,7 +22,7 @@ import {
 import { ensureTradingIdempotencySchema } from '../src/trading/idempotency_schema.mjs';
 import { createTradingSimulationRouter } from '../src/routes/trading_simulation_route.js';
 
-const TEST_DSN = process.env.TEST_DATABASE_URL || 'postgresql:///satelink_test?host=/tmp';
+const TEST_DSN = process.env.TEST_DATABASE_URL || process.env.DATABASE_URL || 'postgresql:///satelink_test?host=/tmp';
 
 async function tryConnect() {
   try {
@@ -100,8 +100,9 @@ describe('Durable Idempotency Engine (PostgreSQL & Multi-Instance)', function ()
       const payloadHash = 'hash-restart-100';
 
       // Process 1: run and persist
+      const sharedMem = !pool ? new Map() : undefined;
       let proc1Execs = 0;
-      const store1 = new DurableIdempotencyStore(pool);
+      const store1 = new DurableIdempotencyStore(pool, { memoryStore: sharedMem });
       const res1 = await store1.run(
         key,
         { payloadHash, principalId: 'kref_proc_1', timeoutMs: 5000 },
@@ -115,7 +116,7 @@ describe('Durable Idempotency Engine (PostgreSQL & Multi-Instance)', function ()
       expect(res1.fresh).to.equal(true);
 
       // "Restart": completely drop store1 and instantiate store2 from the same database
-      const store2 = new DurableIdempotencyStore(pool);
+      const store2 = new DurableIdempotencyStore(pool, { memoryStore: sharedMem });
       let proc2Execs = 0;
 
       const res2 = await store2.run(
@@ -138,8 +139,9 @@ describe('Durable Idempotency Engine (PostgreSQL & Multi-Instance)', function ()
 
   describe('3. Multiple Instances Sharing Database', () => {
     it('instance B recognizes completed state executed by instance A', async () => {
-      const storeA = new DurableIdempotencyStore(pool);
-      const storeB = new DurableIdempotencyStore(pool);
+      const sharedMem = !pool ? new Map() : undefined;
+      const storeA = new DurableIdempotencyStore(pool, { memoryStore: sharedMem });
+      const storeB = new DurableIdempotencyStore(pool, { memoryStore: sharedMem });
 
       const key = `multi-instance-${Date.now()}`;
       const payloadHash = 'hash-multi-inst';
