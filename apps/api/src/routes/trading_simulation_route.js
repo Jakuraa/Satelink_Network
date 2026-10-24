@@ -449,134 +449,91 @@ export function createTradingSimulationRouter(pool, deps = {}) {
             throw simErr;
           }
 
-          // (b) Atomically deduct credits after simulation succeeds inside transaction if client available
-          let client = null;
-          let inTx = false;
-          if (pool && typeof pool.connect === 'function') {
-            try {
-              client = await pool.connect();
-              await client.query('BEGIN');
-              inTx = true;
-            } catch {
-              client = pool;
-              inTx = false;
-            }
-          } else {
-            client = pool;
-            inTx = false;
-          }
-
+          // (b) Atomically deduct credits after simulation succeeds via canonical Financial OS
           let meter;
-          let reqId = null;
-          let customerReport;
           try {
+            meter = await authorizeAndMeter(pool, {
+              apiKey,
+              methodPrice: priceUsdt,
+              product: 'trading',
+            });
+          } catch (meterErr) {
+            meterErr.isBillingFailure = true;
+            throw meterErr;
+          }
+
+          if (!meter.ok) {
+            const billingErr = new Error(meter.message || 'Payment required');
+            billingErr.meter = meter;
+            billingErr.isBillingFailure = true;
+            throw billingErr;
+          }
+
+          // (c) Record revenue event if cost was deducted
+          let reqId = null;
+          if (meter.cost > 0) {
+            reqId = `sim:${principalRef}:${now()}:${crypto.randomBytes(3).toString('hex')}`;
             try {
-              meter = await authorizeAndMeter(client, {
-                apiKey,
-                methodPrice: priceUsdt,
-                product: 'trading',
+              await recordRpcRevenue({
+                pool,
+                chain: null,
+                method: 'paper_simulate',
+                apiKey: meter.apiKey || apiKey,
+                source: 'trading',
+                requestId: reqId,
+                amountUsdt: meter.cost,
+                opType: 'paper_simulation',
               });
-            } catch (meterErr) {
-              meterErr.isBillingFailure = true;
-              throw meterErr;
-            }
-
-            if (!meter.ok) {
-              const billingErr = new Error(meter.message || 'Payment required');
-              billingErr.meter = meter;
-              billingErr.isBillingFailure = true;
-              throw billingErr;
-            }
-
-            // (c) Record revenue event if cost was deducted
-            if (meter.cost > 0) {
-              reqId = `sim:${principalRef}:${now()}:${crypto.randomBytes(3).toString('hex')}`;
-              try {
-                await recordRpcRevenue({
-                  pool: client,
-                  chain: null,
-                  method: 'paper_simulate',
-                  apiKey: meter.apiKey || apiKey,
-                  source: 'trading',
-                  requestId: reqId,
-                  amountUsdt: meter.cost,
-                  opType: 'paper_simulation',
-                });
-              } catch (err) {
-                console.error(`[TradingSim] Revenue logging error: ${err.message}`);
-              }
-            }
-
-            // (d) Assemble clean customer-facing report
-            customerReport = {
-              ok: true,
-              disclaimer: SIMULATION_DISCLAIMER,
-              service: 'Satelink Multi-Market Trading AI',
-              billed_usdt: meter.cost,
-              price_usdt: priceUsdt,
-              tier: meter.tier,
-              idempotency_key: idempotencyKey,
-              instrument_id: instrumentId,
-              strategy,
-              revenue_receipt: reqId
-                ? {
-                    revenue_request_id: reqId,
-                    amount_usdt: meter.cost,
-                    recorded: true,
-                  }
-                : null,
-              simulation: {
-                workflow_id: report.workflowId,
-                executed_at: report.executedAt,
-                status: report.performance?.status || 'COMPLETED',
-                summary: report.performance?.summary || 'Simulation completed',
-                market_data: {
-                  source: report.marketDataValidation?.source,
-                  freshness: report.marketDataValidation?.freshness,
-                  data_age_sec: report.marketDataValidation?.dataAgeSec,
-                  licensing_valid: report.marketDataValidation?.licensingValid,
-                },
-                strategy_baseline: report.strategyBaseline,
-                model_proposal: report.modelProposal,
-                consensus: report.consensus,
-                risk_authorization: {
-                  authorized: report.riskAuthorization?.authorized,
-                  passed_gates: report.riskAuthorization?.passed,
-                  failed_gate: report.riskAuthorization?.failedGate,
-                  reason: report.riskAuthorization?.reason,
-                },
-                order_execution: report.orderExecution,
-                financial_settlement: {
-                  ...report.financialSettlement,
-                  revenueRequestId: reqId,
-                },
-              },
-            };
-
-            // (e) Update durable idempotency inside transaction
-            if (inTx) {
-              await client.query(
-                `UPDATE trading_idempotency
-                 SET state = 'succeeded', receipt_ref = $2, response = $3, updated_at = NOW()
-                 WHERE key = $1`,
-                [idemKey, reqId, JSON.stringify(customerReport)]
-              );
-              await client.query('COMMIT');
-              inTx = false;
-            }
-          } catch (chargeErr) {
-            if (inTx) {
-              try {
-                await client.query('ROLLBACK');
-              } catch {}
-              inTx = false;
-            }
-            throw chargeErr;
-          } finally {
-            if (client && client !== pool && typeof client.release === 'function') {
-              client.release();
+            } catch (err) {
+              console.error(`[TradingSim] Revenue logging error: ${err.message}`);
             }
           }
+
+          // (d) Assemble clean customer-facing report
+          const customerReport = {
+            ok: true,
+            disclaimer: SIMULATION_DISCLAIMER,
+            service: 'Satelink Multi-Market Trading AI',
+            billed_usdt: meter.cost,
+            price_usdt: priceUsdt,
+            tier: meter.tier,
+            idempotency_key: idempotencyKey,
+            instrument_id: instrumentId,
+            strategy,
+            revenue_receipt: reqId
+              ? {
+                  revenue_request_id: reqId,
+                  amount_usdt: meter.cost,
+                  recorded: true,
+                }
+              : null,
+            simulation: {
+              workflow_id: report.workflowId,
+              executed_at: report.executedAt,
+              status: report.performance?.status || 'COMPLETED',
+              summary: report.performance?.summary || 'Simulation completed',
+              market_data: {
+                source: report.marketDataValidation?.source,
+                freshness: report.marketDataValidation?.freshness,
+                data_age_sec: report.marketDataValidation?.dataAgeSec,
+                licensing_valid: report.marketDataValidation?.licensingValid,
+              },
+              strategy_baseline: report.strategyBaseline,
+              model_proposal: report.modelProposal,
+              consensus: report.consensus,
+              risk_authorization: {
+                authorized: report.riskAuthorization?.authorized,
+                passed_gates: report.riskAuthorization?.passed,
+                failed_gate: report.riskAuthorization?.failedGate,
+                reason: report.riskAuthorization?.reason,
+              },
+              order_execution: report.orderExecution,
+              financial_settlement: {
+                ...report.financialSettlement,
+                revenueRequestId: reqId,
+              },
+            },
+          };
 
           return {
             payloadHash: currentPayloadHash,
