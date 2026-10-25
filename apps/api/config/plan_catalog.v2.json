@@ -433,5 +433,234 @@
       "surfaces": [],
       "mcp_tools": []
     }
+  ],
+  "capabilities_note": "Capability Registry v3 (S-6 skeleton). `pricing` follows docs/build/REVENUE_MODEL.md §3; amount_micro is integer micro-USD (1 USD = 1,000,000) or null with status \"withheld\" (F8). `quantity` (extension) = units bought for amount_micro. Discovery reads it only when CAPABILITY_REGISTRY_V3=1; test/capability_registry_v3.test.js fails CI if it disagrees with rails, /v1/pricing or the MCP tool list.",
+  "capabilities": [
+    {
+      "id": "rpc.polygon.call",
+      "version": 1,
+      "name": "Polygon RPC call — USDT credits",
+      "summary": "One JSON-RPC call to Polygon PoS mainnet, debited from prepaid USDT credits.",
+      "product": "polygon_rpc",
+      "status": "live",
+      "audience": [
+        "developer",
+        "agent",
+        "machine"
+      ],
+      "interfaces": {
+        "rest": "POST /rpc/polygon",
+        "mcp_tool": "polygon_rpc",
+        "a2a_skill": null,
+        "console": null
+      },
+      "pricing_rule_ref": "rails.rpc_credits",
+      "pricing": {
+        "unit": "call",
+        "currency": "USD",
+        "amount_micro": 30,
+        "basis": "fixed",
+        "included_in": [],
+        "overage": null,
+        "on_failure": "release_all",
+        "refund_rule": "reversal",
+        "effective_from": "2026-10-22",
+        "version": 1,
+        "status": "live"
+      },
+      "risk_level": "low",
+      "approval_mode": "none",
+      "commercial_status": "sellable",
+      "resale_rights_ref": "docs/build/evidence/RPC_UPSTREAMS.md (F20: upstream resale terms pending)",
+      "docs_url": "https://api.satelink.network/v1/pricing",
+      "owner": "platform"
+    },
+    {
+      "id": "rpc.polygon.x402_bundle",
+      "version": 1,
+      "name": "Polygon RPC — x402 bundle",
+      "summary": "1,000 Polygon RPC calls bought with one x402 payment (USDC on Base); no account.",
+      "product": "polygon_rpc",
+      "status": "live",
+      "audience": [
+        "agent",
+        "machine"
+      ],
+      "interfaces": {
+        "rest": "POST /rpc/polygon",
+        "mcp_tool": "polygon_rpc",
+        "a2a_skill": null,
+        "console": null
+      },
+      "pricing_rule_ref": "rails.rpc_x402_bundle",
+      "pricing": {
+        "unit": "call",
+        "currency": "USD",
+        "amount_micro": 100000,
+        "quantity": 1000,
+        "basis": "fixed",
+        "included_in": [],
+        "overage": null,
+        "on_failure": "release_all",
+        "refund_rule": "reversal",
+        "effective_from": "2026-10-22",
+        "version": 1,
+        "status": "live"
+      },
+      "risk_level": "low",
+      "approval_mode": "none",
+      "commercial_status": "sellable",
+      "resale_rights_ref": "docs/build/evidence/RPC_UPSTREAMS.md (F20: upstream resale terms pending)",
+      "docs_url": "https://api.satelink.network/.well-known/x402",
+      "owner": "platform"
+    },
+    {
+      "id": "intelligence.funding_rate_heatmap",
+      "version": 1,
+      "name": "Funding-rate heatmap",
+      "summary": "Funding-rate heatmap — derived Trading Intelligence analytics (delisted; existing keys only).",
+      "product": "trading_intelligence",
+      "status": "deprecated",
+      "audience": [
+        "agent"
+      ],
+      "interfaces": {
+        "rest": "GET /v1/intelligence/funding-rate-heatmap",
+        "mcp_tool": "funding_rate_heatmap",
+        "a2a_skill": null,
+        "console": null
+      },
+      "pricing_rule_ref": "meters.intelligence_request",
+      "pricing": {
+        "unit": "request",
+        "currency": "USD",
+        "amount_micro": null,
+        "basis": "fixed",
+        "included_in": [],
+        "overage": null,
+        "on_failure": "release_all",
+        "refund_rule": "reversal",
+        "effective_from": "2026-10-22",
+        "version": 1,
+        "status": "withheld"
+      },
+      "risk_level": "low",
+      "approval_mode": "none",
+      "commercial_status": "internal",
+      "resale_rights_ref": null,
+      "docs_url": null,
+      "owner": "platform"
+    },
+    {
+      "id": "intelligence.open_interest_shifts",
+      "version": 1,
+      "name": "Open-interest shifts",
+      "summary": "Open-interest shifts — derived Trading Intelligence analytics (delisted; existing keys only).",
+      "product": "trading_intelligence",
+      "status": "deprecated",
+      "audience": [
+        "agent"
+      ],
+      "interfaces": {
+        "rest": "GET /v1/intelligence/open-interest-shifts",
+        "mcp_tool": "open_interest_shifts",
+        "a2a_skill": null,
+        "console": null
+      },
+      "pricing_rule_ref": "meters.intelligence_request",
+      "pricing": {
+        "unit": "request",
+        "currency": "USD",
+        "amount_micro": null,
+        "basis": "fixed",
+        "included_in": [],
+        "overage": null,
+        "on_failure": "release_all",
+        "refund_rule": "reversal",
+        "effective_from": "2026-10-22",
+        "version": 1,
+        "status": "withheld"
+      },
+      "risk_level": "low",
+      "approval_mode": "none",
+      "commercial_status": "internal",
+      "resale_rights_ref": null,
+      "docs_url": null,
+      "owner": "platform"
+    },
+    {
+      "id": "intelligence.liquidation_clusters",
+      "version": 1,
+      "name": "Liquidation clusters",
+      "summary": "Liquidation clusters — derived Trading Intelligence analytics (delisted; existing keys only).",
+      "product": "trading_intelligence",
+      "status": "deprecated",
+      "audience": [
+        "agent"
+      ],
+      "interfaces": {
+        "rest": "GET /v1/intelligence/liquidation-clusters",
+        "mcp_tool": "liquidation_clusters",
+        "a2a_skill": null,
+        "console": null
+      },
+      "pricing_rule_ref": "meters.intelligence_request",
+      "pricing": {
+        "unit": "request",
+        "currency": "USD",
+        "amount_micro": null,
+        "basis": "fixed",
+        "included_in": [],
+        "overage": null,
+        "on_failure": "release_all",
+        "refund_rule": "reversal",
+        "effective_from": "2026-10-22",
+        "version": 1,
+        "status": "withheld"
+      },
+      "risk_level": "low",
+      "approval_mode": "none",
+      "commercial_status": "internal",
+      "resale_rights_ref": null,
+      "docs_url": null,
+      "owner": "platform"
+    },
+    {
+      "id": "intelligence.market_microstructure",
+      "version": 1,
+      "name": "Market microstructure",
+      "summary": "Market microstructure — derived Trading Intelligence analytics (delisted; existing keys only).",
+      "product": "trading_intelligence",
+      "status": "deprecated",
+      "audience": [
+        "agent"
+      ],
+      "interfaces": {
+        "rest": "GET /v1/intelligence/market-microstructure",
+        "mcp_tool": "market_microstructure",
+        "a2a_skill": null,
+        "console": null
+      },
+      "pricing_rule_ref": "meters.intelligence_request",
+      "pricing": {
+        "unit": "request",
+        "currency": "USD",
+        "amount_micro": null,
+        "basis": "fixed",
+        "included_in": [],
+        "overage": null,
+        "on_failure": "release_all",
+        "refund_rule": "reversal",
+        "effective_from": "2026-10-22",
+        "version": 1,
+        "status": "withheld"
+      },
+      "risk_level": "low",
+      "approval_mode": "none",
+      "commercial_status": "internal",
+      "resale_rights_ref": null,
+      "docs_url": null,
+      "owner": "platform"
+    }
   ]
 }

@@ -1,0 +1,65 @@
+[
+  {
+    "id": "rpc.polygon.call",
+    "version": 1,
+    "name": "Polygon RPC call — USDT credits",
+    "summary": "One JSON-RPC call to Polygon PoS mainnet, debited from prepaid USDT credits.",
+    "product": "polygon_rpc",
+    "status": "live",
+    "audience": [
+      "developer",
+      "agent",
+      "machine"
+    ],
+    "interfaces": {
+      "rest": "POST /rpc/polygon",
+      "mcp_tool": "polygon_rpc",
+      "a2a_skill": null,
+      "console": null
+    },
+    "pricing": {
+      "unit": "call",
+      "currency": "USD",
+      "amount_micro": 30,
+      "quantity": 1,
+      "basis": "fixed",
+      "on_failure": "release_all",
+      "refund_rule": "reversal",
+      "effective_from": "2026-10-22",
+      "version": 1,
+      "status": "live"
+    },
+    "docs_url": "https://api.satelink.network/v1/pricing"
+  },
+  {
+    "id": "rpc.polygon.x402_bundle",
+    "version": 1,
+    "name": "Polygon RPC — x402 bundle",
+    "summary": "1,000 Polygon RPC calls bought with one x402 payment (USDC on Base); no account.",
+    "product": "polygon_rpc",
+    "status": "live",
+    "audience": [
+      "agent",
+      "machine"
+    ],
+    "interfaces": {
+      "rest": "POST /rpc/polygon",
+      "mcp_tool": "polygon_rpc",
+      "a2a_skill": null,
+      "console": null
+    },
+    "pricing": {
+      "unit": "call",
+      "currency": "USD",
+      "amount_micro": 100000,
+      "quantity": 1000,
+      "basis": "fixed",
+      "on_failure": "release_all",
+      "refund_rule": "reversal",
+      "effective_from": "2026-10-22",
+      "version": 1,
+      "status": "live"
+    },
+    "docs_url": "https://api.satelink.network/.well-known/x402"
+  }
+]
