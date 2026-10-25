@@ -178,8 +178,8 @@ export function createNodeRegistryRouter(db, redis, { probeEndpoint = validateEn
         });
       }
 
-      // SSRF guard (SEC-5): the endpoint is fetched below (validateEndpoint) before anything
-      // else proves ownership, so loopback / private / metadata / circular hosts are refused.
+      // SSRF guard (SEC-5): the endpoint is fetched below (validateEndpoint); literal loopback /
+      // private / metadata / circular hosts are refused here, DNS names at connect time.
       if (validateNodeEndpoint(endpoint_url)) {
         return res.status(400).json({ ok: false, error: 'invalid_endpoint' });
       }
@@ -198,7 +198,8 @@ export function createNodeRegistryRouter(db, redis, { probeEndpoint = validateEn
         });
       }
 
-      // Proof of wallet ownership (EIP-191 over every registered field + timestamp), checked
+      // Proof of wallet ownership (EIP-191 over every registered field except the informational,
+      // staff-only `hardware` blob, + timestamp), checked
       // before the endpoint is probed, so unsigned requests cannot trigger outbound fetches.
       const proof = verifyNodeRegistration({
         walletAddress: wallet_address, nodeType: node_type, endpointUrl: endpoint_url,

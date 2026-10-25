@@ -134,7 +134,8 @@ export function validateNodeEndpoint(endpointUrl) {
 // ── Registration proof (W1 follow-up, 2026-10-21) ──────────────────────────────────────────
 // POST /api/nodes/register used to accept any wallet_address, so anyone could register nodes
 // (and earnings) under a wallet they do not control. Registration must now be signed
-// (EIP-191) by that wallet over every registered field. The first line separates it from
+// (EIP-191) by that wallet over every registered field except `hardware` (informational,
+// staff-only). The first line separates it from
 // heartbeats and from the /api/keys bind_wallet challenge.
 //   Satelink node registration
 //   wallet: <lowercase address>

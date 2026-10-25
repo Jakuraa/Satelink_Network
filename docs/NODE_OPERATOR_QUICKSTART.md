@@ -34,7 +34,10 @@ Revenue distribution is enforced on-chain — no trust required.
 
 ## Setup (5 minutes)
 
-### Option A: CLI Install (Recommended)
+### Option A: CLI Install
+
+> **Not yet compatible with signed registration.** Since 2026-10 registration must be signed by the
+> payout wallet (see Option C). The `satelink-node` CLI does not sign yet; use **Option C** until it does.
 
 ```bash
 # 1. Install Node.js 20+ if not present
@@ -55,6 +58,8 @@ satelink-node start
 
 ### Option B: Docker
 
+> **Not yet compatible with signed registration** (same reason as Option A). Use **Option C**.
+
 ```bash
 docker run -d \
   --name satelink-node \
@@ -66,7 +71,7 @@ docker run -d \
   satelinknetwork/node-agent:latest
 ```
 
-### Option C: Manual Registration
+### Option C: Manual Registration (the working path today)
 
 If you're running your own RPC proxy, registration must be signed by the payout wallet
 (EIP-191 `personal_sign`) — this proves you control it. Sign this exact message (7 lines,
@@ -82,8 +87,10 @@ chain_ids: <chain_ids joined by ",">
 timestamp: <timestamp>
 ```
 
+Save as `register.mjs` (it is an ES module: `import` + top-level `await`) and run `node register.mjs`.
+
 ```js
-// node >= 18, `npm i ethers`
+// register.mjs — node >= 18, `npm i ethers`
 import { Wallet } from 'ethers';
 const wallet = new Wallet(process.env.PAYOUT_WALLET_PRIVATE_KEY); // never share or upload this key
 const body = { wallet_address: wallet.address, node_type: 'rpc', endpoint_url: 'https://YOUR_HOST:8080',
