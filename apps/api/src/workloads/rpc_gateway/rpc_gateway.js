@@ -310,14 +310,34 @@ export function createRpcGateway(db) {
             // 402-loop instrumentation (admin alert x402_402_loop): fire-and-forget.
             if (verdict.http === 402 || verdict.code === 'account_not_found') recordSessionKeyDenial(db, apiKey, verdict.code);
             if (verdict.code === 'account_not_found') {
-                return res.status(402).json(paymentRequiredBody(
-                    'The API key or wallet you sent matches no account. Register the wallet (see "register") or check the X-API-Key value.'));
+                const message = 'The API key or wallet you sent matches no account. Register the wallet (see "register") or check the X-API-Key value.';
+                const prBody = paymentRequiredBody(message);
+                const { error: _ignoredError, ...restPrBody } = prBody;
+                return res.status(402).json({
+                    jsonrpc: '2.0',
+                    id: req.body?.id ?? null,
+                    ...restPrBody,
+                    error: {
+                        code: -32005,
+                        message,
+                        data: { error_code: 'account_not_found' }
+                    },
+                    rpc_error: {
+                        code: -32005,
+                        message,
+                        data: { error_code: 'account_not_found' }
+                    }
+                });
             }
             const payload = {
                 jsonrpc: '2.0',
                 id: req.body?.id ?? null,
                 ok: false,
-                error: verdict.code,
+                error: {
+                    code: -32005,
+                    message: verdict.message,
+                    data: { error_code: verdict.code }
+                },
                 message: verdict.message,
                 rpc_error: {
                     code: -32005,

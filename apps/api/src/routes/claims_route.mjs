@@ -349,12 +349,12 @@ export function createClaimsRouter(pool) {
 
       broadcaster.publish('claim:generated', {
         node_id: nodeId,
-        amount_usdt: result.amount_usdt || 0,
+        amount_usdt: result.amount || 0,
         wallet: walletAddress,
         timestamp: new Date().toISOString()
       });
 
-      discord.claim(nodeId, result.amount_usdt || 0, null).catch(() => {});
+      discord.claim(nodeId, result.amount || 0, null).catch(() => {});
 
       res.json({
         success: true,
@@ -362,6 +362,9 @@ export function createClaimsRouter(pool) {
       });
 
     } catch (err) {
+      if (err.code === 'claim_pending_reconciliation') {
+        return res.status(409).json({ success: false, error: 'claim_pending_reconciliation' });
+      }
       console.error('[Claims] Signature generation failed:', err.message);
       res.status(500).json({
         success: false,

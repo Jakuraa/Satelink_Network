@@ -159,7 +159,7 @@ describe('Funnel and onboarding consistency (SAT-535)', function () {
     expect(res.body.jsonrpc).to.equal('2.0');
     expect(res.body.id).to.equal(99);
     expect(res.body.ok).to.equal(false);
-    expect(res.body.error).to.equal('insufficient_credits');
+    expect(res.body.error?.data?.error_code || res.body.error).to.equal('insufficient_credits');
     expect(res.body.payment).to.be.an('object');
   });
 });
