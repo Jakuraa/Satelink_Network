@@ -7,7 +7,7 @@ import { getCached, setCached, isCacheable, getCacheStats } from './cache.js';
 import { checkRateLimit, incrementUsage, createApiKey, getUsageStats, getTiers } from './rate_limiter.js';
 import { createHealthEndpoint, startHealthMonitor } from './health_monitor.js';
 import { recordRpcRevenue } from './rpc_billing.js';
-import { createCreditGate } from '../../middleware/credit_gate.js';
+import { createCreditGate, refundCreditGateDeduction } from '../../middleware/credit_gate.js';
 import { enforceCapacity, precheckCapacity } from '../../capacity/capacity_enforcement.js';
 import { paymentRequiredResponse } from '../../utils/payment_required.js';
 import { PRICE_PER_CALL_USDT } from '../../billing/credit_service.mjs';
@@ -205,6 +205,17 @@ export function createRpcGateway(db) {
         const clientIp = getClientIp(req);
         const canonical = CREDIT_CANONICAL();
 
+        // Legacy mode only: creditGate (mounted before this handler) may already have
+        // deducted credit_balances. Every response that does NOT serve the call goes
+        // through here so that deduction is refunded first (no-op otherwise).
+        const sendUnserved = async (status, payload) => {
+            if (Number(req.creditDeducted) > 0) {
+                const refunded = await refundCreditGateDeduction(db, req, console);
+                res.set('X-Credit-Refunded', String(refunded));
+            }
+            return res.status(status).json(payload);
+        };
+
         // A bare x-wallet-address with no valid api_key and no settled x402
         // payment is an insufficient credential. Reject before any billing or
         // free-tier logic runs — never silently downgrade it to anonymous
@@ -240,7 +251,7 @@ export function createRpcGateway(db) {
         // Validate chain + JSON-RPC body BEFORE any billing so an invalid
         // request is never charged or metered.
         if (!SUPPORTED_CHAINS.has(chain)) {
-            return res.status(400).json({
+            return sendUnserved(400, {
                 ok: false,
                 error: `Unsupported chain: ${chain}. Supported: ${[...SUPPORTED_CHAINS].join(', ')}`
             });
@@ -250,7 +261,7 @@ export function createRpcGateway(db) {
 
         // JSON-RPC batch request handling: protocol-compatible response
         if (Array.isArray(body)) {
-            return res.status(400).json({
+            return sendUnserved(400, {
                 jsonrpc: '2.0',
                 id: null,
                 error: {
@@ -261,7 +272,7 @@ export function createRpcGateway(db) {
         }
 
         if (!body || body.jsonrpc !== '2.0' || !body.method) {
-            return res.status(400).json({
+            return sendUnserved(400, {
                 ok: false,
                 error: 'Invalid JSON-RPC 2.0 payload: requires jsonrpc="2.0" and method',
                 jsonrpc: '2.0',
@@ -274,7 +285,7 @@ export function createRpcGateway(db) {
         }
 
         if (typeof body.method !== 'string' || body.method.length === 0) {
-            return res.status(400).json({ ok: false, error: 'Invalid JSON-RPC method' });
+            return sendUnserved(400, { ok: false, error: 'Invalid JSON-RPC method' });
         }
 
         // ── AUTHORIZE → SERVE → CHARGE (fix/rpc-charge-after-success) ─────────
@@ -411,6 +422,15 @@ export function createRpcGateway(db) {
             return true;
         };
 
+        // Not served → undo any deduction already taken. Only the legacy credit gate
+        // deducts before the upstream call (the canonical path charges after success),
+        // so this restores req.creditDeducted. Reports what the caller was charged.
+        const refundUnserved = async () => {
+            const refunded = await refundCreditGateDeduction(db, req, console);
+            const legacyKept = Number(req.creditDeducted) > 0 && req.creditRefunded !== true;
+            return { charged: billedUsdt > 0 || legacyKept, refunded };
+        };
+
         if (metered) {
             // Preflight (read-only), mirroring enforceCapacity for every
             // capacity path — under 'new' an unfunded key is still refused here
@@ -454,7 +474,7 @@ export function createRpcGateway(db) {
 
             if (!rateCheck.allowed) {
                 res.set('X-RateLimit-Reset', rateCheck.resetAt);
-                return res.status(429).json({
+                return sendUnserved(429, {
                     error: 'rate_limit_exceeded',
                     upgrade_url: `${process.env.API_BASE_URL || 'https://rpc.satelink.network'}/credits/initiate?amount=10`,
                     deposit_address: process.env.REVENUE_VAULT_ADDRESS || '0x577D3716d6Ad5b676d230f5409deF9838FABaCEF',
@@ -512,39 +532,45 @@ export function createRpcGateway(db) {
             });
 
             if (!routeResult.success) {
-                // Upstream failed — nothing was charged.
-                return res.status(502).json({ ok: false, error: routeResult.error, charged: false });
+                // Upstream failed — the canonical path has charged nothing; a legacy
+                // credit-gate deduction is refunded.
+                const { charged, refunded } = await refundUnserved();
+                return res.status(502).json({ ok: false, error: routeResult.error, charged, refunded });
             }
 
             if (!(await chargeServedCall())) return;
 
-            // Cache set - fire and forget
-            if (isCacheable(method)) {
-                setCached(chain, method, params, routeResult.result).catch(() => {});
+            // From here the call is charged: side effects must never cost the
+            // caller the data they paid for, so none of them can reach the catch.
+            try {
+                if (isCacheable(method)) {
+                    setCached(chain, method, params, routeResult.result).catch(() => {});
+                }
+                // Billing - fire and forget (only when a real deduction occurred).
+                // Includes network-node-served calls: the dispatcher no longer sees
+                // the charge (it happens after the call), so it records node stats
+                // only and the revenue row is written here.
+                recordRpcRevenue({
+                    pool: db,
+                    chain,
+                    method,
+                    apiKey,
+                    source: routeResult.provider || 'external_provider',
+                    requestId: request_id,
+                    amountUsdt: billedUsdt
+                }).catch(() => {});
+                const elapsed = Date.now() - startTime;
+                console.log(`[RPC Gateway] ${chain}/${method} → ${routeResult.provider} (${elapsed}ms)`);
+            } catch (sideEffectErr) {
+                console.error('[RPC Gateway] post-charge side effect failed (result still served):', sideEffectErr.message);
             }
-
-            // Billing - fire and forget (only when a real deduction occurred).
-            // Includes network-node-served calls: the dispatcher no longer sees
-            // the charge (it happens after the call), so it records node stats
-            // only and the revenue row is written here.
-            recordRpcRevenue({
-                pool: db,
-                chain,
-                method,
-                apiKey,
-                source: routeResult.provider || 'external_provider',
-                requestId: request_id,
-                amountUsdt: billedUsdt
-            }).catch(() => {});
-
-            const elapsed = Date.now() - startTime;
-            console.log(`[RPC Gateway] ${chain}/${method} → ${routeResult.provider} (${elapsed}ms)`);
 
             res.status(200).json(routeResult.result);
         } catch (error) {
             console.error('[RPC Gateway] Execution error:', error.message);
             if (res.headersSent) return;
-            res.status(502).json({ ok: false, error: 'RPC execution failed', message: error.message, charged: billedUsdt > 0 });
+            const { charged, refunded } = await refundUnserved();
+            res.status(502).json({ ok: false, error: 'RPC execution failed', message: error.message, charged, refunded });
         }
     });
 
