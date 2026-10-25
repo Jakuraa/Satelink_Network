@@ -50,6 +50,17 @@ function getClientIp(req) {
            'unknown';
 }
 
+/** Staff-only node routing snapshot (lists node endpoints). Mount behind requireAdminAuth only. */
+export async function nodeRoutingDebugHandler(_req, res) {
+    try {
+        const status = await getNodeRoutingStatus();
+        res.json({ ok: true, ...status });
+    } catch (err) {
+        console.error('[RPC Gateway] node-routing debug failed:', err.message);
+        res.status(500).json({ ok: false, error: 'node_routing_unavailable' });
+    }
+}
+
 export function createRpcGateway(db) {
     const router = Router();
 
@@ -97,15 +108,9 @@ export function createRpcGateway(db) {
 
     // Staff only (W1 follow-up): it lists node endpoints (the 30-char "truncation" still
     // shows the full IP and port) and was reachable by any paying x402 or API-key caller.
-    router.get('/debug/node-routing', requireAdminAuth, async (req, res) => {
-        try {
-            const status = await getNodeRoutingStatus();
-            res.json({ ok: true, ...status });
-        } catch (err) {
-            console.error('[RPC Gateway] node-routing debug failed:', err.message);
-            res.status(500).json({ ok: false, error: 'node_routing_unavailable' });
-        }
-    });
+    // app_factory also serves it BEFORE the /rpc gates (x402 / free-tier), so a staff token alone
+    // reaches it; this mount stays as defence in depth wherever the gateway is mounted.
+    router.get('/debug/node-routing', requireAdminAuth, nodeRoutingDebugHandler);
 
     router.get('/chains', (req, res) => {
         const chains = getSupportedChains().map(chainKey => {
