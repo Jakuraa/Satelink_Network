@@ -189,10 +189,33 @@ export async function recordSettlementOrReject(pool, res, params, log = console)
   }
 }
 
-function writeSdkResponse(res, response) {
+function writeSdkResponse(res, response, req) {
   res.status(response.status);
   for (const [key, value] of Object.entries(response.headers || {})) res.setHeader(key, value);
   if (response.isHtml) return res.send(response.body);
+  const path = req ? (req.originalUrl || req.url || '').split('?')[0] : '';
+  const isJsonRpc = req && (
+    path.startsWith('/rpc') ||
+    (req.body && !Array.isArray(req.body) && (req.body.jsonrpc === '2.0' || typeof req.body.method === 'string'))
+  );
+  if (isJsonRpc && response.body && typeof response.body === 'object') {
+    const body = response.body;
+    const reqId = (req.body && !Array.isArray(req.body) && req.body.id !== undefined) ? req.body.id : null;
+    const errCode = response.status === 402 ? -32005 : -32603;
+    const errMsg = typeof body.error === 'string' ? body.error : (body.message || 'Payment error');
+    return res.json({
+      ...body,
+      jsonrpc: '2.0',
+      id: reqId,
+      error: {
+        code: errCode,
+        message: errMsg,
+        data: {
+          error_code: response.status === 402 ? 'PAYMENT_REQUIRED' : 'FACILITATOR_ERROR',
+        }
+      },
+    });
+  }
   return res.json(response.body || {});
 }
 
@@ -311,7 +334,7 @@ export function createX402Middleware(pool, logger, opts = {}) {
       if (result.type === 'payment-error') {
         // A payable x402 402 is re-served to a caller whose payment did not verify.
         if (result.response && result.response.status === 402) bumpFunnelDaily(pool, 'x402_402_served');
-        return writeSdkResponse(res, result.response);
+        return writeSdkResponse(res, result.response, req);
       }
 
       // payment-verified — settle BEFORE serving so an unsettled call is never
@@ -328,7 +351,7 @@ export function createX402Middleware(pool, logger, opts = {}) {
         log.error(`${LOG_PREFIX} settle failed: ${err.message}`);
         return res.status(502).json({ ok: false, error: 'x402_facilitator_error', message: err.message });
       }
-      if (!settle.success) return writeSdkResponse(res, settle.response);
+      if (!settle.success) return writeSdkResponse(res, settle.response, req);
 
       // A successful settle without a transaction id cannot be recorded
       // (tx_hash is the replay guard; '' would collide across payments).
@@ -438,6 +461,54 @@ export function createX402Middleware(pool, logger, opts = {}) {
             : {};
           bumpFunnel(pool, 'issued');
           bumpFunnelDaily(pool, 'x402_402_served'); // anonymous exhausted-tier 402 upgraded to a payable x402 challenge
+
+          const isJsonRpc =
+            path.startsWith('/rpc') ||
+            (req.body && !Array.isArray(req.body) && (req.body.jsonrpc === '2.0' || typeof req.body.method === 'string')) ||
+            (body && (body.jsonrpc === '2.0' || (body.error && typeof body.error === 'object' && typeof body.error.code === 'number')));
+
+          if (isJsonRpc) {
+            const reqId = (req.body && !Array.isArray(req.body) && req.body.id !== undefined)
+              ? req.body.id
+              : (body?.id !== undefined ? body.id : null);
+
+            const errorCode = (body?.error && typeof body.error.code === 'number')
+              ? body.error.code
+              : (body?.rpc_error && typeof body.rpc_error.code === 'number')
+                ? body.rpc_error.code
+                : -32005;
+
+            const errorMessage = (body?.error && typeof body.error.message === 'string')
+              ? body.error.message
+              : (typeof body?.message === 'string'
+                ? body.message
+                : (typeof paymentRequired.error === 'string'
+                  ? paymentRequired.error
+                  : 'Payment required'));
+
+            const errorData = {
+              error_code: (body?.error?.data?.error_code) || (body?.rpc_error?.data?.error_code) || 'PAYMENT_REQUIRED',
+              x402Version: paymentRequired.x402Version,
+              accepts: paymentRequired.accepts,
+              ...(body?.error?.data && typeof body.error.data === 'object' ? body.error.data : {}),
+            };
+
+            return originalJson({
+              jsonrpc: '2.0',
+              id: reqId,
+              error: {
+                code: errorCode,
+                message: errorMessage,
+                data: errorData,
+              },
+              x402Version: paymentRequired.x402Version,
+              accepts: paymentRequired.accepts,
+              resource: paymentRequired.resource,
+              extensions: paymentRequired.extensions,
+              alternativePayment: compactAlternativePayment(body),
+            });
+          }
+
           return originalJson({ ...paymentRequired, alternativePayment: compactAlternativePayment(body) });
         } catch (err) {
           // Fail open to today's exact 402 — the USDT rail must never break

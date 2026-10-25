@@ -1,4 +1,5 @@
 import express from "express";
+import { createHealthHandler } from "./src/core/health_route.js";
 import compression from 'compression';
 import { attachBaseMiddleware } from "./src/security/middleware.js";
 import revenueRoutes from "./src/routes/revenue.js";
@@ -31,6 +32,7 @@ import { createWellKnownSatelinkRouter, createMachineV1Router } from "./src/rout
 import { createWellKnownX402Router } from "./src/routes/well_known_x402.js";
 import { createMetricsRouter } from "./src/workloads/rpc_gateway/metrics.js";
 import { createIntelligenceRouter } from "./src/routes/intelligence_route.js";
+import { createTradingSimulationRouter } from "./src/routes/trading_simulation_route.js";
 import { startIntelRefresh } from "./src/intelligence/engine.js";
 import { createMachineIntelRouter } from "./src/routes/machine_intel.js";
 import { createX402KeyRecoveryRouter } from "./src/payments/x402/key_recovery_router.js";
@@ -97,22 +99,8 @@ export function createApp(pool, redis) {
   // Core health endpoints
   app.get("/healthz", (req, res) => res.status(200).json({ status: "ok" }));
 
-  // Enhanced public health endpoint — ALWAYS returns 200 for Railway
-  app.get("/health", async (req, res) => {
-    res.setHeader("Cache-Control", "no-cache");
-    const checks = { server: 'ok', db: 'unknown', uptime: Math.floor(process.uptime()) };
-    try {
-      await pool.query('SELECT 1');
-      checks.db = 'ok';
-    } catch (e) {
-      checks.db = 'degraded: ' + (e.message || 'unknown').slice(0, 50);
-    }
-    res.status(200).json({
-      ok: true,
-      ...checks,
-      timestamp: new Date().toISOString()
-    });
-  });
+  // Public health endpoint — ALWAYS returns 200 for Railway; includes the deployed commit
+  app.get("/health", createHealthHandler(pool));
 
 app.get("/api/mode", (req, res) => {
     res.status(200).json({
@@ -453,6 +441,10 @@ app.get("/api/mode", (req, res) => {
   app.use("/v1", express.json({ limit: '16kb' }), createIntelligenceRouter(pool));
   startIntelRefresh(pool, { logger: console });
 
+  // Multi-Market Trading AI — Metered paper execution simulation (/v1/trading/paper/simulate).
+  // Metered via canonical api_credits; live trading remains disabled.
+  app.use("/v1/trading", express.json({ limit: '64kb' }), createTradingSimulationRouter(pool));
+
   // Track B (P3.B / P6) — read-only plan catalogue (/v1/plans) + customer
   // console summary (/v1/console/summary). Mounted BEFORE the "/v1" ai-gateway
   // so their paths are not shadowed. Additive; no money-path coupling.
@@ -589,6 +581,37 @@ app.get("/api/mode", (req, res) => {
   // injected below); /resell is public and payment-gated (its x402 402 challenge
   // is the auth). Does not touch any existing route or the live money path.
   app.use("/vnext", createVnextKernelRouter(pool, { adminAuth: requireAdminAuth }));
+
+  // Global error handler for body-parser syntax errors and unexpected exceptions
+  // Sanitizes stack traces and returns JSON-RPC 2.0 error for /rpc routes
+  app.use((err, req, res, next) => {
+    if (res.headersSent) return next(err);
+    const isRpc = req.originalUrl?.startsWith('/rpc') || req.path?.startsWith('/rpc');
+    if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+      if (isRpc) {
+        return res.status(400).json({
+          jsonrpc: '2.0',
+          id: null,
+          error: {
+            code: -32700,
+            message: 'Parse error',
+          },
+        });
+      }
+      return res.status(400).json({ ok: false, error: 'Invalid JSON payload' });
+    }
+    if (isRpc) {
+      return res.status(500).json({
+        jsonrpc: '2.0',
+        id: null,
+        error: {
+          code: -32603,
+          message: 'Internal error',
+        },
+      });
+    }
+    return res.status(err.status || 500).json({ ok: false, error: 'Internal server error' });
+  });
 
   return app;
 }

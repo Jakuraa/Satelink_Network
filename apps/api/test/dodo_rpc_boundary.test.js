@@ -99,7 +99,7 @@ describe('Dodo → RPC/x402 boundary (fix/dodo-rpc-boundary)', function () {
     const res = await rpcCall(424242);
     expect(upstreamCalls, 'refused by the preflight, before any upstream call').to.equal(0);
     expect(res.status, JSON.stringify(res.body)).to.equal(402);
-    expect(res.body.error).to.equal('insufficient_credits');
+    expect(res.body.error?.data?.error_code || res.body.error).to.equal('insufficient_credits');
     const b = await balances();
     expect(b.c).to.equal(10);
     expect(b.d).to.equal(10);
