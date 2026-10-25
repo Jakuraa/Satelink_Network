@@ -24,7 +24,7 @@ import {
 import { getNodeHealthSummary } from '../../scheduler/node_health_monitor.js';
 import { handleNodeComeback } from './offline_detector.js';
 import { getNodeEarnings } from './earnings_aggregator.js';
-import { requireHeaderSecret } from '../../security/header_secret.js';
+import { requireHeaderSecret, isStaffRequest } from '../../security/header_secret.js';
 import { verifyNodeHeartbeat, validateNodeEndpoint, acceptMonotonicHeartbeat, verifyNodeRegistration } from './heartbeat_auth.js';
 import { nodeEndpointFetch } from './node_endpoint_fetch.js';
 
@@ -178,8 +178,8 @@ export function createNodeRegistryRouter(db, redis, { probeEndpoint = validateEn
         });
       }
 
-      // SSRF guard (SEC-5): the endpoint is fetched below (validateEndpoint) before anything
-      // else proves ownership, so loopback / private / metadata / circular hosts are refused.
+      // SSRF guard (SEC-5): the endpoint is fetched below (validateEndpoint); literal loopback /
+      // private / metadata / circular hosts are refused here, DNS names at connect time.
       if (validateNodeEndpoint(endpoint_url)) {
         return res.status(400).json({ ok: false, error: 'invalid_endpoint' });
       }
@@ -198,7 +198,8 @@ export function createNodeRegistryRouter(db, redis, { probeEndpoint = validateEn
         });
       }
 
-      // Proof of wallet ownership (EIP-191 over every registered field + timestamp), checked
+      // Proof of wallet ownership (EIP-191 over every registered field except the informational,
+      // staff-only `hardware` blob, + timestamp), checked
       // before the endpoint is probed, so unsigned requests cannot trigger outbound fetches.
       const proof = verifyNodeRegistration({
         walletAddress: wallet_address, nodeType: node_type, endpointUrl: endpoint_url,
@@ -408,17 +409,27 @@ export function createNodeRegistryRouter(db, redis, { probeEndpoint = validateEn
       }
 
       const row = result.rows[0];
+      // SEC-4b (W1 follow-up): the payout wallet, the raw endpoint (IP:port), hardware and
+      // failure text are staff-only. Public callers get the operational summary.
+      const staff = isStaffRequest(req);
+      // The body depends on a request header: never let a cache serve the staff view publicly.
+      res.vary('Authorization'); // append (keeps e.g. Vary: Origin from CORS)
+      res.vary('X-Admin-Token');
+      if (staff) res.set('Cache-Control', 'private, no-store');
 
       res.json({
         ok: true,
         node: {
           nodeId: row.node_id,
-          wallet: row.wallet,
+          ...(staff ? {
+            wallet: row.wallet,
+            endpointUrl: row.endpoint_url,
+            hardware: row.hardware_json,
+            lastFailureReason: row.last_failure_reason || null,
+          } : {}),
           nodeType: row.node_type,
-          endpointUrl: row.endpoint_url,
           region: row.region,
           chainIds: row.chain_ids,
-          hardware: row.hardware_json,
           status: row.status,
           tier: row.tier,
           reputationScore: row.reputation_score,
@@ -429,8 +440,7 @@ export function createNodeRegistryRouter(db, redis, { probeEndpoint = validateEn
           consecutiveFailures: row.consecutive_failures || 0,
           totalRequestsServed: row.total_requests_served || 0,
           avgLatencyMs: row.avg_latency_ms || null,
-          lastFailureAt: row.last_failure_at || null,
-          lastFailureReason: row.last_failure_reason || null
+          lastFailureAt: row.last_failure_at || null
         }
       });
     } catch (err) {

@@ -135,3 +135,18 @@ describe('node endpoints: resolve-then-check at connect time (DNS rebinding)', f
     });
   });
 });
+
+// Review follow-ups (Session A): paid-path size cap, failure codes, fail-closed lookup.
+import { RPC_RESPONSE_MAX_BYTES } from '../src/workloads/rpc_gateway/node_dispatcher.js';
+import { createGuardedLookup as guardedLookupFactory } from '../src/services/node_registry/node_endpoint_fetch.js';
+describe('node endpoint fetch — review follow-ups', () => {
+  it('forwardToNode uses a paid-RPC response cap far above the 1 MB probe default', () => {
+    if (!(RPC_RESPONSE_MAX_BYTES >= 16 * 1024 * 1024)) throw new Error(`cap too small: ${RPC_RESPONSE_MAX_BYTES}`);
+  });
+  it('the guarded lookup refuses an answer that is not an IP address (fail closed)', (done) => {
+    const lookup = guardedLookupFactory({ baseLookup: (_h, _o, cb) => cb(null, [{ address: 'not-an-ip', family: 4 }]) });
+    lookup('example.test', {}, (err) => {
+      try { if (!err || err.code !== 'blocked_address') throw new Error(`expected blocked_address, got ${err && err.code}`); done(); } catch (e) { done(e); }
+    });
+  });
+});

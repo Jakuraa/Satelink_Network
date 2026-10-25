@@ -1,7 +1,7 @@
 {
   "name": "satelink-mcp",
   "version": "2.1.2",
-  "description": "Satelink MCP server \u2014 give AI agents pay-per-call Polygon (chain 137) JSON-RPC access. Every call paid via automatic x402 micropayments (USDC on Base).",
+  "description": "Satelink MCP server — give AI agents pay-per-call Polygon (chain 137) JSON-RPC access. Every call paid via automatic x402 micropayments (USDC on Base).",
   "type": "module",
   "main": "index.js",
   "bin": {

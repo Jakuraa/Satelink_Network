@@ -110,8 +110,8 @@ export async function acceptMonotonicHeartbeat(nodeId, timestamp, redis) {
 
 /**
  * Validates a node endpoint URL (used before storing it). Literal-address checks only: a DNS
- * name that resolves to a private address is NOT caught here (follow-up: resolve-then-check
- * at connect time); fetch sites refuse redirects (redirect: 'manual').
+ * name that resolves to a private address is caught at connect time by node_endpoint_fetch.js
+ * (resolve-then-check in the socket's own lookup; redirects are never followed).
  * @returns {string|null} error code, or null when acceptable
  */
 export function validateNodeEndpoint(endpointUrl) {
@@ -134,7 +134,8 @@ export function validateNodeEndpoint(endpointUrl) {
 // ── Registration proof (W1 follow-up, 2026-10-21) ──────────────────────────────────────────
 // POST /api/nodes/register used to accept any wallet_address, so anyone could register nodes
 // (and earnings) under a wallet they do not control. Registration must now be signed
-// (EIP-191) by that wallet over every registered field. The first line separates it from
+// (EIP-191) by that wallet over every registered field except `hardware` (informational,
+// staff-only). The first line separates it from
 // heartbeats and from the /api/keys bind_wallet challenge.
 //   Satelink node registration
 //   wallet: <lowercase address>

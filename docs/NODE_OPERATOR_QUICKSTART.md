@@ -76,8 +76,10 @@ chain_ids: <chain_ids joined by ",">
 timestamp: <timestamp>
 ```
 
+Save as `register.mjs` (it is an ES module: `import` + top-level `await`) and run `node register.mjs`.
+
 ```js
-// node >= 18, `npm i ethers`
+// register.mjs — node >= 18, `npm i ethers`
 import { Wallet } from 'ethers';
 const wallet = new Wallet(process.env.PAYOUT_WALLET_PRIVATE_KEY); // never share or upload this key
 const body = { wallet_address: wallet.address, node_type: 'rpc', endpoint_url: 'https://YOUR_HOST:8080',

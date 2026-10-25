@@ -175,6 +175,9 @@ export async function selectNodeSimple(pool, { chainId, nodeType = 'rpc', exclud
   }
 }
 
+/** Response cap for forwarded paid RPC calls (the endpoint client's default is a 1 MB probe cap). */
+export const RPC_RESPONSE_MAX_BYTES = 32 * 1024 * 1024;
+
 /**
  * Forwards RPC request to a network node
  */
@@ -187,16 +190,21 @@ export async function forwardToNode(node, rpcRequest) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(rpcRequest),
-      timeoutMs: REQUEST_TIMEOUT_MS
+      timeoutMs: REQUEST_TIMEOUT_MS,
+      // Paid RPC responses (eth_getLogs ranges, full blocks) routinely exceed the 1 MB probe
+      // default; a larger cap still bounds memory without failing honest nodes.
+      maxBytes: RPC_RESPONSE_MAX_BYTES
     });
 
     const latencyMs = Date.now() - startTime;
 
     if (!response.ok) {
-      throw new Error(`Node returned HTTP ${response.status}`);
+      throw Object.assign(new Error('http_status'), { code: `http_${response.status}` });
     }
 
-    const data = await response.json();
+    let data;
+    try { data = await response.json(); }
+    catch { throw Object.assign(new Error('bad_json'), { code: 'bad_json' }); }
 
     // RPC-level errors (like "insufficient funds", "typed transaction too short") are VALID responses
     // The node successfully processed the request - the error is from the blockchain, not the node

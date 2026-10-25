@@ -12,6 +12,7 @@
 import http from 'node:http';
 import https from 'node:https';
 import dns from 'node:dns';
+import net from 'node:net';
 import { isBlockedIp, validateNodeEndpoint } from './heartbeat_auth.js';
 
 const DEFAULT_TIMEOUT_MS = 5000;
@@ -33,7 +34,8 @@ export function createGuardedLookup({ baseLookup = dns.lookup, isBlocked = isBlo
       const list = (Array.isArray(addresses) ? addresses : [{ address: addresses, family: opts.family || 4 }])
         .filter((a) => a && a.address);
       if (list.length === 0) return callback(codedError('dns_no_address'));
-      if (list.some((a) => isBlocked(a.address))) return callback(codedError('blocked_address'));
+      // fail closed: an answer that is not an IP address is refused like a private one
+      if (list.some((a) => net.isIP(a.address) === 0 || isBlocked(a.address))) return callback(codedError('blocked_address'));
       if (opts.all) return callback(null, list);
       return callback(null, list[0].address, list[0].family);
     });
