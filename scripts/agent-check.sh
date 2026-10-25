@@ -8,6 +8,7 @@ set -uo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
+export CI="${CI:-true}"
 VERBOSE="${VERBOSE:-0}"
 run() { # run <label> <cmd...> — print one ✅/⚠️ line; full output if VERBOSE=1
   local label="$1"; shift
