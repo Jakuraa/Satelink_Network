@@ -1,6 +1,8 @@
 import { expect } from 'chai';
 import express from 'express';
 import request from 'supertest';
+import { localRequest, closeLocalServers } from './_helpers/local_request.mjs';
+
 
 import {
   apiKeyCreateLimiter,
@@ -146,6 +148,7 @@ describe('api_keys security hardening', () => {
 
   // ---------------------------------------------------------------- P0-2
   describe('P0-2 — rate limiting', () => {
+  afterEach(closeLocalServers); // see test/_helpers/local_request.mjs (macOS 127.0.0.1 port hijack)
     it('apiKeyCreateLimiter caps key creation per IP (30/window)', async () => {
       // apiKeyCreateLimiter is a module-level singleton (rate_limits.js),
       // keyed by req.ip and shared with EVERY route that creates keys —
@@ -159,10 +162,10 @@ describe('api_keys security hardening', () => {
       const app = express();
       app.post('/api/keys', (req, _res, next) => { capturedIp = req.ip; next(); }, apiKeyCreateLimiter, (_req, res) => res.json({ ok: true }));
       for (let i = 0; i < 30; i++) {
-        const r = await request(app).post('/api/keys').send({});
+        const r = await (await localRequest(app)).post('/api/keys').send({});
         expect(r.status, `request ${i + 1} should pass`).to.equal(200);
       }
-      const blocked = await request(app).post('/api/keys').send({});
+      const blocked = await (await localRequest(app)).post('/api/keys').send({});
       expect(blocked.status).to.equal(429);
       if (capturedIp) apiKeyCreateLimiter.resetKey(capturedIp);
     });
@@ -171,13 +174,13 @@ describe('api_keys security hardening', () => {
       const app = express();
       app.post('/api/keys/deposit', apiKeyDepositLimiter, (_req, res) => res.json({ ok: true }));
       for (let i = 0; i < 10; i++) {
-        const r = await request(app).post('/api/keys/deposit').set('X-API-Key', 'keyA').send({});
+        const r = await (await localRequest(app)).post('/api/keys/deposit').set('X-API-Key', 'keyA').send({});
         expect(r.status, `keyA request ${i + 1}`).to.equal(200);
       }
-      const blockedA = await request(app).post('/api/keys/deposit').set('X-API-Key', 'keyA').send({});
+      const blockedA = await (await localRequest(app)).post('/api/keys/deposit').set('X-API-Key', 'keyA').send({});
       expect(blockedA.status).to.equal(429);
 
-      const okB = await request(app).post('/api/keys/deposit').set('X-API-Key', 'keyB').send({});
+      const okB = await (await localRequest(app)).post('/api/keys/deposit').set('X-API-Key', 'keyB').send({});
       expect(okB.status).to.equal(200);
     });
 
@@ -185,10 +188,10 @@ describe('api_keys security hardening', () => {
       const app = express();
       app.get('/api/keys/deposits', apiKeyReadLimiter, (_req, res) => res.json({ ok: true }));
       for (let i = 0; i < 60; i++) {
-        const r = await request(app).get('/api/keys/deposits').set('X-API-Key', 'readKey');
+        const r = await (await localRequest(app)).get('/api/keys/deposits').set('X-API-Key', 'readKey');
         expect(r.status, `read ${i + 1}`).to.equal(200);
       }
-      const blocked = await request(app).get('/api/keys/deposits').set('X-API-Key', 'readKey');
+      const blocked = await (await localRequest(app)).get('/api/keys/deposits').set('X-API-Key', 'readKey');
       expect(blocked.status).to.equal(429);
     });
   });
