@@ -77,7 +77,7 @@ export const RISK = {
 
 export const PRICING = {
   title: "Pricing",
-  body: "Pricing at launch. There is no price yet and nobody is charged during the paper beta. Pricing will be published here before anyone is asked to pay.",
+  body: "Pricing at launch. Automated trading execution remains in controlled beta. Developer paper simulations via the API are metered pay-per-call from prepaid credits as published in the API Reference and Pricing specifications.",
 };
 
 export const SECURITY = {
@@ -92,7 +92,7 @@ export const SECURITY = {
 
 export const DOCS = {
   title: "Documentation",
-  body: "Satelink Trading AI API is not public yet. When it opens, its reference will be published here. Until then, these pages describe how the product works.",
+  body: "Trading AI paper simulation is available via the Developer API reference. Live broker execution remains disabled.",
 };
 
 export const LEGAL_PLACEHOLDERS = [

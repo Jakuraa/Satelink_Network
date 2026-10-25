@@ -298,6 +298,85 @@ const OPENAPI_SPEC = {
         parameters: [{ name: 'symbol', in: 'query', required: false, schema: { type: 'string' } }],
         responses: { '200': { description: 'Microstructure payload' }, '404': { description: 'Not yet available' } }
       }
+    },
+    '/v1/trading/paper/simulate': {
+      get: {
+        operationId: 'discoverTradingPaperSimulation',
+        summary: 'Trading AI paper-simulation discovery and pricing',
+        description: 'Returns supported instruments, strategies, execution mode, and pricing ($0.05 USDT / call). Free and public.',
+        responses: {
+          '200': {
+            description: 'Discovery metadata',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    ok: { type: 'boolean' },
+                    service: { type: 'string' },
+                    mode: { type: 'string' },
+                    price_usdt: { type: 'number' },
+                    supported_instruments: { type: 'array', items: { type: 'string' } },
+                    supported_strategies: { type: 'array', items: { type: 'string' } },
+                    disclaimer: { type: 'string' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      post: {
+        operationId: 'simulateTradingPaperExecution',
+        summary: 'Execute metered trading strategy simulation',
+        description: 'Executes simulated paper-trading run. Metered at $0.05 USDT from prepaid credits. Live trading is strictly disabled.',
+        security: [{ ApiKeyAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['idempotencyKey', 'instrumentId', 'strategy'],
+                properties: {
+                  idempotencyKey: { type: 'string', description: 'Unique caller-generated idempotency key' },
+                  instrumentId: { type: 'string', enum: ['BINANCE:BTCUSDT', 'PAPER:BTCUSDT', 'NSE:NIFTY50'] },
+                  strategy: { type: 'string', example: 'sma-crossover' },
+                  parameters: { type: 'object' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            description: 'Simulation completed with revenue receipt',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    ok: { type: 'boolean' },
+                    simulation_id: { type: 'string' },
+                    mode: { type: 'string' },
+                    disclaimer: { type: 'string' },
+                    revenue_receipt: {
+                      type: 'object',
+                      properties: {
+                        revenue_request_id: { type: 'string' },
+                        amount_usdt: { type: 'number' },
+                        recorded: { type: 'boolean' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          '402': { description: 'Insufficient credits or payment required' },
+          '422': { description: 'Missing parameter or idempotency payload mismatch' }
+        }
+      }
     }
   },
   components: {

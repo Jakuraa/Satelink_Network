@@ -1,16 +1,17 @@
 ## How metering works
 
-Every billed call deducts a flat **$0.00003 (USDT)** from your credit
-balance and writes one immutable revenue event — the canonical record that
-every dashboard number traces back to. There are no subscriptions, no seats,
-and no overage tiers.
+Billed operations deduct directly from your credit balance and write one immutable revenue event — the canonical record that every dashboard number and receipt traces back to. There are no subscriptions, no seats, and no overage tiers:
+
+- **JSON-RPC Calls**: $0.00003 (USDT) per call
+- **Trading Intelligence**: $0.01 (USDT) per call
+- **Paper Trading Simulation**: $0.05 (USDT) per simulation run
 
 ## Credits
 
 Your API key carries a USDT credit balance:
 
 - **Deposited** — total USDT you've sent to the vault.
-- **Spent** — metered usage at $0.00003/call.
+- **Spent** — metered usage across API calls.
 - **Remaining** — spendable balance. Credits never expire.
 
 Check any time:

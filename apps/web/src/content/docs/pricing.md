@@ -35,6 +35,16 @@ Public endpoints can be queried by agents and automated systems before authentic
 | Per-call | $0.01 per call on crypto rails |
 | Starter Pack | $9.99 one-time purchase via card / UPI (Dodo) |
 
+## Trading AI — Paper Simulation
+
+| | |
+|---|---|
+| Price | **$0.05 per simulation run** (50 UU) |
+| Mode | Simulated paper execution (live trading is strictly disabled) |
+| Billing | Deducted from a prepaid USDT credit balance |
+| Idempotency | Replays with identical `idempotencyKey` return cached results at **$0 extra charge** |
+| Zero-charge guarantee | Unsuccessful simulations never deduct credits |
+
 That works out to **$30 per million calls**, always, at any volume. There are
 no plans, no tiers, no rate negotiations, and no "contact sales."
 
