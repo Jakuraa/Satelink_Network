@@ -55,7 +55,7 @@ export function verifyNodeHeartbeat({ nodeId, wallet, timestamp, signature, endp
   return { ok: true };
 }
 
-function isBlockedIp(host) {
+export function isBlockedIp(host) {
   const v = net.isIP(host);
   if (v === 4) {
     const [a, b, c] = host.split('.').map(Number);
@@ -82,7 +82,8 @@ function isBlockedIp(host) {
     // 2000::/3, 6to4 (2002::/16, embeds an IPv4) and documentation (2001:db8::/32) are refused.
     const first = parseInt(h.split(':')[0] || '0', 16);
     if (!(first >= 0x2000 && first <= 0x3fff)) return true;
-    return first === 0x2002 || h.startsWith('2001:db8:') || h.startsWith('2001:0db8:');
+    // Teredo 2001:0::/32 embeds an IPv4 address like 6to4 does.
+    return first === 0x2002 || h.startsWith('2001:db8:') || h.startsWith('2001:0db8:') || /^2001:(0{1,4})?:/.test(h);
   }
   return false;
 }
@@ -109,8 +110,8 @@ export async function acceptMonotonicHeartbeat(nodeId, timestamp, redis) {
 
 /**
  * Validates a node endpoint URL (used before storing it). Literal-address checks only: a DNS
- * name that resolves to a private address is NOT caught here (follow-up: resolve-then-check
- * at connect time); fetch sites refuse redirects (redirect: 'manual').
+ * name that resolves to a private address is caught at connect time by node_endpoint_fetch.js
+ * (resolve-then-check in the socket's own lookup; redirects are never followed).
  * @returns {string|null} error code, or null when acceptable
  */
 export function validateNodeEndpoint(endpointUrl) {

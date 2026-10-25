@@ -6,6 +6,8 @@
  * Feeds data into reputation scoring and offline detection (S2-009).
  */
 
+import { nodeEndpointFetch } from '../services/node_registry/node_endpoint_fetch.js';
+
 const HEALTH_CHECK_INTERVAL_MS = 120000; // 2 minutes
 const HEALTH_CHECK_TIMEOUT_MS = 10000; // 10 second timeout per node
 const MAX_CONCURRENT_CHECKS = 10;
@@ -51,17 +53,11 @@ async function checkNodeHealth(node, timeoutMs = HEALTH_CHECK_TIMEOUT_MS) {
   }
 
   const healthUrl = endpointUrl.endsWith('/') ? `${endpointUrl}health` : `${endpointUrl}/health`;
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   const startTime = Date.now();
 
   try {
-    const response = await fetch(healthUrl, {
-      method: 'GET',
-      redirect: 'manual', // never follow a node's redirect into the private network (SSRF)
-      signal: controller.signal
-    });
-    clearTimeout(timeoutId);
+    // Resolve-then-check at connect time, no redirects (node_endpoint_fetch.js).
+    const response = await nodeEndpointFetch(healthUrl, { method: 'GET', timeoutMs, headersOnly: true });
     const responseTimeMs = Date.now() - startTime;
 
     if (response.ok) {
@@ -75,9 +71,10 @@ async function checkNodeHealth(node, timeoutMs = HEALTH_CHECK_TIMEOUT_MS) {
       };
     }
   } catch (err) {
-    clearTimeout(timeoutId);
     const responseTimeMs = Date.now() - startTime;
-    const errorMsg = err.name === 'AbortError' ? 'timeout' : err.message;
+    // Fixed categories only (timeout / unreachable / blocked_address / ...): raw error text can
+    // carry internal hosts and is served by GET /api/nodes/:id/health.
+    const errorMsg = err.code || 'unreachable';
     return { nodeId: node.node_id, status: 'unreachable', responseTimeMs, error: errorMsg };
   }
 }
