@@ -25,7 +25,7 @@ import { getNodeHealthSummary } from '../../scheduler/node_health_monitor.js';
 import { handleNodeComeback } from './offline_detector.js';
 import { getNodeEarnings } from './earnings_aggregator.js';
 import { requireHeaderSecret, isStaffRequest } from '../../security/header_secret.js';
-import { verifyNodeHeartbeat, validateNodeEndpoint, acceptMonotonicHeartbeat } from './heartbeat_auth.js';
+import { verifyNodeHeartbeat, validateNodeEndpoint, acceptMonotonicHeartbeat, verifyNodeRegistration } from './heartbeat_auth.js';
 import { nodeEndpointFetch } from './node_endpoint_fetch.js';
 
 const VALID_REGIONS = ['ap-south-1', 'us-east-1', 'eu-west-1', 'ap-southeast-1'];
@@ -138,7 +138,7 @@ async function sendDiscordNotification(nodeId, region, walletPrefix) {
   }
 }
 
-export function createNodeRegistryRouter(db, redis) {
+export function createNodeRegistryRouter(db, redis, { probeEndpoint = validateEndpoint } = {}) {
   const router = Router();
 
   ensureTable(db);
@@ -146,7 +146,7 @@ export function createNodeRegistryRouter(db, redis) {
 
   router.post('/register', async (req, res) => {
     try {
-      const { wallet_address, node_type, endpoint_url, region, chain_ids, hardware } = req.body || {};
+      const { wallet_address, node_type, endpoint_url, region, chain_ids, hardware, timestamp, signature } = req.body || {};
 
       if (!wallet_address || !WALLET_REGEX.test(wallet_address)) {
         return res.status(400).json({
@@ -178,8 +178,8 @@ export function createNodeRegistryRouter(db, redis) {
         });
       }
 
-      // SSRF guard (SEC-5): the endpoint is fetched below (validateEndpoint) before anything
-      // else proves ownership, so loopback / private / metadata / circular hosts are refused.
+      // SSRF guard (SEC-5): the endpoint is fetched below (validateEndpoint); literal loopback /
+      // private / metadata / circular hosts are refused here, DNS names at connect time.
       if (validateNodeEndpoint(endpoint_url)) {
         return res.status(400).json({ ok: false, error: 'invalid_endpoint' });
       }
@@ -198,7 +198,25 @@ export function createNodeRegistryRouter(db, redis) {
         });
       }
 
-      const endpointReachable = await validateEndpoint(endpoint_url);
+      // Proof of wallet ownership (EIP-191 over every registered field except the informational,
+      // staff-only `hardware` blob, + timestamp), checked
+      // before the endpoint is probed, so unsigned requests cannot trigger outbound fetches.
+      const proof = verifyNodeRegistration({
+        walletAddress: wallet_address, nodeType: node_type, endpointUrl: endpoint_url,
+        region, chainIds: chain_ids, timestamp, signature,
+      });
+      if (!proof.ok) {
+        return res.status(proof.http).json({
+          ok: false,
+          error: proof.error,
+          sign: {
+            method: 'personal_sign (EIP-191) with wallet_address; send timestamp (unix ms) and signature',
+            message_template: 'Satelink node registration\nwallet: <lowercase wallet_address>\nnode_type: <node_type>\nendpoint: <endpoint_url>\nregion: <region>\nchain_ids: <chain_ids joined by ",">\ntimestamp: <timestamp>',
+          },
+        });
+      }
+
+      const endpointReachable = await probeEndpoint(endpoint_url);
       if (!endpointReachable) {
         return res.status(400).json({
           ok: false,
@@ -210,25 +228,46 @@ export function createNodeRegistryRouter(db, redis) {
       const now = Math.floor(Date.now() / 1000);
 
       if (db && db.query) {
-        const existing = await db.query(
-          'SELECT node_id FROM registered_nodes WHERE wallet = $1 AND endpoint_url = $2',
-          [wallet_address, endpoint_url]
-        );
+        // Duplicate check + insert under one advisory lock per (wallet, endpoint), in one
+        // transaction: two parallel identical requests (a double-click, or a replay inside the
+        // window) cannot both pass the check and insert twice.
+        const client = typeof db.connect === 'function' ? await db.connect() : db;
+        let broken;
+        try {
+          if (client !== db) {
+            await client.query('BEGIN');
+            await client.query('SELECT pg_advisory_xact_lock(hashtext($1))',
+              [`node-register:${String(wallet_address).toLowerCase()}|${endpoint_url}`]);
+          }
+          const existing = await client.query(
+            // Case-insensitive: the signed message lowercases the wallet, so a replay with a
+            // differently-cased address must still hit this duplicate check.
+            'SELECT node_id FROM registered_nodes WHERE lower(wallet) = lower($1) AND endpoint_url = $2',
+            [wallet_address, endpoint_url]
+          );
 
-        if (existing.rows.length > 0) {
-          return res.status(409).json({
-            ok: false,
-            error: 'Node with this wallet and endpoint already registered',
-            existingNodeId: existing.rows[0].node_id
-          });
+          if (existing.rows.length > 0) {
+            if (client !== db) await client.query('ROLLBACK');
+            return res.status(409).json({
+              ok: false,
+              error: 'Node with this wallet and endpoint already registered',
+              existingNodeId: existing.rows[0].node_id
+            });
+          }
+
+          await client.query(
+            `INSERT INTO registered_nodes
+             (node_id, wallet, node_type, endpoint_url, region, chain_ids, hardware_json, status, tier, registered_at, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', 'bronze', $8, $8)`,
+            [nodeId, wallet_address, node_type, endpoint_url, region, JSON.stringify(chain_ids), JSON.stringify(hardware || {}), now]
+          );
+          if (client !== db) await client.query('COMMIT');
+        } catch (err) {
+          if (client !== db) await client.query('ROLLBACK').catch((rbErr) => { broken = rbErr; });
+          throw err;
+        } finally {
+          if (client !== db) client.release(broken);
         }
-
-        await db.query(
-          `INSERT INTO registered_nodes
-           (node_id, wallet, node_type, endpoint_url, region, chain_ids, hardware_json, status, tier, registered_at, updated_at)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', 'bronze', $8, $8)`,
-          [nodeId, wallet_address, node_type, endpoint_url, region, JSON.stringify(chain_ids), JSON.stringify(hardware || {}), now]
-        );
       }
 
       if (redis) {

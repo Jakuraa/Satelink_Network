@@ -130,3 +130,57 @@ export function validateNodeEndpoint(endpointUrl) {
   if (isBlockedIp(host)) return 'invalid_endpoint';
   return null;
 }
+
+// ── Registration proof (W1 follow-up, 2026-10-21) ──────────────────────────────────────────
+// POST /api/nodes/register used to accept any wallet_address, so anyone could register nodes
+// (and earnings) under a wallet they do not control. Registration must now be signed
+// (EIP-191) by that wallet over every registered field except `hardware` (informational,
+// staff-only). The first line separates it from
+// heartbeats and from the /api/keys bind_wallet challenge.
+//   Satelink node registration
+//   wallet: <lowercase address>
+//   node_type: <type>
+//   endpoint: <endpoint_url>
+//   region: <region>
+//   chain_ids: <ids joined by ",">
+//   timestamp: <unix ms>
+// Registration is a one-off, possibly hand-signed step: a wider window than heartbeats. Replay
+// within it is harmless (same signed fields → the duplicate check answers 409).
+export const REGISTRATION_MAX_AGE_MS = 5 * 60_000;
+
+export function registrationMessage({ walletAddress, nodeType, endpointUrl, region, chainIds, timestamp }) {
+  return [
+    'Satelink node registration',
+    `wallet: ${String(walletAddress).toLowerCase()}`,
+    `node_type: ${nodeType}`,
+    `endpoint: ${endpointUrl}`,
+    `region: ${region}`,
+    `chain_ids: ${chainIds.join(',')}`,
+    `timestamp: ${timestamp}`,
+  ].join('\n');
+}
+
+/** @returns {{ok: true} | {ok: false, http: number, error: string}} */
+export function verifyNodeRegistration({ walletAddress, nodeType, endpointUrl, region, chainIds, timestamp, signature, now = Date.now() }) {
+  if (typeof signature !== 'string' || signature.length === 0 || signature.length > 200 || timestamp === undefined || timestamp === null) {
+    return { ok: false, http: 401, error: 'registration_signature_required' };
+  }
+  const ts = Number(timestamp);
+  if (!Number.isSafeInteger(ts)) return { ok: false, http: 400, error: 'invalid_timestamp' };
+  if (now - ts > REGISTRATION_MAX_AGE_MS) return { ok: false, http: 400, error: 'stale_registration' };
+  if (ts - now > HEARTBEAT_MAX_FUTURE_MS) return { ok: false, http: 400, error: 'future_registration' };
+  if (!Array.isArray(chainIds) || !chainIds.every((c) => Number.isSafeInteger(c) && c > 0)) {
+    return { ok: false, http: 400, error: 'invalid_chain_ids' };
+  }
+  let recovered;
+  try {
+    recovered = ethers.verifyMessage(
+      registrationMessage({ walletAddress, nodeType, endpointUrl, region, chainIds, timestamp: ts }), signature);
+  } catch {
+    return { ok: false, http: 401, error: 'invalid_registration_signature' };
+  }
+  if (recovered.toLowerCase() !== String(walletAddress).toLowerCase()) {
+    return { ok: false, http: 401, error: 'invalid_registration_signature' };
+  }
+  return { ok: true };
+}

@@ -170,15 +170,18 @@ describe('SEC-5 — node heartbeat requires the registered wallet\'s signature',
   it('registration probes the endpoint through the guarded client, not global fetch', async () => {
     // node_endpoint_fetch (resolve-then-check, no redirects) replaced fetch(); its behaviour is
     // covered in node_endpoint_dns_rebinding.test.js. '.example' never resolves -> refused.
+    const { registrationMessage } = await import('../src/services/node_registry/heartbeat_auth.js');
     let globalFetchCalls = 0;
     const realFetch = globalThis.fetch;
     globalThis.fetch = async () => { globalFetchCalls += 1; return new Response('', { status: 200 }); };
     try {
-      const res = await request(app(fakeDb())).post('/api/nodes/register').send({
-        wallet_address: owner.address, node_type: 'rpc', endpoint_url: 'https://node.example:8545',
-        region: 'us-east-1', chain_ids: [137],
-      });
+      const fields = { node_type: 'rpc', endpoint_url: 'https://node.example:8545', region: 'us-east-1', chain_ids: [137] };
+      const timestamp = Date.now();
+      const signature = await owner.signMessage(registrationMessage({ walletAddress: owner.address, nodeType: 'rpc',
+        endpointUrl: fields.endpoint_url, region: fields.region, chainIds: fields.chain_ids, timestamp }));
+      const res = await request(app(fakeDb())).post('/api/nodes/register').send({ wallet_address: owner.address, ...fields, timestamp, signature });
       expect(res.status).to.equal(400);
+      expect(res.body.error).to.match(/unreachable/i);
       expect(globalFetchCalls).to.equal(0);
     } finally { globalThis.fetch = realFetch; }
   });
