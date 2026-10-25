@@ -32,3 +32,5 @@ export type { RetryPolicy, RetryEnv } from './retry.js';
 
 export { BudgetExceededError, withBudget, priceEstimator, upperBoundInputTokens } from './budget.js';
 export type { ModelPrice, CostEstimator } from './budget.js';
+export { withMetering, InMemoryUsageSink } from './metering.js';
+export type { UsageEvent, UsageSink, MeteringOptions } from './metering.js';
