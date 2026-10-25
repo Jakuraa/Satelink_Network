@@ -22,7 +22,8 @@
  * Pure: amounts are Money (bigint minor units), time is epoch ms passed in by the caller.
  * Immutable — every operation returns a new Reservation; `version` is bumped by the repository.
  * References its Account by Id only (#7). Ledger posting of a capture belongs to the application
- * service (pending hold → posted debit), not to this aggregate.
+ * layer (coordination/reservation-postings.ts: hold → capture | release, all posted), not to this
+ * aggregate.
  *
  * State machine:
  *   held → captured (terminal)
@@ -70,8 +71,13 @@ export class Reservation {
   }
 
   /**
-   * Hold `amount` against `available` — the account's available balance AFTER every other active
-   * hold (see sumHeld). The caller reads both under the same lock/transaction it saves in.
+   * Hold `amount` against `available` — the customer account's ledger-derived available balance.
+   * Holds are posted transfers to the holds account, so that balance is ALREADY net of every other
+   * active hold: never subtract holds again. The authoritative check is repeated inside the unit of
+   * work, under the account lock, in the transaction that writes the hold.
+   *
+   * Policy: capture is refused at/after expiresAt (the hold has lapsed and is released by the
+   * recovery job). Work that may outlast the TTL must be reserved with a TTL that covers it.
    */
   static reserve(params: {
     id: ReservationId;
@@ -186,8 +192,9 @@ export class Reservation {
 }
 
 /**
- * Sum of the active holds in `currency` — subtract it from the ledger's available balance before
- * reserving. Reservations in another currency are a caller bug and are rejected, never skipped.
+ * Sum of the active holds in `currency` — for RECONCILIATION only (holds account balance ==
+ * Σ active holds). Never subtract it from a ledger available balance: holds are already posted
+ * there. Reservations in another currency are a caller bug and are rejected, never skipped.
  */
 export function sumHeld(currencyOf: Money, reservations: readonly Reservation[]): Result<Money, ReservationCurrencyMismatchError> {
   let total = 0n;

@@ -8,8 +8,9 @@
  * misclassified downstream — there is deliberately NO default: every
  * construction site must state what kind of transaction it is building.
  *
- * The set mirrors the CHECK constraint exactly (009, widened by 019):
- *   ledger_txns.kind IN ('draw','settlement','deposit','adjustment','reversal','refund')
+ * The set mirrors the CHECK constraint exactly (009, widened by 019 and 020):
+ *   ledger_txns.kind IN ('draw','settlement','deposit','adjustment','reversal','refund',
+ *                        'hold','capture','release')
  * 'refund' = money returned to a customer for a recognised revenue event
  * (Dodo refund / lost dispute); 'reversal' = mechanical undo of a transaction.
  */

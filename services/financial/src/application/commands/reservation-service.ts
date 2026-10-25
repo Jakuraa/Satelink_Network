@@ -20,7 +20,7 @@ import type { ReservationAccounts, ReservationError, ReservationPostingError } f
 import type { Money, Result } from '@satelink/kernel';
 import { ok, err } from '@satelink/kernel';
 import type { AvailableBalanceReader, ReservationRepository } from '../ports/reservation-repository.js';
-import type { ReservationUnitOfWork } from '../ports/reservation-unit-of-work.js';
+import type { CommitHoldError, CommitSettleError, ReservationUnitOfWork } from '../ports/reservation-unit-of-work.js';
 import type { RepositoryError, WriteError } from '../ports/repository-errors.js';
 
 export class ReservationNotFoundError {
@@ -40,13 +40,18 @@ export type ReservationServiceError =
   | ReservationPostingError
   | RepositoryError
   | WriteError
+  | CommitHoldError
+  | CommitSettleError
   | ReservationNotFoundError
   | InvalidReservationInputError;
 
 export interface ReservationServiceDeps {
   readonly reservations: ReservationRepository;
   readonly uow: ReservationUnitOfWork;
-  /** Ledger-derived available balance of the customer account (already net of posted holds). */
+  /**
+   * Ledger-derived available balance of the customer account (already net of posted holds). Used
+   * as a fast pre-check only: the authoritative check runs inside uow.commitHold under the lock.
+   */
   readonly balances: AvailableBalanceReader;
   /** Which ledger accounts a reservation posts to (customer = its accountId). */
   readonly accountsFor: (r: Reservation) => ReservationAccounts;
@@ -69,7 +74,8 @@ export async function reserve(deps: ReservationServiceDeps, cmd: ReserveCommand)
   if (!Number.isSafeInteger(cmd.ttlMs) || cmd.ttlMs <= 0) return err(new InvalidReservationInputError('ttlMs must be a positive integer'));
 
   // Idempotent replay: the same key returns the existing reservation (or a conflict), never a 2nd hold.
-  const prior = await deps.reservations.findByIdempotencyKey(cmd.idempotencyKey);
+  const replay = () => replayByKey(deps, cmd, accountId.value);
+  const prior = await deps.reservations.findByIdempotencyKey(cmd.accountId, cmd.idempotencyKey);
   if (prior.isErr) return prior;
   if (prior.value) return prior.value.matchRetry({ accountId: accountId.value, amount: cmd.amount, idempotencyKey: cmd.idempotencyKey });
 
@@ -83,9 +89,20 @@ export async function reserve(deps: ReservationServiceDeps, cmd: ReserveCommand)
   if (r.isErr) return r;
   const posting = holdPosting(r.value, deps.accountsFor(r.value));
   if (posting.isErr) return posting;
-  const committed = await deps.uow.commit(r.value, posting.value);
-  if (committed.isErr) return committed;
+  const committed = await deps.uow.commitHold(r.value, posting.value);
+  if (committed.isErr) {
+    // a concurrent reserve with the same key won the race: this call is its replay
+    if (committed.error.tag === 'DuplicateReservationError' && committed.error.field === 'idempotency_key') return replay();
+    return committed;
+  }
   return reload(deps, r.value.id.value);
+}
+
+async function replayByKey(deps: ReservationServiceDeps, cmd: ReserveCommand, accountId: AccountId): Promise<Result<Reservation, ReservationServiceError>> {
+  const winner = await deps.reservations.findByIdempotencyKey(cmd.accountId, cmd.idempotencyKey);
+  if (winner.isErr) return winner;
+  if (!winner.value) return err(new ReservationNotFoundError(`key ${cmd.idempotencyKey}`));
+  return winner.value.matchRetry({ accountId, amount: cmd.amount, idempotencyKey: cmd.idempotencyKey });
 }
 
 export function capture(deps: ReservationServiceDeps, reservationId: string, amount: Money, now: number): Promise<Result<Reservation, ReservationServiceError>> {
@@ -96,23 +113,46 @@ export function release(deps: ReservationServiceDeps, reservationId: string, now
   return transition(deps, reservationId, (r) => r.release(now));
 }
 
+export interface ExpireResult {
+  readonly expired: readonly string[];
+  /** Lapsed holds that could not be expired this run (error text per id) — alert on a non-empty list. */
+  readonly failed: readonly { readonly id: string; readonly error: string }[];
+}
+
 /**
- * Orphan recovery: expire (and post the release of) up to `limit` lapsed holds. Returns the ids
- * expired. A reservation that moved on concurrently (stale version) is skipped, never forced.
+ * Orphan recovery: expire (and post the release of) up to `limit` lapsed holds. Failures are
+ * reported, never swallowed, and skipped for the rest of the run so they cannot starve the others.
+ * A reservation settled concurrently (stale version / already settled) is not a failure.
  */
-export async function expireLapsed(deps: ReservationServiceDeps, now: number, limit = 100): Promise<Result<string[], RepositoryError>> {
-  const lapsed = await deps.reservations.findLapsed(now, limit);
-  if (lapsed.isErr) return lapsed;
+export async function expireLapsed(deps: ReservationServiceDeps, now: number, limit = 100): Promise<Result<ExpireResult, RepositoryError>> {
   const expired: string[] = [];
-  for (const r of lapsed.value) {
-    const next = r.expire(now);
-    if (next.isErr || next.value === r) continue;
-    const posting = settlePosting(next.value, deps.accountsFor(next.value));
-    if (posting.isErr) continue;
-    const committed = await deps.uow.commit(next.value, posting.value);
-    if (committed.isOk) expired.push(r.id.value);
+  const failed: { id: string; error: string }[] = [];
+  const skip = new Set<string>();
+  while (expired.length + failed.length < limit) {
+    const page = await deps.reservations.findLapsed(now, limit - expired.length - failed.length, skip);
+    if (page.isErr) return page;
+    if (page.value.length === 0) break;
+    for (const r of page.value) {
+      skip.add(r.id.value);
+      const next = r.expire(now);
+      if (next.isErr) { failed.push({ id: r.id.value, error: describe(next.error) }); continue; }
+      const posting = settlePosting(next.value, deps.accountsFor(next.value));
+      if (posting.isErr) { failed.push({ id: r.id.value, error: describe(posting.error) }); continue; }
+      const committed = await deps.uow.commitSettle(next.value, posting.value);
+      if (committed.isOk) expired.push(r.id.value);
+      else if (committed.error.tag !== 'StaleVersionError' && committed.error.tag !== 'AlreadySettledError') {
+        failed.push({ id: r.id.value, error: describe(committed.error) });
+      }
+    }
   }
-  return ok(expired);
+  return ok({ expired, failed });
+}
+
+function describe(e: unknown): string {
+  const o = e as { tag?: string; message?: string; toString?: () => string };
+  if (typeof o?.message === 'string') return `${o.tag ?? 'Error'}: ${o.message}`;
+  const t = o?.toString?.();
+  return t && t !== '[object Object]' ? t : (o?.tag ?? 'unknown error');
 }
 
 async function transition(
@@ -128,7 +168,7 @@ async function transition(
   if (next.value === found.value) return ok(found.value); // idempotent replay: nothing to write
   const posting = settlePosting(next.value, deps.accountsFor(next.value));
   if (posting.isErr) return posting;
-  const committed = await deps.uow.commit(next.value, posting.value);
+  const committed = await deps.uow.commitSettle(next.value, posting.value);
   if (committed.isErr) return committed;
   return reload(deps, reservationId);
 }

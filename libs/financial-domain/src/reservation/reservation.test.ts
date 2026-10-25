@@ -138,7 +138,7 @@ describe('Reservation aggregate', () => {
     });
   });
 
-  describe('sumHeld (available = ledger available − active holds)', () => {
+  describe('sumHeld (reconciliation: holds account balance == Σ active holds)', () => {
     it('sums only active holds', () => {
       const a = hold(100n);
       const b = must(hold(200n).capture(usdt(50n), T0 + 1));
