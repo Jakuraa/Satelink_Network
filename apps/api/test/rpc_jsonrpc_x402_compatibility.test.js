@@ -129,6 +129,25 @@ describe('JSON-RPC 2.0 / x402 compatibility suite (Step D)', function () {
           return { rowCount: 1, rows: [{ credits_usdt: '0.10' }] };
         }
         if (/SELECT.*FROM\s+api_credits\s+WHERE\s+api_key\s*=\s*\$1/i.test(text)) {
+          if (params[0] && params[0].includes('unknown')) {
+            return { rows: [] };
+          }
+          if (params[0] && params[0].includes('unfunded')) {
+            return {
+              rows: [
+                {
+                  api_key: params[0],
+                  wallet_address: PAYER_ADDRESS,
+                  tier: 'free',
+                  balance_usdt: '0.00',
+                  credits_usdt: '0.00',
+                  credits_remaining: 0,
+                  daily_used: 0,
+                  daily_limit: 1000,
+                },
+              ],
+            };
+          }
           return {
             rows: [
               {
@@ -445,5 +464,139 @@ describe('JSON-RPC 2.0 / x402 compatibility suite (Step D)', function () {
     expect(typeof errorMessage).to.equal('string');
     expect(errorCode).to.equal(-32005);
     expect(errorMessage.length).to.be.greaterThan(0);
+  });
+
+  // 13. Keyed caller with unfunded key receives compliant JSON-RPC 2.0 error object.
+  it('13. keyed caller with unfunded key receives compliant JSON-RPC 2.0 error object', async () => {
+    const prev = process.env.CREDIT_CANONICAL;
+    process.env.CREDIT_CANONICAL = 'true';
+    try {
+      const res = await request(app)
+        .post('/rpc/polygon')
+        .set('X-API-Key', 'mock_unfunded_key_999')
+        .send({ jsonrpc: '2.0', method: 'eth_blockNumber', params: [], id: 1301 });
+
+      expect(res.status).to.equal(402);
+      expect(res.body.jsonrpc).to.equal('2.0');
+      expect(res.body.id).to.equal(1301);
+      expect(res.body.error).to.be.an('object');
+      expect(typeof res.body.error).to.not.equal('string');
+      expect(res.body.error.code).to.equal(-32005);
+      expect(res.body.error.message).to.be.a('string');
+      expect(res.body.error.data).to.be.an('object');
+      expect(res.body.deposit || res.body.payment).to.be.an('object');
+    } finally {
+      process.env.CREDIT_CANONICAL = prev;
+    }
+  });
+
+  // 14. Keyed caller with unknown key receives compliant JSON-RPC 2.0 error object with matching id.
+  it('14. keyed caller with unknown key receives compliant JSON-RPC 2.0 error object with matching id', async () => {
+    const prev = process.env.CREDIT_CANONICAL;
+    process.env.CREDIT_CANONICAL = 'true';
+    try {
+      const res = await request(app)
+        .post('/rpc/polygon')
+        .set('X-API-Key', 'sk_unknown_key_0000000000000000')
+        .send({ jsonrpc: '2.0', method: 'eth_blockNumber', params: [], id: 'client-key-test' });
+
+      expect(res.status).to.be.oneOf([401, 402]);
+      expect(res.body.jsonrpc).to.equal('2.0');
+      expect(res.body.id).to.equal('client-key-test');
+      expect(res.body.error).to.be.an('object');
+      expect(typeof res.body.error).to.not.equal('string');
+      expect(res.body.error.code).to.equal(-32005);
+      expect(res.body.error.message).to.be.a('string');
+      expect(res.body.error.data.error_code).to.be.a('string');
+    } finally {
+      process.env.CREDIT_CANONICAL = prev;
+    }
+  });
+
+  // 15. Keyed caller with daily limit exceeded receives compliant JSON-RPC 2.0 error object
+  it('15. keyed caller with daily limit exceeded receives compliant JSON-RPC 2.0 error object with code -32005', async () => {
+    const prev = process.env.CREDIT_CANONICAL;
+    const prevPath = process.env.CAPACITY_ENFORCEMENT_PATH;
+    process.env.CREDIT_CANONICAL = 'true';
+    process.env.CAPACITY_ENFORCEMENT_PATH = 'legacy';
+    try {
+      const pool = fakePool();
+      // Mock pool returning an account that exceeded daily limit
+      const origQuery = pool.query;
+      const customQuery = async (sql, params = []) => {
+        const text = String(sql);
+        if (/FROM\s+api_usage_daily/i.test(text)) {
+          return { rows: [{ request_count: 1000 }] };
+        }
+        if (/SELECT.*FROM\s+api_credits\s+WHERE\s+api_key\s*=\s*\$1/i.test(text)) {
+          return {
+            rows: [
+              {
+                api_key: params[0],
+                wallet_address: PAYER_ADDRESS,
+                tier: 'free',
+                balance_usdt: '10.00',
+                credits_usdt: '10.00',
+                credits_remaining: 1000,
+                daily_used: 1000,
+                daily_limit: 1000,
+              },
+            ],
+          };
+        }
+        return origQuery(sql, params);
+      };
+      pool.query = customQuery;
+      pool.connect = async () => ({ query: customQuery, release() {} });
+
+      const customGate = createFreeTierGate(silent, null);
+      const customX402 = createX402Middleware(pool, silent, { httpServer: fakeServer() });
+      const customApp = express();
+      attachBaseMiddleware(customApp);
+      customApp.use('/rpc', customX402, (req, res, next) => (req.x402?.settled ? next() : customGate(req, res, next)), express.json(), createRpcGateway(pool));
+
+      const res = await request(customApp)
+        .post('/rpc/polygon')
+        .set('X-API-Key', 'sk_mock_daily_limit_key')
+        .send({ jsonrpc: '2.0', method: 'eth_blockNumber', params: [], id: 1501 });
+
+      expect(res.status).to.equal(429);
+      expect(res.body.jsonrpc).to.equal('2.0');
+      expect(res.body.id).to.equal(1501);
+      expect(res.body.error).to.be.an('object');
+      expect(res.body.error.code).to.equal(-32005);
+      expect(res.body.error.data.error_code).to.equal('daily_limit_exceeded');
+      expect(res.body.payment).to.be.an('object');
+    } finally {
+      process.env.CREDIT_CANONICAL = prev;
+      process.env.CAPACITY_ENFORCEMENT_PATH = prevPath;
+    }
+  });
+
+  // 16. Standard Web3 client parser compatibility (ethers/viem/web3.py) handles error objects safely
+  it('16. standard Web3 client parser safely reads error object on all billing denial conditions', async () => {
+    const denials = [
+      { name: 'unfunded', key: 'mock_unfunded_key_999' },
+      { name: 'unknown', key: 'sk_unknown_key_0000000000000000' }
+    ];
+
+    const prev = process.env.CREDIT_CANONICAL;
+    process.env.CREDIT_CANONICAL = 'true';
+    try {
+      for (const d of denials) {
+        const res = await request(app)
+          .post('/rpc/polygon')
+          .set('X-API-Key', d.key)
+          .send({ jsonrpc: '2.0', method: 'eth_blockNumber', params: [], id: `test-${d.name}` });
+
+        const parsed = res.body;
+        expect(parsed.error).to.be.an('object');
+        expect(typeof parsed.error.code).to.equal('number');
+        expect(typeof parsed.error.message).to.equal('string');
+        expect(parsed.error.code).to.equal(-32005);
+      }
+    } finally {
+      process.env.CREDIT_CANONICAL = prev;
+    }
   });
 });
