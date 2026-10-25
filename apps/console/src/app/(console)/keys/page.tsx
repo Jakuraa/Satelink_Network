@@ -71,6 +71,10 @@ async function AccountKeysPage() {
         lede="Keys on your account — the same on every browser and device. A key is shown once, when it is created."
         actions={<CreateAccountKey />}
       />
+      <div className="mb-4 flex items-center justify-between rounded border border-sl-border bg-sl-surface p-3 text-xs text-sl-text-muted">
+        <span>Looking for cURL examples, Python snippets, and API schemas?</span>
+        <a href="/developers" className="font-medium text-sl-accent hover:underline">Go to API &amp; Developers →</a>
+      </div>
       {browserKeys.length > 0 && <MigrateBanner count={browserKeys.length} />}
       <Panel title={res.ok ? `Keys (${res.data.length})` : "Keys"}>
         {!res.ok ? (

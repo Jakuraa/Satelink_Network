@@ -41,10 +41,10 @@ export const USE_CASE_TASKS: Record<string, string[]> = {
 };
 
 export const TASKS: Record<string, { title: string; body: string; href: string }> = {
-  "market-data": { title: "Get market data", body: "Funding rates, open interest, order books — pick a market, see the price, get a chart.", href: "/data" },
-  "agent-access": { title: "Give my software access", body: "Create a key for an app or agent, choose what it can use and set a monthly limit.", href: "/agents/new" },
-  "add-money": { title: "Add money", body: "Choose a plan or a credit pack, or top up with USDT.", href: "/billing/add" },
-  spend: { title: "See what I've spent", body: "This month, per agent, what's left and when it resets.", href: "/spend" },
+  "market-data": { title: "Run a paper simulation", body: "Execute simulated SMA crossover strategies with live snapshot data ($0.05 / run).", href: "/paper-trading" },
+  "agent-access": { title: "API keys & developer access", body: "Create an API key for your bot or AI agent with idempotency and spend controls.", href: "/developers" },
+  "add-money": { title: "Fund account credits", body: "Deposit USDT on Polygon or configure x402 on Base to power simulations.", href: "/billing/add" },
+  spend: { title: "See what I've spent", body: "Inspect request activity, simulation charges, and remaining limits.", href: "/spend" },
   rpc: { title: "Make a blockchain call", body: "Polygon RPC over HTTPS — your endpoint, a first request, and what it costs.", href: "/rpc" },
 };
 

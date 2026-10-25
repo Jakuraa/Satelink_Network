@@ -357,6 +357,20 @@ d('CONSOLE_ACCOUNTS_V1', function () {
       assert.equal((await call('/intelligence/not-a-metric', { method: 'POST', body: { keyId: k.id } })).status, 404);
     });
 
+    it('trading paper simulation uses MY key server-side and never for another account', async () => {
+      const k = await fundedKey(1);
+      await linkKey(pool, A, { apiKey: k.key });
+      const r = await (await call('/trading/paper/simulate', { method: 'POST', body: { keyId: k.id, idempotencyKey: 'sim_test_001' } })).json();
+      assert.equal(r.url, 'http://intel.test/v1/trading/paper/simulate');
+      assert.equal(r.sawKey, k.key);
+      // Another account cannot run simulation with my key -> 404 key_not_found
+      assert.equal((await call('/trading/paper/simulate', { method: 'POST', account: B, body: { keyId: k.id, idempotencyKey: 'sim_test_001' } })).status, 404);
+      // Account with no keys gets 402 no_key
+      const noKeyAcct = 'user_no_keys';
+      await pool.query(`INSERT INTO "user" VALUES ($1, 'nokey@example.test')`, [noKeyAcct]);
+      assert.equal((await call('/trading/paper/simulate', { method: 'POST', account: noKeyAcct, body: { idempotencyKey: 'sim_test_001' } })).status, 402);
+    });
+
     it('deposit claim goes through the unchanged key route with MY key only', async () => {
       const k = await fundedKey(1);
       await linkKey(pool, A, { apiKey: k.key });

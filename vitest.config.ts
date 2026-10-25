@@ -90,6 +90,15 @@ export default defineConfig({
         },
       },
       {
+        test: {
+          name: 'console',
+          include: ['apps/console/**/*.{test,spec}.{ts,tsx}'],
+          exclude: ['**/node_modules/**', 'apps/console/e2e/**', '.claude/worktrees/**', ...INTEGRATION_PATTERNS],
+          environment: 'node',
+          testTimeout: 20_000,
+        },
+      },
+      {
         extends: true,
         plugins: [workspaceResolver],
         test: {

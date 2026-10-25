@@ -5,7 +5,7 @@ import { loadKey, series, windowSum } from "@/lib/data";
 import { int, usd } from "@/lib/format";
 import { fingerprint, getActiveKey, getKeys } from "@/lib/keys";
 import { accountsEnabled } from "@/lib/account";
-import { loadCatalog, loadKeys, loadPlan, loadSpend, loadUsage } from "@/lib/v2";
+import { loadCatalog, loadKeys, loadPlan, loadUsage } from "@/lib/v2";
 import { UsageDashboard } from "@/components/v2/UsageDashboard";
 
 export const metadata: Metadata = { title: "Usage & Execution" };

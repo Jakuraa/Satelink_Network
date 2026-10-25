@@ -17,6 +17,7 @@ const ALLOW: [string, RegExp][] = [
   ["POST", /^\/wallets\/(challenge|verify)$/],
   ["DELETE", /^\/wallets\/0x[0-9a-fA-F]{40}$/],
   ["POST", /^\/intelligence\/[a-z-]+$/],
+  ["POST", /^\/trading\/paper\/simulate$/],
   ["POST", /^\/checkout$/],
   ["POST", /^\/keys\/\d+\/deposit$/],
   ["POST", /^\/onboarding\/(account|name|use|plan|review|safety|back)$/],
@@ -42,10 +43,10 @@ async function handle(req: Request, ctx: { params: Promise<{ path: string[] }> }
     return NextResponse.json({ ok: false, error: "not_allowed" }, { status: 404 });
   }
   const body = method === "DELETE" ? undefined : await req.json().catch(() => ({}));
-  if (path.startsWith("/intelligence/") || /^\/keys\/\d+\/deposit$/.test(path)) {
-    // Metric runs return the upstream body as-is (status + payload).
+  if (path.startsWith("/intelligence/") || path.startsWith("/trading/") || /^\/keys\/\d+\/deposit$/.test(path)) {
+    // Metric and simulation runs return the upstream body as-is (status + payload).
     const raw = await meRaw("POST", path, body);
-    audit(g.session, path.startsWith("/intelligence/") ? "me/intelligence" : "me/deposit", { target: path.split("/")[2], status: raw.status });
+    audit(g.session, path.startsWith("/intelligence/") ? "me/intelligence" : path.startsWith("/trading/") ? "me/trading" : "me/deposit", { target: path.split("/")[2], status: raw.status });
     return NextResponse.json(raw.body, { status: raw.status });
   }
   const r = await meMutate<unknown>(method, path, body, req.headers.get("idempotency-key") || undefined, path.startsWith("/onboarding/") ? clientHeaders(req) : {});
