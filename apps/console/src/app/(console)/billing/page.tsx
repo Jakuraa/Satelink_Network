@@ -128,6 +128,26 @@ async function BillingV2() {
         </Panel>
       )}
 
+      <Panel title="Simulation &amp; API Metering Rates" className="mt-4">
+        <div className="grid gap-3 sm:grid-cols-3 text-xs">
+          <div className="rounded border border-sl-border bg-sl-bg p-3">
+            <span className="font-semibold text-sl-text">Paper Trading Simulation</span>
+            <p className="mt-1 font-mono text-base font-semibold text-sl-accent">$0.05 USDT / run</p>
+            <p className="mt-1 text-[11px] text-sl-text-muted">Multi-market deterministic execution simulation. Charged only upon successful completion.</p>
+          </div>
+          <div className="rounded border border-sl-border bg-sl-bg p-3">
+            <span className="font-semibold text-sl-text">Polygon RPC</span>
+            <p className="mt-1 font-mono text-base font-semibold text-sl-text">$0.00003 / call</p>
+            <p className="mt-1 text-[11px] text-sl-text-muted">JSON-RPC 2.0 calls on chain 137. Keyed or via x402 bundle ($0.10 = 1,000 calls).</p>
+          </div>
+          <div className="rounded border border-sl-border bg-sl-bg p-3">
+            <span className="font-semibold text-sl-text">Idempotent Replay Cache</span>
+            <p className="mt-1 font-mono text-base font-semibold text-sl-text">$0.00 on retries</p>
+            <p className="mt-1 text-[11px] text-sl-text-muted">Idempotent retries return cached reports with zero repeated deductions.</p>
+          </div>
+        </div>
+      </Panel>
+
       <Panel title={`Plans${cat ? ` · catalog ${cat.version}` : ""}`} className="mt-4">
         {!cat ? <ErrorNote what="the plan catalogue" /> : (
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4" data-testid="plan-cards">

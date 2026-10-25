@@ -221,6 +221,44 @@ export function createMeRouter(pool, {
     }
   });
 
+  // Run a metered paper trading simulation with one of MY keys ($0.05 USDT).
+  // Charged against canonical api_credits via authorizeAndMeter in the trading route.
+  router.post('/trading/paper/simulate', async (req, res) => {
+    try {
+      const keyId = req.body?.keyId ? Number(req.body.keyId) : null;
+      let key = null;
+      if (keyId && Number.isInteger(keyId) && keyId > 0) {
+        key = await ownedKeyString(req, keyId);
+        if (!key) {
+          return res.status(404).json({ ok: false, error: 'key_not_found' });
+        }
+      } else {
+        const row = (await pool.query(
+          `SELECT c.api_key FROM account_api_keys l JOIN api_credits c ON c.id = l.api_key_id
+            WHERE l.account_id = $1 AND l.revoked_at IS NULL ORDER BY l.created_at ASC LIMIT 1`,
+          [req.account.accountId]
+        )).rows[0];
+        key = row?.api_key ?? null;
+        if (!key) {
+          return res.status(402).json({
+            ok: false,
+            error: 'no_key',
+            message: 'No active API key found on this account. Create an API key first.',
+            disclaimer: 'SIMULATED_PAPER_EXECUTION: NOT_ACTUAL_RETURNS',
+          });
+        }
+      }
+      const { keyId: _discard, ...forwardBody } = req.body || {};
+      return await loopback(res, '/v1/trading/paper/simulate', key, {
+        method: 'POST',
+        body: JSON.stringify(forwardBody),
+      });
+    } catch (err) {
+      logger.error?.('[console-accounts] trading paper simulation failed:', err.message);
+      return res.status(502).json({ ok: false, error: 'trading_simulation_unavailable' });
+    }
+  });
+
   // Wallets + x402
   router.get('/wallets', h((req) => listWallets(pool, req.account.accountId)));
   router.post('/wallets/challenge', h((req) => createChallenge(pool, req.account.accountId, req.body || {})));

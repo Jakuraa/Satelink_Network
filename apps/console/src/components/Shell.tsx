@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Activity, BarChart3, Bell, Bot, CreditCard, Home, KeyRound, LayoutDashboard, LineChart, Menu, MoreHorizontal, Moon, Search,
+  Activity, BarChart3, Bell, BookOpen, Code2, CreditCard, KeyRound, LayoutDashboard, Menu, MoreHorizontal, Moon, PlayCircle, Search,
   Server, Settings, Sun, Wallet, X, Zap,
 } from "lucide-react";
 
@@ -12,46 +12,46 @@ type NavItem = { href: string; label: string; key: string; icon: React.Component
 
 export const NAV: NavItem[] = [
   { href: "/", label: "Overview", key: "o", icon: LayoutDashboard },
-  { href: "/agents", label: "Agents", key: "a", icon: Bot },
-  { href: "/keys", label: "API keys", key: "k", icon: KeyRound },
-  { href: "/requests", label: "Requests", key: "r", icon: Activity },
-  { href: "/usage", label: "Usage", key: "u", icon: BarChart3 },
-  { href: "/trading-intelligence", label: "Trading Intel", key: "t", icon: LineChart, group: "Products" },
-  { href: "/rpc", label: "RPC", key: "p", icon: Server, group: "Products" },
-  { href: "/x402", label: "x402", key: "x", icon: Zap, group: "Products" },
-  { href: "/billing", label: "Billing", key: "b", icon: CreditCard, group: "Account" },
+  { href: "/paper-trading", label: "Paper Trading", key: "p", icon: PlayCircle },
+  { href: "/developers", label: "API & Developers", key: "d", icon: Code2 },
+  { href: "/billing", label: "Credits & Billing", key: "b", icon: CreditCard },
+  { href: "/docs", label: "Documentation", key: "m", icon: BookOpen },
+  { href: "/requests", label: "Requests", key: "r", icon: Activity, group: "Activity & Logs" },
+  { href: "/spend", label: "Spending & Caps", key: "s", icon: Wallet, group: "Activity & Logs" },
   { href: "/alerts", label: "Alerts", key: "l", icon: Bell, group: "Account" },
-  { href: "/settings", label: "Settings", key: "s", icon: Settings, group: "Account" },
+  { href: "/settings", label: "Settings", key: "e", icon: Settings, group: "Account" },
 ];
 
-// Console V2 (account mode): Simple mode is task-first; Advanced keeps the
-// analytics pages. The bottom tab bar is the mobile navigation in both.
+// Console V2 (account mode): Developer-first navigation organized around
+// simulation, API integration, and billing truth.
 export const SIMPLE_NAV: NavItem[] = [
-  { href: "/", label: "Home", key: "h", icon: Home },
-  { href: "/data", label: "Get market data", key: "d", icon: LineChart },
-  { href: "/agents", label: "Agents & keys", key: "a", icon: Bot },
-  { href: "/billing", label: "Billing", key: "b", icon: CreditCard },
-  { href: "/spend", label: "Spending", key: "p", icon: Wallet },
-  { href: "/settings", label: "Settings", key: "s", icon: Settings },
+  { href: "/", label: "Overview", key: "o", icon: LayoutDashboard },
+  { href: "/paper-trading", label: "Paper Trading", key: "p", icon: PlayCircle },
+  { href: "/developers", label: "API & Developers", key: "d", icon: Code2 },
+  { href: "/billing", label: "Credits & Billing", key: "b", icon: CreditCard },
+  { href: "/docs", label: "Documentation", key: "m", icon: BookOpen },
+  { href: "/spend", label: "Spending & Caps", key: "s", icon: Wallet, group: "Account" },
+  { href: "/settings", label: "Settings", key: "e", icon: Settings, group: "Account" },
 ];
 export const ADVANCED_NAV: NavItem[] = [
-  { href: "/", label: "Dashboard", key: "o", icon: LayoutDashboard },
-  { href: "/data", label: "Market data", key: "d", icon: LineChart },
-  { href: "/agents", label: "Agents", key: "a", icon: Bot },
-  { href: "/keys", label: "API keys", key: "k", icon: KeyRound },
-  { href: "/requests", label: "Requests", key: "r", icon: Activity },
-  { href: "/usage", label: "Usage", key: "u", icon: BarChart3 },
-  { href: "/rpc", label: "RPC", key: "c", icon: Server, group: "Products" },
-  { href: "/x402", label: "x402", key: "x", icon: Zap, group: "Products" },
-  { href: "/billing", label: "Billing", key: "b", icon: CreditCard, group: "Account" },
-  { href: "/spend", label: "Spending", key: "p", icon: Wallet, group: "Account" },
+  { href: "/", label: "Overview", key: "o", icon: LayoutDashboard },
+  { href: "/paper-trading", label: "Paper Trading", key: "p", icon: PlayCircle },
+  { href: "/developers", label: "API & Developers", key: "d", icon: Code2 },
+  { href: "/billing", label: "Credits & Billing", key: "b", icon: CreditCard },
+  { href: "/docs", label: "Documentation", key: "m", icon: BookOpen },
+  { href: "/keys", label: "API Keys", key: "k", icon: KeyRound, group: "Developer Tools" },
+  { href: "/requests", label: "Requests", key: "r", icon: Activity, group: "Developer Tools" },
+  { href: "/usage", label: "Usage Analytics", key: "u", icon: BarChart3, group: "Developer Tools" },
+  { href: "/rpc", label: "RPC (Polygon)", key: "c", icon: Server, group: "Protocols" },
+  { href: "/x402", label: "x402 Protocol", key: "x", icon: Zap, group: "Protocols" },
+  { href: "/spend", label: "Spending & Caps", key: "s", icon: Wallet, group: "Account" },
   { href: "/alerts", label: "Alerts", key: "l", icon: Bell, group: "Account" },
-  { href: "/settings", label: "Settings", key: "s", icon: Settings, group: "Account" },
+  { href: "/settings", label: "Settings", key: "e", icon: Settings, group: "Account" },
 ];
 const TABS = [
-  { href: "/", label: "Home", icon: Home },
-  { href: "/data", label: "Data", icon: LineChart },
-  { href: "/agents", label: "Agents", icon: Bot },
+  { href: "/", label: "Overview", icon: LayoutDashboard },
+  { href: "/paper-trading", label: "Paper", icon: PlayCircle },
+  { href: "/developers", label: "API", icon: Code2 },
   { href: "/billing", label: "Billing", icon: CreditCard },
 ];
 

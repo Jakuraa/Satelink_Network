@@ -4,7 +4,7 @@ import { useState } from "react";
 
 const input = "h-11 w-full rounded-[var(--sl-radius)] border border-sl-border-strong bg-sl-surface px-3.5 text-[15px] text-sl-text placeholder:text-sl-text-subtle focus:border-sl-accent focus:outline-none focus:ring-2 focus:ring-sl-accent/30";
 
-export function SignInForm({ next, signup = false }: { next: string; signup?: boolean }) {
+export function SignInForm({ next }: { next: string; signup?: boolean }) {
   const [email, setEmail] = useState("");
   const [state, setState] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [googleErr, setGoogleErr] = useState(false);

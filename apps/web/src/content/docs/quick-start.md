@@ -49,13 +49,26 @@ confirmations (about 5 minutes). Full detail: [Billing & Credits](/docs/billing)
 
 ## 5. Call with your key & check usage
 
-Call with your authenticated key:
+Call JSON-RPC with your authenticated key:
 
 ```bash
 curl -X POST https://rpc.satelink.network/rpc \
   -H "Content-Type: application/json" \
   -H "X-API-Key: YOUR_API_KEY" \
   -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
+```
+
+Or execute a paper trading simulation run ($0.05/call):
+
+```bash
+curl -X POST https://api.satelink.network/v1/trading/paper/simulate \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{
+    "idempotencyKey": "my-first-simulation-001",
+    "instrumentId": "BINANCE:BTCUSDT",
+    "strategy": "sma-crossover"
+  }'
 ```
 
 Check your usage and remaining credits:
