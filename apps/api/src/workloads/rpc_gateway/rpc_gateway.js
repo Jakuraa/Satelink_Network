@@ -12,6 +12,7 @@ import { enforceCapacity, precheckCapacity } from '../../capacity/capacity_enfor
 import { paymentRequiredResponse } from '../../utils/payment_required.js';
 import { PRICE_PER_CALL_USDT } from '../../billing/credit_service.mjs';
 import { requireHeaderSecret } from '../../security/header_secret.js';
+import { requireAdminAuth } from '../../admin/admin_router.js';
 
 // Customer Zero P0 recovery: when CREDIT_CANONICAL=true, authenticated callers
 // (X-API-Key or x-wallet-address) are authorized + metered + deducted against
@@ -47,6 +48,17 @@ function getClientIp(req) {
            req.headers['x-real-ip'] ||
            req.socket?.remoteAddress ||
            'unknown';
+}
+
+/** Staff-only node routing snapshot (lists node endpoints). Mount behind requireAdminAuth only. */
+export async function nodeRoutingDebugHandler(_req, res) {
+    try {
+        const status = await getNodeRoutingStatus();
+        res.json({ ok: true, ...status });
+    } catch (err) {
+        console.error('[RPC Gateway] node-routing debug failed:', err.message);
+        res.status(500).json({ ok: false, error: 'node_routing_unavailable' });
+    }
 }
 
 export function createRpcGateway(db) {
@@ -94,14 +106,11 @@ export function createRpcGateway(db) {
         res.json({ ok: true, tiers: getTiers() });
     });
 
-    router.get('/debug/node-routing', async (req, res) => {
-        try {
-            const status = await getNodeRoutingStatus();
-            res.json({ ok: true, ...status });
-        } catch (err) {
-            res.status(500).json({ ok: false, error: err.message });
-        }
-    });
+    // Staff only (W1 follow-up): it lists node endpoints (the 30-char "truncation" still
+    // shows the full IP and port) and was reachable by any paying x402 or API-key caller.
+    // app_factory also serves it BEFORE the /rpc gates (x402 / free-tier), so a staff token alone
+    // reaches it; this mount stays as defence in depth wherever the gateway is mounted.
+    router.get('/debug/node-routing', requireAdminAuth, nodeRoutingDebugHandler);
 
     router.get('/chains', (req, res) => {
         const chains = getSupportedChains().map(chainKey => {

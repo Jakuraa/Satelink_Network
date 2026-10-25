@@ -3,7 +3,7 @@ import { createHealthHandler } from "./src/core/health_route.js";
 import compression from 'compression';
 import { attachBaseMiddleware } from "./src/security/middleware.js";
 import revenueRoutes from "./src/routes/revenue.js";
-import { createRpcGateway } from "./src/workloads/rpc_gateway/rpc_gateway.js";
+import { createRpcGateway, nodeRoutingDebugHandler } from "./src/workloads/rpc_gateway/rpc_gateway.js";
 import { createMevRelayRouter } from "./src/workloads/mev_relay/index.js";
 import { createLangChainAdapterRouter } from "./src/workloads/ai_gateway/langchain_adapter.js";
 import { createPluginManifestRouter, createOpenApiRouter } from "./src/workloads/ai_gateway/plugin_manifest.js";
@@ -409,6 +409,9 @@ app.get("/api/mode", (req, res) => {
   // Persistent traffic aggregates (rpc_traffic_daily). Mounted FIRST so 402s from the
   // x402 middleware and freeTierGate are counted too. Records on res 'finish' into an
   // in-memory batch flushed every 60s — never blocks or fails the request.
+  // Staff-only debug route, served BEFORE the /rpc gates below: otherwise freeTierGate answers
+  // 402 to a request carrying only the staff token (#575 review).
+  app.get("/rpc/debug/node-routing", requireAdminAuth, nodeRoutingDebugHandler);
   app.use("/rpc", rpcTrafficRecorder.middleware);
   app.use("/rpc", x402Middleware, freeTierGateUnlessX402Paid, express.json({ limit: '1mb' }), createRpcGateway(pool));
 
