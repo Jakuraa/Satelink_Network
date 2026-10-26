@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, X, Coins, ShieldCheck, Zap, ArrowRight, Info, AlertTriangle } from "lucide-react";
+import { X, Coins, Zap, ArrowRight, Info, ShieldCheck } from "lucide-react";
 
 interface BuyUsageCreditsModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ interface BuyUsageCreditsModalProps {
 export function BuyUsageCreditsModal({
   isOpen,
   onClose,
-  currentBalanceUu = 0,
+  currentBalanceUu: _currentBalanceUu = 0,
 }: BuyUsageCreditsModalProps) {
   const [selectedPreset, setSelectedPreset] = useState<string>("pack_250");
   const [isCustom, setIsCustom] = useState(false);
@@ -97,6 +97,15 @@ export function BuyUsageCreditsModal({
     setIsSubmitting(true);
     setError(null);
     try {
+      if (rail === "payram") {
+        window.location.href = `/billing/checkout?plan=${encodeURIComponent(selectedPreset)}&method=payram_usdt`;
+        return;
+      }
+      if (rail === "transacty") {
+        window.location.href = `/billing/checkout?plan=${encodeURIComponent(selectedPreset)}&method=transacty_upi`;
+        return;
+      }
+
       const payload = isCustom
         ? { customAmountInr, paymentRail: rail, type: "custom_pack" }
         : { itemId: selectedPreset, paymentRail: rail, type: "preset_pack" };

@@ -32,7 +32,8 @@ export function AddMoneyFlow({ catalog, keys, plan, returned }: { catalog: PlanC
     const j = await r.json().catch(() => null);
     setBusy(false);
     if (j?.ok && j.data?.checkoutUrl) { window.location.href = j.data.checkoutUrl; return; }
-    setErr(j?.error === "billing_v2_disabled" ? "Card and UPI checkout isn't switched on yet. USDT works today." : j?.error === "checkout_not_available" ? "Available soon — card and UPI checkout opens when billing goes live. USDT works today." : j?.error === "not_purchasable" ? "This option isn't available to buy yet." : "Checkout couldn't start. Try again.");
+    // If legacy checkout fails, redirect smoothly to the unified one-page checkout
+    window.location.href = `/billing/checkout?plan=${encodeURIComponent(item)}`;
   }
 
   async function loadInfo(id: number) {

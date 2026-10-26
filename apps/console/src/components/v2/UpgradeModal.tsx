@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, X, Zap, ShieldCheck, ArrowRight, Sparkles } from "lucide-react";
+import { Check, X, Zap, ShieldCheck, ArrowRight } from "lucide-react";
 import type { PlanCatalog } from "@/lib/v2-shared";
 
 interface UpgradeModalProps {
@@ -15,7 +15,7 @@ export function UpgradeModal({
   isOpen,
   onClose,
   currentPlanId = "pro",
-  catalog,
+  catalog: _catalog,
 }: UpgradeModalProps) {
   const [targetTier, setTargetTier] = useState<"max_5x" | "max_20x">("max_5x");
   const [frequency, setFrequency] = useState<"monthly" | "yearly">("monthly");
@@ -83,6 +83,15 @@ export function UpgradeModal({
     setError(null);
     try {
       const planCatalogId = frequency === "yearly" ? `${targetTier}_yearly` : targetTier;
+      if (rail === "payram") {
+        window.location.href = `/billing/checkout?plan=${encodeURIComponent(planCatalogId)}&method=payram_usdt`;
+        return;
+      }
+      if (rail === "transacty") {
+        window.location.href = `/billing/checkout?plan=${encodeURIComponent(planCatalogId)}&method=transacty_upi`;
+        return;
+      }
+
       const res = await fetch("/api/console/me/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
