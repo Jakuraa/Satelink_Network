@@ -10,10 +10,10 @@ import type { AccountPlan, PlanCatalog } from "@/lib/v2-shared";
 type KeyOpt = { id: number; label: string; hint: string; balanceUsdt: number };
 const STEPS = ["How", "Choose", "Pay", "Done"];
 
-export function AddMoneyFlow({ catalog, keys, plan, returned }: { catalog: PlanCatalog | null; keys: KeyOpt[]; plan: AccountPlan | null; returned: boolean }) {
-  const [step, setStep] = useState(returned ? 3 : 0);
-  const [how, setHow] = useState<"plan" | "pack" | "usdt" | "">("");
-  const [item, setItem] = useState("");
+export function AddMoneyFlow({ catalog, keys, plan, returned, initialPack }: { catalog: PlanCatalog | null; keys: KeyOpt[]; plan: AccountPlan | null; returned: boolean; initialPack?: string }) {
+  const [step, setStep] = useState(returned ? 3 : initialPack ? 1 : 0);
+  const [how, setHow] = useState<"plan" | "pack" | "usdt" | "">(initialPack ? "pack" : "");
+  const [item, setItem] = useState(initialPack ?? "");
   const [keyId, setKeyId] = useState<number | null>(keys[0]?.id ?? null);
   const [info, setInfo] = useState<{ address?: string; network?: string; token_address?: string } | null>(null);
   const [tx, setTx] = useState("");
@@ -32,7 +32,8 @@ export function AddMoneyFlow({ catalog, keys, plan, returned }: { catalog: PlanC
     const j = await r.json().catch(() => null);
     setBusy(false);
     if (j?.ok && j.data?.checkoutUrl) { window.location.href = j.data.checkoutUrl; return; }
-    setErr(j?.error === "billing_v2_disabled" ? "Card and UPI checkout isn't switched on yet. USDT works today." : j?.error === "checkout_not_available" ? "Available soon — card and UPI checkout opens when billing goes live. USDT works today." : j?.error === "not_purchasable" ? "This option isn't available to buy yet." : "Checkout couldn't start. Try again.");
+    // If legacy checkout fails, redirect smoothly to the unified one-page checkout
+    window.location.href = `/billing/checkout?plan=${encodeURIComponent(item)}`;
   }
 
   async function loadInfo(id: number) {

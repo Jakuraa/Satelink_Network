@@ -23,6 +23,7 @@ import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testconta
 import { Client } from 'pg';
 import { migrate, status, verify } from '../runner.js';
 import { resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
 
 const MIGRATIONS_DIR = resolve(import.meta.dirname ?? new URL('.', import.meta.url).pathname, '..', 'migrations');
 
@@ -138,13 +139,15 @@ describe('M2 — ledger schema migrations', { timeout: 120_000 }, () => {
       '017_satelink_app_role.sql',
       '018_subscriptions.sql',
       '019_ledger_kind_refund.sql',
+      '038_ledger_kind_payments.sql',
+      '039_payments_core.sql',
     ]);
     expect(result.skipped).toHaveLength(0);
   });
 
   // The exact count is derived from the applied list above so adding a
   // migration only requires updating that one list.
-  const MIGRATION_COUNT = 19;
+  const MIGRATION_COUNT = 21;
 
   it('re-running applies nothing (idempotent)', async () => {
     const result = await migrate(connectionString, MIGRATIONS_DIR);
@@ -489,6 +492,30 @@ describe('M2 — ledger schema migrations', { timeout: 120_000 }, () => {
       expect(BigInt(row.available_balance)).toBe(500n);
       // Pending credits tracked but NOT in available
       expect(BigInt(row.pending_credits)).toBe(9999n);
+    } finally {
+      await client.end();
+    }
+  });
+
+  it('038 and 039 down migrations roll back cleanly and allow re-application', async () => {
+    const client = new Client({ connectionString });
+    await client.connect();
+    try {
+      const down039 = readFileSync(resolve(MIGRATIONS_DIR, '../migrations-down/039_payments_core.down.sql'), 'utf8');
+      const down038 = readFileSync(resolve(MIGRATIONS_DIR, '../migrations-down/038_ledger_kind_payments.down.sql'), 'utf8');
+      await client.query(down039);
+      await client.query(down038);
+
+      // Verify payment tables are dropped
+      const { rows } = await client.query(
+        "SELECT table_name FROM information_schema.tables WHERE table_name IN ('payment_intents', 'payment_events', 'payment_entitlement_grants', 'provider_reconciliation_runs')",
+      );
+      expect(rows).toHaveLength(0);
+
+      // Re-apply using migrate() to prove idempotency and clean re-application
+      const reapply = await migrate(connectionString, MIGRATIONS_DIR);
+      expect(reapply.errors).toHaveLength(0);
+      expect(reapply.applied).toEqual(['038_ledger_kind_payments.sql', '039_payments_core.sql']);
     } finally {
       await client.end();
     }

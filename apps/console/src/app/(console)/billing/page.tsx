@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Badge, Empty, ErrorNote, Kpi, NeedsKey, PageHeader, Panel, Table } from "@/components/ui";
 import { apiFetch } from "@/lib/api";
 import { loadKey } from "@/lib/data";
@@ -7,7 +8,6 @@ import { getActiveKey } from "@/lib/keys";
 import { accountsEnabled, me } from "@/lib/account";
 import { loadCatalog, loadKeys, loadPlan, usd as usdV2, type PlanCatalog, type AccountPlan } from "@/lib/v2";
 import { Meter } from "@/components/v2/charts";
-import Link from "next/link";
 
 export const metadata: Metadata = { title: "Billing" };
 
@@ -31,8 +31,8 @@ export default async function BillingPage() {
         lede={`Plan, balances and payments for ${active.label}.`}
         actions={
           <>
-            <a href={`${WEB}/checkout?plan=starter`} className="h-8 rounded bg-sl-accent px-3 py-2 text-xs font-semibold text-sl-accent-ink">Buy credit pack</a>
-            <a href={`${WEB}/pricing`} className="h-8 rounded border border-sl-border px-3 py-2 text-xs">Compare plans</a>
+            <Link href="/billing/checkout" className="h-8 inline-flex items-center rounded bg-sl-accent px-3 py-1.5 text-xs font-semibold text-sl-accent-ink hover:bg-sl-accent-strong">Unified Checkout</Link>
+            <a href={`${WEB}/pricing`} className="h-8 inline-flex items-center rounded border border-sl-border px-3 py-1.5 text-xs text-sl-text hover:bg-sl-surface-hover">Compare plans</a>
           </>
         }
       />
@@ -58,7 +58,7 @@ export default async function BillingPage() {
                 <td className="text-right">{int(p.includedCalls)}</td>
                 <td className="text-right">{p.overagePerCall === null ? "none" : usd(p.overagePerCall, 3)}</td>
                 <td className="text-right">{p.apiKeys}</td>
-                <td className="text-right">{s?.plan === p.id ? <Badge tone="good">current</Badge> : <a className="text-xs text-sl-accent hover:underline" href={`${WEB}/pricing`}>View</a>}</td>
+                <td className="text-right">{s?.plan === p.id ? <Badge tone="good">current</Badge> : <Link className="text-xs text-sl-accent hover:underline" href={`/billing/checkout?plan=${p.id}`}>Subscribe</Link>}</td>
               </tr>
             ))}
           </Table>

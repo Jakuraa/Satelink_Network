@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Check, X, Zap, ShieldCheck, ArrowRight, Sparkles } from "lucide-react";
+import React, { useState } from "react";
+import { Check, X, Zap, ShieldCheck, ArrowRight } from "lucide-react";
 import type { PlanCatalog } from "@/lib/v2-shared";
 
 interface UpgradeModalProps {
@@ -15,7 +15,7 @@ export function UpgradeModal({
   isOpen,
   onClose,
   currentPlanId = "pro",
-  catalog,
+  catalog: _catalog,
 }: UpgradeModalProps) {
   const [targetTier, setTargetTier] = useState<"max_5x" | "max_20x">("max_5x");
   const [frequency, setFrequency] = useState<"monthly" | "yearly">("monthly");
@@ -82,23 +82,24 @@ export function UpgradeModal({
     setIsSubmitting(true);
     setError(null);
     try {
-      const planCatalogId = frequency === "yearly" ? `${targetTier}_yearly` : targetTier;
-      const res = await fetch("/api/console/me/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          itemId: planCatalogId,
-          paymentRail: rail,
-          returnUrl: `${window.location.origin}/billing?upgraded=1`,
-        }),
-      });
-      const data = await res.json().catch(() => null);
-      if (data?.ok && data.data?.checkoutUrl) {
-        window.location.href = data.data.checkoutUrl;
-      } else {
-        // Fallback for test / demo environment
-        setError(data?.message || data?.error || "Checkout integration is switching to live gateway. USDT and test rails active.");
+      const PLAN_ID_MAP: Record<string, string> = {
+        max_5x: "trading_ai_max",
+        max_20x: "trading_ai_max",
+        max: "trading_ai_max",
+        pro: "trading_ai_pro",
+        launch: "trading_ai_launch",
+      };
+      const planCatalogId = PLAN_ID_MAP[targetTier] ?? "trading_ai_max";
+      if (rail === "payram") {
+        window.location.href = `/billing/checkout?plan=${encodeURIComponent(planCatalogId)}&method=payram_usdt`;
+        return;
       }
+      if (rail === "transacty") {
+        window.location.href = `/billing/checkout?plan=${encodeURIComponent(planCatalogId)}&method=transacty_upi`;
+        return;
+      }
+      window.location.href = `/billing/checkout?plan=${encodeURIComponent(planCatalogId)}`;
+      return;
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to initiate checkout");
     } finally {

@@ -97,6 +97,11 @@ export default defineConfig({
           environment: 'node',
           testTimeout: 20_000,
         },
+        resolve: {
+          alias: {
+            '@': fileURLToPath(new URL('./apps/console/src', import.meta.url)),
+          },
+        },
       },
       {
         extends: true,

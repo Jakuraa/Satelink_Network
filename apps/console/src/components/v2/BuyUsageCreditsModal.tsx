@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Check, X, Coins, ShieldCheck, Zap, ArrowRight, Info, AlertTriangle } from "lucide-react";
+import React, { useState } from "react";
+import { X, Coins, Zap, ArrowRight, Info, ShieldCheck } from "lucide-react";
 
 interface BuyUsageCreditsModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ interface BuyUsageCreditsModalProps {
 export function BuyUsageCreditsModal({
   isOpen,
   onClose,
-  currentBalanceUu = 0,
+  currentBalanceUu: _currentBalanceUu = 0,
 }: BuyUsageCreditsModalProps) {
   const [selectedPreset, setSelectedPreset] = useState<string>("pack_250");
   const [isCustom, setIsCustom] = useState(false);
@@ -97,24 +97,11 @@ export function BuyUsageCreditsModal({
     setIsSubmitting(true);
     setError(null);
     try {
-      const payload = isCustom
-        ? { customAmountInr, paymentRail: rail, type: "custom_pack" }
-        : { itemId: selectedPreset, paymentRail: rail, type: "preset_pack" };
-
-      const res = await fetch("/api/console/me/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...payload,
-          returnUrl: `${window.location.origin}/usage?credits_purchased=1`,
-        }),
-      });
-      const data = await res.json().catch(() => null);
-      if (data?.ok && data.data?.checkoutUrl) {
-        window.location.href = data.data.checkoutUrl;
-      } else {
-        setError(data?.message || data?.error || "Checkout integration is switching to live gateway. USDT and test rails active.");
-      }
+      // Route usage-credit purchases through the existing dedicated credit-pack flow
+      window.location.href = isCustom
+        ? "/billing/add"
+        : `/billing/add?pack=${encodeURIComponent(selectedPreset)}`;
+      return;
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to initiate payment");
     } finally {
