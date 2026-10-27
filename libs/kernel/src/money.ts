@@ -266,6 +266,9 @@ export class Money<C extends Currency = Currency> {
    *
    * INVARIANT: sum(result) === this.amount EXACTLY, for any ratios and amount.
    * This is what the frozen SplitRule design depends on.
+   *
+   * Ratios are integer WEIGHTS (e.g. basis points 5000/3000/2000 for 50/30/20), never fractions:
+   * money arithmetic is integer-only (decision S-4; tools/architecture-tests/forbid-money-float).
    */
   allocate(
     ratios: readonly number[],
@@ -276,30 +279,25 @@ export class Money<C extends Currency = Currency> {
 
     for (let i = 0; i < ratios.length; i++) {
       const r = ratios[i]!;
-      if (!Number.isFinite(r) || r < 0) {
+      if (!Number.isSafeInteger(r) || r < 0) {
         return err(
           new InvalidAllocateRatiosError(
-            `ratio at index ${i} must be a non-negative finite number, got ${r}`,
+            `ratio at index ${i} must be a non-negative integer weight, got ${r}`,
           ),
         );
       }
     }
 
-    const total = ratios.reduce((sum, r) => sum + r, 0);
-    if (total === 0) {
+    const weights = ratios.map((r) => BigInt(r));
+    const totalBig = weights.reduce((sum, w) => sum + w, 0n);
+    if (totalBig === 0n) {
       return err(new InvalidAllocateRatiosError('sum of ratios must be greater than zero'));
     }
-
-    // Scale ratios to bigint for integer arithmetic.
-    // Multiply by a large factor to preserve ratio precision.
-    const SCALE = 10n ** 18n;
-    const totalBig = BigInt(Math.round(total * Number(SCALE)));
 
     const isNegative = this.amount < 0n;
     const absAmount = isNegative ? -this.amount : this.amount;
 
-    const scaledRatios = ratios.map((r) => BigInt(Math.round(r * Number(SCALE))));
-    const parts: Money<C>[] = scaledRatios.map((sr) => {
+    const parts: Money<C>[] = weights.map((sr) => {
       const partAbs = (absAmount * sr) / totalBig;
       const partAmount = isNegative ? -partAbs : partAbs;
       return new Money(partAmount, this.currency);
