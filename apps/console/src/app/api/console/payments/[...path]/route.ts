@@ -4,7 +4,7 @@
 import { NextResponse } from "next/server";
 import { audit, guard } from "@/lib/guard";
 import { getSession } from "@/lib/session";
-import { loadIntent, paymentsPost } from "@/lib/payments";
+import { loadIntent, loadMethods, paymentsPost } from "@/lib/payments";
 
 const REF = "inv_[A-Za-z0-9-]{8,64}";
 const POSTS: RegExp[] = [
@@ -39,6 +39,10 @@ export async function GET(_req: Request, ctx: { params: Promise<{ path: string[]
   if (!(await getSession())) return NextResponse.json({ ok: false, error: "unauthenticated" }, { status: 401 });
   const path = await pathOf(ctx);
   if (!GETS.some((re) => re.test(path))) return NextResponse.json({ ok: false, error: "not_allowed" }, { status: 404 });
+  if (path === "/checkout/methods") {
+    const r = await loadMethods();
+    return NextResponse.json(r.ok ? { ok: true, data: r.data } : { ok: false, error: r.error }, { status: r.ok ? 200 : r.status || 502, headers: { "Cache-Control": "no-store" } });
+  }
   const ref = path.split("/").pop() as string;
   const r = await loadIntent(ref);
   return NextResponse.json(r.ok ? { ok: true, data: r.data } : { ok: false, error: r.error }, { status: r.ok ? 200 : r.status || 502, headers: { "Cache-Control": "no-store" } });

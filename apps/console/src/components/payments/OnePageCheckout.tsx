@@ -61,11 +61,21 @@ export function OnePageCheckout({
 }: OnePageCheckoutProps) {
   const paidPlans = useMemo(() => plans.plans.filter((p) => p.price !== null), [plans.plans]);
 
+  const isInvalidInitialPlan = Boolean(
+    initialPlanId && !paidPlans.some((p) => p.id === initialPlanId)
+  );
+
+  const [invalidPlanError, setInvalidPlanError] = useState<string | null>(
+    isInvalidInitialPlan
+      ? `Invalid plan ID "${initialPlanId}". Please select a valid plan from the catalog below.`
+      : null
+  );
+
   // Selections
   const [selectedPlanId, setSelectedPlanId] = useState<string>(
     initialPlanId && paidPlans.some((p) => p.id === initialPlanId)
       ? initialPlanId
-      : paidPlans[0]?.id ?? "trading_ai_pro"
+      : (initialPlanId ? "" : (paidPlans[0]?.id ?? "trading_ai_pro"))
   );
   const [selectedMethod, setSelectedMethod] = useState<string>(
     initialMethod && methods.some((m) => m.id === initialMethod)
@@ -109,8 +119,8 @@ export function OnePageCheckout({
   };
 
   const selectedPlan = useMemo(
-    () => plans.plans.find((p) => p.id === selectedPlanId) ?? paidPlans[0],
-    [plans.plans, paidPlans, selectedPlanId]
+    () => plans.plans.find((p) => p.id === selectedPlanId) ?? null,
+    [plans.plans, selectedPlanId]
   );
 
   const policy = quote?.refundPolicy ?? refundPolicy;
@@ -119,6 +129,11 @@ export function OnePageCheckout({
   // 1. Fetch quote when plan or method changes
   useEffect(() => {
     if (activeIntent || initialRef) return; // already in active payment flow
+    if (!selectedPlanId) {
+      setQuote(null);
+      setQuoteLoading(false);
+      return;
+    }
     let cancelled = false;
     async function fetchQuote() {
       setQuoteLoading(true);
@@ -208,6 +223,10 @@ export function OnePageCheckout({
   // 3. Start Checkout Intent
   async function handleStartCheckout() {
     if (!canComplete) return;
+    if (!selectedPlanId) {
+      setActionError("Please select a valid plan before proceeding to checkout.");
+      return;
+    }
     setIsSubmitting(true);
     setActionError(null);
     try {
@@ -568,6 +587,15 @@ export function OnePageCheckout({
                   </span>
                   <h2 className="text-base font-semibold text-sl-text">Select AI Assistance Plan</h2>
                 </div>
+                {invalidPlanError && (
+                  <div
+                    role="alert"
+                    className="mt-3 flex items-center gap-2 rounded-lg border border-sl-down/40 bg-sl-down/10 p-3 text-xs text-sl-down"
+                  >
+                    <AlertCircle className="size-4 shrink-0 text-sl-down" />
+                    <span>{invalidPlanError}</span>
+                  </div>
+                )}
                 <div className="mt-4 grid gap-3 sm:grid-cols-3">
                   {paidPlans.map((p: TradingAiPlan) => {
                     const isSelected = selectedPlanId === p.id;
@@ -577,7 +605,10 @@ export function OnePageCheckout({
                       <button
                         key={p.id}
                         type="button"
-                        onClick={() => setSelectedPlanId(p.id)}
+                        onClick={() => {
+                          setSelectedPlanId(p.id);
+                          setInvalidPlanError(null);
+                        }}
                         className={`flex flex-col items-start rounded-lg border p-4 text-left transition-all ${
                           isSelected
                             ? "border-sl-accent bg-sl-accent/10 ring-1 ring-sl-accent"
@@ -680,13 +711,15 @@ export function OnePageCheckout({
                 <button
                   type="button"
                   onClick={handleStartCheckout}
-                  disabled={isSubmitting || quoteLoading || !canComplete || methods.length === 0}
+                  disabled={isSubmitting || quoteLoading || !canComplete || methods.length === 0 || !selectedPlanId}
                   className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-lg bg-sl-accent text-base font-semibold text-sl-accent-ink hover:bg-sl-accent-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sl-accent/50 disabled:opacity-50 transition-colors shadow-sm"
                 >
                   {isSubmitting
                     ? "Initiating Secure Checkout..."
                     : quote
                     ? `Pay ${quote.amount.display} ${quote.amount.currency} Now`
+                    : !selectedPlanId
+                    ? "Select a Plan to Continue"
                     : "Proceed to Checkout"}
                   <ArrowRight className="size-4" />
                 </button>
@@ -717,7 +750,7 @@ export function OnePageCheckout({
                 1. What am I buying?
               </span>
               <p className="text-sm font-medium text-sl-text">
-                Satelink AI Assistance — {selectedPlan?.name ?? "Pro"} Plan
+                Satelink AI Assistance — {selectedPlan ? `${selectedPlan.name} Plan` : "No plan selected"}
               </p>
               <p className="text-xs leading-relaxed text-sl-text-muted">
                 30-day access to metered AI agent orchestration, deterministic paper-trading
@@ -734,7 +767,7 @@ export function OnePageCheckout({
               <div className="flex items-baseline justify-between">
                 <span className="text-sm text-sl-text-muted">Payable Today:</span>
                 <span className="font-mono text-xl font-bold tabular-nums text-sl-text">
-                  {quote ? `${quote.amount.display} ${quote.amount.currency}` : "Calculating..."}
+                  {quote ? `${quote.amount.display} ${quote.amount.currency}` : selectedPlanId ? "Calculating..." : "—"}
                 </span>
               </div>
               {quoteError && (

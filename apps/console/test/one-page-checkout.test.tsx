@@ -35,6 +35,14 @@ const mockPlans: PlansPayload = {
       renewsAs: null,
       limits: { agentRunsPerDay: 50, deepReasoningPerDay: 10, backtestsPerDay: 20, liveStrategies: 1, apiCallsPerDay: 5000 },
     },
+    {
+      id: "trading_ai_max",
+      name: "Max",
+      price: { USD: { amountMinor: "7900", display: "79.00" } },
+      introPrice: null,
+      renewsAs: null,
+      limits: { agentRunsPerDay: 500, deepReasoningPerDay: 100, backtestsPerDay: 200, liveStrategies: 5, apiCallsPerDay: 50000 },
+    },
   ],
   creditPacks: [],
   billing: { crypto: "prepaid", fiat: "recurring" },
@@ -154,5 +162,57 @@ describe("OnePageCheckout Component", () => {
     );
 
     expect(html).toContain("Test Mode / Sandbox:");
+  });
+
+  it("never silently selects Pro on an invalid plan ID and produces a clear error", () => {
+    const html = renderToStaticMarkup(
+      <OnePageCheckout
+        plans={mockPlans}
+        methods={mockMethods}
+        merchant={mockMerchant}
+        refundPolicy={mockRefundPolicy}
+        testMode={false}
+        initialPlanId="pack_250"
+      />
+    );
+
+    // Shows clear error about invalid plan ID
+    expect(html).toContain('Invalid plan ID &quot;pack_250&quot;');
+    // Does NOT silently select Pro Plan
+    expect(html).not.toContain("Satelink AI Assistance — Pro Plan");
+    // Displays "No plan selected" in order summary
+    expect(html).toContain("Satelink AI Assistance — No plan selected");
+    // Button is disabled asking to select a plan
+    expect(html).toContain("Select a Plan to Continue");
+  });
+
+  it("selects the intended valid plan when a valid plan ID is passed", () => {
+    const htmlMax = renderToStaticMarkup(
+      <OnePageCheckout
+        plans={mockPlans}
+        methods={mockMethods}
+        merchant={mockMerchant}
+        refundPolicy={mockRefundPolicy}
+        testMode={false}
+        initialPlanId="trading_ai_max"
+      />
+    );
+
+    expect(htmlMax).not.toContain("Invalid plan ID");
+    expect(htmlMax).toContain("Satelink AI Assistance — Max Plan");
+
+    const htmlLaunch = renderToStaticMarkup(
+      <OnePageCheckout
+        plans={mockPlans}
+        methods={mockMethods}
+        merchant={mockMerchant}
+        refundPolicy={mockRefundPolicy}
+        testMode={false}
+        initialPlanId="trading_ai_launch"
+      />
+    );
+
+    expect(htmlLaunch).not.toContain("Invalid plan ID");
+    expect(htmlLaunch).toContain("Satelink AI Assistance — Launch Plan");
   });
 });

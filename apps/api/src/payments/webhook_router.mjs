@@ -20,7 +20,9 @@ export function createPaymentWebhookRouter(pool, { adapters = [], ingest = inges
   router.post('/:provider', limit, express.raw({ type: '*/*', limit: '256kb' }), async (req, res) => {
     const adapter = byId.get(req.params.provider);
     if (!adapter) return res.status(404).json({ ok: false, error: 'unknown_provider' });
-    const raw = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
+    const raw = Buffer.isBuffer(req.rawBody)
+      ? req.rawBody
+      : (Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0));
     if (raw.length === 0) return res.status(400).json({ ok: false, error: 'empty_body' });
     try {
       const r = await ingest(pool, adapter, raw, req.headers);
