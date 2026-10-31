@@ -59,6 +59,8 @@ export interface RiskLimits {
   readonly maxExposureMinor: bigint;
   /** Maximum daily loss in minor-units. Positive number (loss is subtracted from baseline). */
   readonly maxDailyLossMinor: bigint;
+  /** Optional per-order notional cap in minor-units (checked in G7). */
+  readonly maxOrderNotionalMinor?: bigint | undefined;
 }
 
 export interface OrderIntent {
@@ -68,8 +70,10 @@ export interface OrderIntent {
   readonly exchange: string;
   readonly side: OrderSide;
   readonly orderType: OrderType;
-  /** Quantity in instrument lots/shares (positive integer). */
+  /** Quantity in instrument lots/shares (positive integer). 0 when the size is carried in quantityAtoms. */
   readonly quantity: number;
+  /** Fractional (crypto) size in 10^-8 base-asset units, when lots do not apply. */
+  readonly quantityAtoms?: bigint | undefined;
   /** Limit price in minor-units. Required for LIMIT orders. */
   readonly limitPriceMinor?: bigint | undefined;
 }
@@ -150,6 +154,7 @@ const GATES: readonly Gate[] = [
     gate: 'G7_POSITION_LIMIT',
     check: (i) => {
       if (i.currentPositionCount >= i.limits.maxPositionCount) return `Position count limit reached (${i.currentPositionCount}/${i.limits.maxPositionCount})`;
+      if (i.limits.maxOrderNotionalMinor !== undefined && i.orderValueMinor > i.limits.maxOrderNotionalMinor) return `Order notional ${i.orderValueMinor} exceeds per-order limit ${i.limits.maxOrderNotionalMinor}`;
       if (i.currentExposureMinor + i.orderValueMinor > i.limits.maxExposureMinor) return `Exposure limit would be breached`;
       return null;
     },
@@ -168,7 +173,25 @@ const GATES: readonly Gate[] = [
   },
 ];
 
+export interface GateResult {
+  readonly gate: AuthorizationGate;
+  readonly passed: boolean;
+  readonly reason: string | null;
+}
+
 export class RiskAuthorizationEngine {
+  /**
+   * Evaluate every gate (no short-circuit) for audit records. Authorization is
+   * still all-or-nothing: authorized only when every gate passed.
+   */
+  evaluateAll(input: AuthorizationInput): { readonly authorized: boolean; readonly policyVersion: string; readonly gates: readonly GateResult[] } {
+    const gates = GATES.map(({ gate, check }) => {
+      const reason = check(input);
+      return Object.freeze({ gate, passed: reason === null, reason });
+    });
+    return { authorized: gates.every((g) => g.passed), policyVersion: POLICY_VERSION, gates };
+  }
+
   authorize(input: AuthorizationInput): AuthorizationResult {
     const evaluatedAt = new Date().toISOString();
     const passed: AuthorizationGate[] = [];

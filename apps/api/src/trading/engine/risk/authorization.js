@@ -73,6 +73,8 @@ const GATES = [
         check: (i) => {
             if (i.currentPositionCount >= i.limits.maxPositionCount)
                 return `Position count limit reached (${i.currentPositionCount}/${i.limits.maxPositionCount})`;
+            if (i.limits.maxOrderNotionalMinor !== undefined && i.orderValueMinor > i.limits.maxOrderNotionalMinor)
+                return `Order notional ${i.orderValueMinor} exceeds per-order limit ${i.limits.maxOrderNotionalMinor}`;
             if (i.currentExposureMinor + i.orderValueMinor > i.limits.maxExposureMinor)
                 return `Exposure limit would be breached`;
             return null;
@@ -92,6 +94,17 @@ const GATES = [
     },
 ];
 export class RiskAuthorizationEngine {
+    /**
+     * Evaluate every gate (no short-circuit) for audit records. Authorization is
+     * still all-or-nothing: authorized only when every gate passed.
+     */
+    evaluateAll(input) {
+        const gates = GATES.map(({ gate, check }) => {
+            const reason = check(input);
+            return Object.freeze({ gate, passed: reason === null, reason });
+        });
+        return { authorized: gates.every((g) => g.passed), policyVersion: POLICY_VERSION, gates };
+    }
     authorize(input) {
         const evaluatedAt = new Date().toISOString();
         const passed = [];

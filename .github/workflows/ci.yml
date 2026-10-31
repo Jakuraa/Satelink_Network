@@ -55,6 +55,40 @@ jobs:
         working-directory: apps/corporate
         run: npm run lint:claims
 
+  trading:
+    name: Trading engine (typecheck + tests + bundle sync)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline
+
+      - name: TypeScript check (services/trading)
+        working-directory: services/trading
+        run: npx tsc --noEmit -p .
+
+      # Not piped: the vitest exit code is the step's exit code. The opt-in live
+      # Eulerpool test skips unless EULERPOOL_LIVE=1 (never set in CI).
+      - name: Tests (services/trading)
+        working-directory: services/trading
+        run: npx vitest run
+
+      # apps/api deploys a compiled copy of the engine (Railway rootDirectory=/apps/api).
+      # Fail if that copy is stale relative to services/trading/src.
+      - name: Engine bundle is in sync
+        run: |
+          npm run build --workspace services/trading
+          git diff --exit-code -- apps/api/src/trading/engine
+          test -z "$(git status --porcelain -- apps/api/src/trading/engine)"
+
   test:
     name: Tests
     runs-on: ubuntu-latest
