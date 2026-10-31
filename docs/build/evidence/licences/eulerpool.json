@@ -1,0 +1,18 @@
+{
+  "source": "eulerpool",
+  "plan": "FREE",
+  "verifiedAt": "2026-10-31",
+  "sources": [
+    "https://eulerpool.com/financial-data-api/pricing (read 2026-10-31): Free = 100,000 requests/month, hard limit, EOD + delayed quotes, non-commercial usage, attribution 'Data by Eulerpool' in any public-facing product",
+    "https://eulerpool.com/developers/rate-limits (read 2026-10-31): Free tier hard-limited, HTTP 429 until the month resets",
+    "Founder input 2026-10-31: plan FREE (EOD + delayed, non-commercial, attribution 'Data by Eulerpool')"
+  ],
+  "writtenConfirmations": [],
+  "permissions": {
+    "strategyDerivation": "INTERNAL_RD_ONLY",
+    "display": false,
+    "redistribution": false,
+    "commercialUse": false
+  },
+  "attribution": "Data by Eulerpool"
+}
