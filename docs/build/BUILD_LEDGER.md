@@ -5,6 +5,53 @@ categories only (R14); details in `docs/build/evidence/private/` on the build ma
 
 ---
 
+## Session T1 — 2026-10-31 Trading AI: Eulerpool + evaluation harness + go/no-go (Opus 5.5, background job)
+
+Scope: founder prompt "TRADING AI: EULERPOOL DATA + DECISION API GO/NO-GO + BINANCE DEMO EXECUTION".
+Branch `feat/trading-eulerpool-demo-broker` (worktree `.claude/worktrees/trading-eulerpool-demo`).
+Start: main `88ef1dca` (#600) = deployed `/health.commit` `88ef1dca…`.
+
+### Phase 0
+- Railway `Satelink-api` variable NAMES present: `BINANCE_DEMO_API_KEY`, `BINANCE_DEMO_API_SECRET`,
+  `EULERPOOL_API_KEY`, `OPENROUTER_API_KEY` (values never read).
+- **Geo stop**: from the API container (region `us-west2`) `demo-api.binance.com` ping/time/ticker → **HTTP 451**
+  (restricted location). Phases 4 (demo broker) and 5 (forward-test runner) NOT started.
+  `evidence/TRADING_GEO_CHECK_2026-10-31.md` (proposal: separate `trading-worker` service in `europe-west4`).
+- Reused, not rewritten: services/trading (instrument, providers, SMA, decision-api, 10-gate engine,
+  broker-adapter/UnknownOrderReconciler, orchestrator, metering) and the apps/api engine bundle.
+  `services/sie` is only in open PR #581; OpenRouter adapter only in draft #579 (other session) — not touched.
+
+### Delivered (code)
+| Phase | What | Tests |
+|---|---|---|
+| 1 | Eulerpool adapter: Bearer-only auth, lossless JSON → bigint, typed errors, bounded retries, 90% quota stop + alert, backtest cache, licensing from `evidence/licences/eulerpool.json` (FREE: internal R&D only; customer use fails closed) | 19 contract + 7 decimal/JSON; opt-in live test |
+| 2 | Bar-replay engine (t+1 open fills, fee/spread/slippage, bigint exchange filters), walk-forward ×4 OOS, baselines, metrics, leakage gate, StrategyEvaluation + append-only store; migration 040 (+down, PG test) | 13 unit + 6 PG integration |
+| 3 | Go/no-go engine (conditions a–f), Ed25519 founder-signed demo mandate with hard ceiling, model outage → BASELINE_ONLY, append-only decisions | 15 |
+| CI | New `trading` job: typecheck, vitest, engine-bundle drift check (trading tests never ran in CI before) | — |
+
+services/trading vitest: 91 → 143 passed, 1 skipped (opt-in live). Database integration: 75/75 (local PG 16).
+Mutation checks (each test fails on the mutant): t+1 fill, leakage verdict, kill switch, mandate, agreement, quota guard.
+
+### Live checks
+- Eulerpool (once, from Railway): all endpoints **HTTP 502** at Eulerpool's edge; build machine invalid-token → 401.
+  Auth path unverified. `evidence/EULERPOOL_CONTRACT.md`.
+- Binance demo place/query/cancel: not run (geo stop).
+
+### StrategyEvaluation (1d klines 2021-01-01 → 2026-10-30, 4×182-day OOS, fee 10 bps; local test DB, not production)
+| Strategy | Symbol | Id | Beat best baseline | Verdict |
+|---|---|---|---|---|
+| sma-crossover@1.0.0 | BTCUSDT | `eval_ee91816f4c449cb32350a7ed261797d6` | 1/4 | FAIL |
+| donchian-breakout@1.0.0 | BTCUSDT | `eval_90e4a95572d4bdc51a15ef8fd95801a8` | 0/4 | FAIL |
+| sma-crossover@1.0.0 | ETHUSDT | `eval_8c5142e626f53e607e696700f282156a` | 2/4 | FAIL |
+| donchian-breakout@1.0.0 | ETHUSDT | `eval_5a91643a7c1c6fdcb6e83dd82379e06e` | 1/4 | FAIL |
+Full records: `evidence/trading/STRATEGY_EVALUATIONS_2026-10-31.json`. No PASS → no demo-enable command issued.
+
+### Founder actions added
+- F22 Create `trading-worker` Railway service outside the US (recommend `europe-west4`), demo/Eulerpool/OpenRouter vars only; re-probe.
+- F23 Apply migration 040 to production (`npx tsx database/runner.ts migrate <url>`) when the worker needs it (F14).
+- F24 Generate the founder Ed25519 mandate key; publish the public key id for `trustedMandateKeys`.
+- F25 Eulerpool: Free plan is non-commercial — Builder ($990/yr) before any customer-facing use.
+
 ## Session 2 — 2026-10-20 P0 close-out (Opus 5.5, background job)
 
 Scope: founder session prompt "P0 CLOSE-OUT (security + money PRs)". Founder answers A1–A3 were
