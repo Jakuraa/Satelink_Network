@@ -187,13 +187,16 @@ export class GoNoGoEngine {
     const reasons: string[] = [];
 
     // (a) evaluation
-    const ev = isUsablePass(inp.evaluation, inp.strategy.id, inp.strategy.version, now);
+    const ev = isUsablePass(inp.evaluation, inp.strategy.id, inp.strategy.version, inp.instrument.id, now);
     if (!ev.ok) reasons.push(`(a) ${ev.reason}`);
 
     // (b) freshness + licence
     const prov = inp.provenance.map((p) => ({ source: p.source, retrieved_at: p.retrievedAt, age_s: Math.max(0, Math.floor((now.getTime() - Date.parse(p.retrievedAt)) / 1000)), max_age_s: p.maxAgeS, licence: p.licence }));
     if (prov.length === 0) reasons.push('(b) no data provenance recorded');
-    for (const p of prov) {
+    for (const [i, p] of prov.entries()) {
+      const t = Date.parse(inp.provenance[i]!.retrievedAt);
+      if (!Number.isFinite(t)) reasons.push(`(b) ${p.source} retrieval time is invalid`);
+      else if (t > now.getTime() + 5_000) reasons.push(`(b) ${p.source} retrieval time is in the future`);
       if (!Number.isFinite(p.age_s) || p.age_s > p.max_age_s) reasons.push(`(b) ${p.source} data is stale (${p.age_s}s > ${p.max_age_s}s)`);
       if (!p.licence.strategyDerivationPermitted) reasons.push(`(b) ${p.source} licence does not permit strategy derivation`);
     }

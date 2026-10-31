@@ -31,7 +31,7 @@ function signMandate(over: Partial<Omit<DemoMandate, 'signature'>> = {}, key = p
   return { ...body, signature: sign(null, Buffer.from(mandateSigningPayload(body)), key).toString('base64') };
 }
 
-const PASS_EVAL = { evaluationId: 'eval_x', strategyId: 'sma-crossover', strategyVersion: '1.0.0', verdict: 'PASS', expiresAt: '2026-11-20T00:00:00Z' } as unknown as StrategyEvaluation;
+const PASS_EVAL = { evaluationId: 'eval_x', strategyId: 'sma-crossover', strategyVersion: '1.0.0', instrumentId: 'BINANCE:BTCUSDT', verdict: 'PASS', createdAt: '2026-10-25T00:00:00Z', expiresAt: '2026-11-20T00:00:00Z' } as unknown as StrategyEvaluation;
 const baseline = (signal: Signal = Signal.BUY): SignalResult => ({ signal, confidence: 0.6, rationale: 'fast above slow', strategyVersion: '1.0.0', generatedAt: NOW.toISOString() });
 const proposer = (o: ModelProposalOutcome): ModelProposer => ({ propose: async () => o });
 const agreeing = (signal: Signal = Signal.BUY) => proposer({ status: 'OK', output: { signal, confidence: 0.7, rationale: 'trend', risks: ['volatility'], servedModelId: 'anthropic/claude-haiku-5-5', generationId: 'gen-123' } });
@@ -96,12 +96,15 @@ describe('go/no-go — one failing case per condition', () => {
     await expectNoGo(input({ evaluation: { ...PASS_EVAL, verdict: 'FAIL' } as StrategyEvaluation }), /\(a\) .*verdict FAIL/);
     await expectNoGo(input({ evaluation: { ...PASS_EVAL, expiresAt: '2026-11-01T00:00:00Z' } as StrategyEvaluation }), /\(a\) .*expired/);
     await expectNoGo(input({ evaluation: { ...PASS_EVAL, strategyVersion: '0.9.0' } as StrategyEvaluation }), /\(a\) evaluation is for sma-crossover@0.9.0/);
+    await expectNoGo(input({ evaluation: { ...PASS_EVAL, instrumentId: 'BINANCE:ETHUSDT' } as StrategyEvaluation }), /\(a\) evaluation is for BINANCE:ETHUSDT/);
+    await expectNoGo(input({ evaluation: { ...PASS_EVAL, expiresAt: 'not-a-date' } as StrategyEvaluation }), /\(a\) .*invalid validity window/);
   });
 
   it('(b) stale data / licence without strategy derivation', async () => {
     await expectNoGo(input({ provenance: [{ source: 'binance', retrievedAt: '2026-11-02T10:00:00Z', maxAgeS: 1800, licence: BINANCE_LIC }] }), /\(b\) binance data is stale/);
     await expectNoGo(input({ provenance: [{ source: 'eulerpool', retrievedAt: NOW.toISOString(), maxAgeS: 1800, licence: { ...BINANCE_LIC, source: 'eulerpool', strategyDerivationPermitted: false } }] }), /\(b\) eulerpool licence does not permit/);
     await expectNoGo(input({ provenance: [] }), /\(b\) no data provenance/);
+    await expectNoGo(input({ provenance: [{ source: 'binance', retrievedAt: '2026-11-02T13:00:00Z', maxAgeS: 1800, licence: BINANCE_LIC }] }), /\(b\) binance retrieval time is in the future/);
   });
 
   it('(c) model disagrees and model-only is not allowed (default)', async () => {
@@ -137,6 +140,9 @@ describe('go/no-go — one failing case per condition', () => {
     await expectNoGo(input({ mandate: tampered }), /\(e\) mandate signature invalid/);
     await expectNoGo(input({ mandate: signMandate({ expiresAt: '2026-11-02T00:00:00Z' }) }), /\(e\) mandate expired/);
     await expectNoGo(input({ mandate: signMandate({ revoked: true }) }), /\(e\) mandate revoked/);
+    // A JSON-deserialised mandate carries strings; canonicalJson signs 10000n and "10000" alike.
+    const stringly = JSON.parse(JSON.stringify(signMandate(), (_k, v) => (typeof v === 'bigint' ? v.toString() : v))) as DemoMandate;
+    await expectNoGo(input({ mandate: stringly }), /\(e\) mandate is malformed/);
     await expectNoGo(input({ mandate: signMandate({ scope: { ...signMandate().scope, maxOrderNotionalMinor: 1_000_00n } }) }), /\(e\) mandate per-order notional outside/);
     await expectNoGo(input({ mandate: signMandate({ scope: { ...signMandate().scope, instrumentIds: ['BINANCE:ETHUSDT'] } }) }), /\(e\) mandate does not cover BINANCE:BTCUSDT/);
   });

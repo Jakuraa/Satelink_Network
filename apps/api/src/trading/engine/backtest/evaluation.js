@@ -116,14 +116,22 @@ export function evaluateStrategy(cfg) {
     });
 }
 /** True when the evaluation is a PASS for this strategy version and not expired at `now`. */
-export function isUsablePass(e, strategyId, strategyVersion, now) {
+export function isUsablePass(e, strategyId, strategyVersion, instrumentId, now) {
     if (!e)
         return { ok: false, reason: 'no evaluation on record' };
     if (e.strategyId !== strategyId || e.strategyVersion !== strategyVersion)
         return { ok: false, reason: `evaluation is for ${e.strategyId}@${e.strategyVersion}` };
+    if (e.instrumentId !== instrumentId)
+        return { ok: false, reason: `evaluation is for ${e.instrumentId}, not ${instrumentId}` };
     if (e.verdict !== 'PASS')
         return { ok: false, reason: `evaluation ${e.evaluationId} verdict FAIL` };
-    if (now.getTime() > Date.parse(e.expiresAt))
+    const created = Date.parse(e.createdAt);
+    const expires = Date.parse(e.expiresAt);
+    // Fail closed on missing/malformed timestamps or a window longer than the TTL.
+    if (!(Number.isFinite(created) && Number.isFinite(expires) && expires > created && expires - created <= EVALUATION_TTL_DAYS * 86_400_000)) {
+        return { ok: false, reason: `evaluation ${e.evaluationId} has an invalid validity window` };
+    }
+    if (!(now.getTime() <= expires))
         return { ok: false, reason: `evaluation ${e.evaluationId} expired ${e.expiresAt}` };
     return { ok: true, reason: `evaluation ${e.evaluationId} PASS, expires ${e.expiresAt}` };
 }

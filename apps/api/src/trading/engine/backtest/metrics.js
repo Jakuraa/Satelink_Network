@@ -9,7 +9,7 @@ export function computeMetrics(r, candles, periodsPerYear) {
         if (e > peak)
             peak = e;
         if (peak > 0n) {
-            const dd = ((peak - e) * 10000n) / peak;
+            const dd = ((peak - e) * 10000n + peak - 1n) / peak; // ceil: never flatter the candidate
             if (dd > maxDd)
                 maxDd = dd;
         }

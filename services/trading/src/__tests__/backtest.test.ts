@@ -171,11 +171,15 @@ describe('walk-forward evaluation', () => {
   it('isUsablePass enforces PASS, matching version and the 30-day expiry', () => {
     const e = evaluateStrategy({ ...base, family: SMA_FAMILY, costs: DEFAULT_COSTS });
     const forged = { ...e, verdict: 'PASS' as const };
-    expect(isUsablePass(forged, 'sma-crossover', '1.0.0', new Date('2026-11-29T00:00:00Z')).ok).toBe(true);
-    expect(isUsablePass(forged, 'sma-crossover', '1.0.0', new Date('2026-12-01T00:00:01Z')).reason).toMatch(/expired/);
-    expect(isUsablePass(forged, 'sma-crossover', '2.0.0', new Date('2026-11-01T00:00:00Z')).ok).toBe(false);
-    expect(isUsablePass({ ...e, verdict: 'FAIL' }, 'sma-crossover', '1.0.0', new Date('2026-11-01T00:00:00Z')).ok).toBe(false);
-    expect(isUsablePass(null, 'sma-crossover', '1.0.0', new Date()).ok).toBe(false);
+    expect(isUsablePass(forged, 'sma-crossover', '1.0.0', BTC.id, new Date('2026-11-29T00:00:00Z')).ok).toBe(true);
+    expect(isUsablePass(forged, 'sma-crossover', '1.0.0', BTC.id, new Date('2026-12-01T00:00:01Z')).reason).toMatch(/expired/);
+    expect(isUsablePass(forged, 'sma-crossover', '2.0.0', BTC.id, new Date('2026-11-01T00:00:00Z')).ok).toBe(false);
+    expect(isUsablePass({ ...e, verdict: 'FAIL' }, 'sma-crossover', '1.0.0', BTC.id, new Date('2026-11-01T00:00:00Z')).ok).toBe(false);
+    expect(isUsablePass(null, 'sma-crossover', '1.0.0', BTC.id, new Date()).ok).toBe(false);
+    // Review fixes: instrument must match; a missing/malformed or over-long validity window fails closed.
+    expect(isUsablePass(forged, 'sma-crossover', '1.0.0', 'BINANCE:ETHUSDT', new Date('2026-11-01T00:00:00Z')).reason).toMatch(/is for BINANCE:BTCUSDT/);
+    expect(isUsablePass({ ...forged, expiresAt: undefined as unknown as string }, 'sma-crossover', '1.0.0', BTC.id, new Date('2026-11-01T00:00:00Z')).ok).toBe(false);
+    expect(isUsablePass({ ...forged, expiresAt: '2099-01-01T00:00:00Z' }, 'sma-crossover', '1.0.0', BTC.id, new Date('2026-11-01T00:00:00Z')).ok).toBe(false);
   });
 });
 

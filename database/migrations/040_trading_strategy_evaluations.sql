@@ -6,9 +6,11 @@
 -- trading_decisions: every Decision API outcome, GO or NO_GO
 --   (services/trading/src/decision/go-no-go.ts). Test/demo activity only — never revenue.
 --
--- Both tables are append-only: a trigger rejects UPDATE and DELETE for every role
--- (including the superuser the API still connects as — see 017), so the guarantee does
--- not depend on role grants. No existing table is altered.
+-- Both tables are append-only: triggers reject UPDATE, DELETE and TRUNCATE for ordinary
+-- statements from any role, including the superuser the API still connects as (see 017).
+-- A superuser can still bypass triggers deliberately (ALTER TABLE … DISABLE TRIGGER,
+-- session_replication_role = replica); closing that needs the 017 role switch.
+-- No existing table is altered.
 -- Down: database/migrations-down/040_trading_strategy_evaluations.down.sql (local/ephemeral only).
 
 CREATE TABLE trading_strategy_evaluations (

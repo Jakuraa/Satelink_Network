@@ -29,7 +29,7 @@ Start: main `88ef1dca` (#600) = deployed `/health.commit` `88ef1dca…`.
 | 3 | Go/no-go engine (conditions a–f), Ed25519 founder-signed demo mandate with hard ceiling, model outage → BASELINE_ONLY, append-only decisions | 15 |
 | CI | New `trading` job: typecheck, vitest, engine-bundle drift check (trading tests never ran in CI before) | — |
 
-services/trading vitest: 91 → 143 passed, 1 skipped (opt-in live). Database integration: 75/75 (local PG 16).
+services/trading vitest: 91 → 147 passed, 1 skipped (opt-in live). Independent review (fresh subagent): 0 blockers; 7 should-fix all fixed with regression tests (instrument check on (a), fail-closed expiry, atomic quota reservation, truthful cache timestamps, forming-bar drop, mandate field types, future timestamps). Database integration: 75/75 (local PG 16).
 Mutation checks (each test fails on the mutant): t+1 fill, leakage verdict, kill switch, mandate, agreement, quota guard.
 
 ### Live checks
@@ -40,10 +40,10 @@ Mutation checks (each test fails on the mutant): t+1 fill, leakage verdict, kill
 ### StrategyEvaluation (1d klines 2021-01-01 → 2026-10-30, 4×182-day OOS, fee 10 bps; local test DB, not production)
 | Strategy | Symbol | Id | Beat best baseline | Verdict |
 |---|---|---|---|---|
-| sma-crossover@1.0.0 | BTCUSDT | `eval_ee91816f4c449cb32350a7ed261797d6` | 1/4 | FAIL |
-| donchian-breakout@1.0.0 | BTCUSDT | `eval_90e4a95572d4bdc51a15ef8fd95801a8` | 0/4 | FAIL |
-| sma-crossover@1.0.0 | ETHUSDT | `eval_8c5142e626f53e607e696700f282156a` | 2/4 | FAIL |
-| donchian-breakout@1.0.0 | ETHUSDT | `eval_5a91643a7c1c6fdcb6e83dd82379e06e` | 1/4 | FAIL |
+| sma-crossover@1.0.0 | BTCUSDT | `eval_1e1d3b6bb51e44e33d2c8e32a99832ed` | 1/4 | FAIL |
+| donchian-breakout@1.0.0 | BTCUSDT | `eval_b65c96c6779eaef918727f8c70e8287f` | 0/4 | FAIL |
+| sma-crossover@1.0.0 | ETHUSDT | `eval_73e50ca5cec1bddbeda2e5781387c02f` | 2/4 | FAIL |
+| donchian-breakout@1.0.0 | ETHUSDT | `eval_9f622e8226fd63a1b6e6b3c8a6f88c03` | 1/4 | FAIL |
 Full records: `evidence/trading/STRATEGY_EVALUATIONS_2026-10-31.json`. No PASS → no demo-enable command issued.
 
 ### Founder actions added

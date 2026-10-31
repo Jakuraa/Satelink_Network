@@ -30,6 +30,15 @@ export function mandateSigningPayload(m) {
 export function verifyDemoMandate(m, keys, now) {
     if (!m)
         return { ok: false, reason: 'no demo mandate' };
+    const s0 = m.scope;
+    if (typeof m.mandateId !== 'string' || typeof m.principalId !== 'string' || typeof m.keyId !== 'string' ||
+        typeof m.signature !== 'string' || typeof m.validFrom !== 'string' || typeof m.expiresAt !== 'string' ||
+        typeof m.revoked !== 'boolean' || !s0 ||
+        typeof s0['maxOrderNotionalMinor'] !== 'bigint' || typeof s0['maxDailyLossMinor'] !== 'bigint' ||
+        !Number.isInteger(s0['maxOpenPositions']) || !Array.isArray(s0['instrumentIds']) ||
+        !s0['instrumentIds'].every((x) => typeof x === 'string')) {
+        return { ok: false, reason: 'mandate is malformed (field types)' };
+    }
     const key = keys.get(m.keyId);
     if (!key)
         return { ok: false, reason: `mandate key '${m.keyId}' is not trusted` };

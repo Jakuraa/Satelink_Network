@@ -77,6 +77,8 @@ export class EulerpoolResearchProvider {
     #clock;
     constructor(config = {}) {
         this.#baseUrl = (config.baseUrl ?? EULERPOOL_BASE_URL).replace(/\/$/, '');
+        if (new URL(this.#baseUrl).protocol !== 'https:')
+            throw new EulerpoolError(EulerpoolErrorCode.BAD_REQUEST, 'baseUrl must be https (the Bearer key would travel in clear text)');
         this.#apiKey = config.apiKey;
         this.#fetch = config.fetch ?? ((url, init) => globalThis.fetch(url, init));
         this.#evidence = config.licenceEvidence ?? null;
@@ -153,6 +155,8 @@ export class EulerpoolResearchProvider {
                     throw schema(endpoint, `${k}[${i}] is not positive`);
                 return m;
             };
+            if (openMs + DAY_MS > nowMs)
+                continue; // still forming: never enters a dataset
             const [o, h, l, c] = [px('o'), px('h'), px('l'), px('c')];
             if (h < l || h < o || h < c || l > o || l > c)
                 throw schema(endpoint, `bar ${i} has inconsistent OHLC`);
@@ -170,7 +174,7 @@ export class EulerpoolResearchProvider {
                 lowMinor: l,
                 closeMinor: c,
                 volume: (v ? numericText(v[i]) : null) ?? '0',
-                isClosed: openMs + DAY_MS <= nowMs,
+                isClosed: true,
             });
         }
         return out;
@@ -307,34 +311,44 @@ export class EulerpoolResearchProvider {
         const cacheKey = createHash('sha256').update(`eulerpool:${pathAndQuery}`).digest('hex');
         if (opts.cache && this.#cache) {
             const hit = await this.#cache.get(cacheKey);
-            if (hit !== null)
-                return { body: parseBody(hit, endpoint), retrievedAt: this.#clock().toISOString() };
+            const env = hit === null ? null : readEnvelope(hit);
+            // A cache hit keeps its original retrieval time, so freshness checks see its true age.
+            if (env)
+                return { body: parseBody(env.body, endpoint), retrievedAt: env.retrievedAt };
         }
         if (!this.#apiKey)
             throw new EulerpoolError(EulerpoolErrorCode.NO_API_KEY, 'no API key configured', { endpoint });
         let attempt = 0;
         for (;;) {
-            await this.#guardQuota(endpoint);
+            await this.#reserveQuota(endpoint);
             const text = await this.#once(pathAndQuery, endpoint).catch(async (e) => {
                 if (e instanceof EulerpoolError && e.details.retryable && attempt < this.#maxRetries)
                     return null;
                 throw e;
             });
             if (text !== null) {
+                const retrievedAt = this.#clock().toISOString();
+                const body = parseBody(text, endpoint);
                 if (opts.cache && this.#cache)
-                    await this.#cache.set(cacheKey, text);
-                return { body: parseBody(text, endpoint), retrievedAt: this.#clock().toISOString() };
+                    await this.#cache.set(cacheKey, JSON.stringify({ v: 1, retrievedAt, body: text }));
+                return { body, retrievedAt };
             }
             await this.#sleep(this.#retryBaseMs * 2 ** attempt);
             attempt++;
         }
     }
-    async #guardQuota(endpoint) {
+    /**
+     * Reserve one request BEFORE sending: increment first, then refuse if the reservation
+     * lands past the stop line. Concurrent callers each get a distinct count from the store,
+     * so the stop cannot be overshot; a refused reservation stays counted (fails closed).
+     */
+    async #reserveQuota(endpoint) {
         const period = this.#period();
-        const used = await this.#quota.used(period);
-        if (used >= this.quotaStopAt) {
-            this.#alert(period, used);
-            throw new EulerpoolError(EulerpoolErrorCode.QUOTA_GUARD, `monthly quota guard: ${used}/${this.#limit} used, stop at ${this.quotaStopAt}`, { endpoint, retryable: false });
+        const used = await this.#quota.increment(period);
+        if (used >= this.quotaStopAt)
+            this.#alert(period, Math.min(used, this.quotaStopAt));
+        if (used > this.quotaStopAt) {
+            throw new EulerpoolError(EulerpoolErrorCode.QUOTA_GUARD, `monthly quota guard: stop at ${this.quotaStopAt}/${this.#limit}`, { endpoint, retryable: false });
         }
     }
     #alert(period, used) {
@@ -352,9 +366,6 @@ export class EulerpoolResearchProvider {
         const timer = setTimeout(() => ac.abort(), this.#timeoutMs);
         let res;
         try {
-            const used = await this.#quota.increment(period);
-            if (used >= this.quotaStopAt)
-                this.#alert(period, used);
             res = await this.#fetch(`${this.#baseUrl}${pathAndQuery}`, {
                 method: 'GET',
                 headers: { Authorization: `Bearer ${this.#apiKey}`, Accept: 'application/json' },
@@ -410,6 +421,16 @@ export function eulerpoolEquityInstrument(ticker, opts = {}) {
         tradingHours: { open: '09:30:00', close: '16:00:00', timezone: 'America/New_York', tradingDays: [1, 2, 3, 4, 5] },
         brokerSymbols: { eulerpool: opts.identifier ?? ticker },
     });
+}
+function readEnvelope(raw) {
+    try {
+        const e = JSON.parse(raw);
+        if (e && e.v === 1 && typeof e.retrievedAt === 'string' && !Number.isNaN(Date.parse(e.retrievedAt)) && typeof e.body === 'string') {
+            return { retrievedAt: e.retrievedAt, body: e.body };
+        }
+    }
+    catch { /* legacy/corrupt entry → treated as a miss */ }
+    return null;
 }
 function parseBody(text, endpoint) {
     try {

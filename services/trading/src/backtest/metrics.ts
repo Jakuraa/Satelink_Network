@@ -39,7 +39,7 @@ export function computeMetrics(r: BacktestResult, candles: readonly Candle[], pe
   for (const e of r.equityMinor) {
     if (e > peak) peak = e;
     if (peak > 0n) {
-      const dd = ((peak - e) * 10_000n) / peak;
+      const dd = ((peak - e) * 10_000n + peak - 1n) / peak; // ceil: never flatter the candidate
       if (dd > maxDd) maxDd = dd;
     }
   }

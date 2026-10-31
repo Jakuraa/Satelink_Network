@@ -236,3 +236,40 @@ describe('EulerpoolResearchProvider — quota guard and cache', () => {
     expect([...mem.keys()].every((k) => /^[a-f0-9]{64}$/.test(k))).toBe(true);
   });
 });
+
+describe('EulerpoolResearchProvider — review fixes', () => {
+  it('concurrent requests cannot overshoot the 90% stop (reserve-then-send)', async () => {
+    const store = new InMemoryQuotaStore();
+    await store.raiseTo('2026-10', 89_998);
+    const s = scripted([{ status: 200, body: fx('ratios_ok.json') }]);
+    const p = provider(s.fetch, { quotaStore: store });
+    const codes = await Promise.all(Array.from({ length: 6 }, () => codeOf(p.ratios('AAPL', R))));
+    expect(codes.filter((c) => c === 'NO_ERROR')).toHaveLength(2);
+    expect(codes.filter((c) => c === 'QUOTA_GUARD')).toHaveLength(4);
+    expect(s.calls).toHaveLength(2);
+  });
+
+  it('a cache hit keeps its original retrieval time', async () => {
+    const mem = new Map<string, string>();
+    const cache: ResponseCache = { get: async (k) => mem.get(k) ?? null, set: async (k, v) => { mem.set(k, v); } };
+    let now = new Date('2026-10-31T10:00:00Z');
+    const s = scripted([{ status: 200, body: fx('ohlcv_ok.json') }]);
+    const p = provider(s.fetch, { cache, clock: () => now });
+    await p.dailyBars(AAPL, range, { ...R, cache: true });
+    now = new Date('2027-03-01T00:00:00Z');
+    const again = await p.dailyBars(AAPL, range, { ...R, cache: true });
+    expect(s.calls).toHaveLength(1);
+    expect(again[0]!.retrievalTs).toBe('2026-10-31T10:00:00.000Z');
+  });
+
+  it('a still-forming daily bar is dropped', async () => {
+    const body = '{"t":[1761868800,1761955200],"o":[1,1],"h":[2,2],"l":[1,1],"c":[2,2]}'; // 2025-10-31, 2025-11-01
+    const p = provider(scripted([{ status: 200, body }]).fetch, { clock: () => new Date('2025-11-01T12:00:00Z') });
+    const bars = await p.dailyBars(AAPL, range, R);
+    expect(bars.map((b) => b.eventTs)).toEqual(['2025-10-31T00:00:00.000Z']);
+  });
+
+  it('refuses a non-https base URL (the Bearer key would travel in clear text)', () => {
+    expect(() => new EulerpoolResearchProvider({ baseUrl: 'http://api.eulerpool.com/api/1' })).toThrow(/https/);
+  });
+});

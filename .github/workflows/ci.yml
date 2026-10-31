@@ -58,6 +58,8 @@ jobs:
   trading:
     name: Trading engine (typecheck + tests + bundle sync)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     timeout-minutes: 10
 
     steps:

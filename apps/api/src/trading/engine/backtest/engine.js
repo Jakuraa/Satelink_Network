@@ -28,6 +28,8 @@ export function runBacktest(cfg) {
         if (Date.parse(candles[i].eventTs) <= Date.parse(candles[i - 1].eventTs))
             throw new RangeError(`candles not strictly increasing at ${i}`);
     }
+    for (const c of candles)
+        Object.freeze(c); // strategies must not mutate shared bars
     const rand = seededRandom(cfg.seed);
     let cash = cfg.initialCashMinor;
     let qty = 0n;
@@ -130,8 +132,10 @@ export function runBacktest(cfg) {
     if ((cfg.liquidateAtEnd ?? true) && qty > 0n) {
         const last = end - 1;
         execute('SELL', last, candles[last].closeMinor, last);
-        equity[equity.length - 1] = cash;
-        inPos[inPos.length - 1] = 0;
+        if (qty === 0n) {
+            equity[equity.length - 1] = cash;
+            inPos[inPos.length - 1] = 0;
+        }
     }
     return {
         start, end,

@@ -37,4 +37,35 @@ export class FileResponseCache {
 export function loadLicenceEvidence(path, source) {
     return validateLicenceEvidence(JSON.parse(readFileSync(path, 'utf8')), source);
 }
+/**
+ * Quota counter persisted to a JSON file, so separate research runs share one monthly
+ * count. Increments are serialised within the process; use one runner at a time.
+ */
+export class FileQuotaStore {
+    path;
+    #chain = Promise.resolve();
+    constructor(path) {
+        this.path = path;
+    }
+    #read() {
+        return readFile(this.path, 'utf8').then((t) => JSON.parse(t), () => ({}));
+    }
+    async #write(d) {
+        await mkdir(join(this.path, '..'), { recursive: true });
+        const tmp = `${this.path}.${process.pid}.tmp`;
+        await writeFile(tmp, JSON.stringify(d), 'utf8');
+        await rename(tmp, this.path);
+    }
+    #serial(fn) {
+        const next = this.#chain.then(fn, fn);
+        this.#chain = next.catch(() => undefined);
+        return next;
+    }
+    used(p) { return this.#serial(async () => (await this.#read())[p] ?? 0); }
+    increment(p) { return this.#serial(async () => { const d = await this.#read(); d[p] = (d[p] ?? 0) + 1; await this.#write(d); return d[p]; }); }
+    raiseTo(p, used) { return this.#serial(async () => { const d = await this.#read(); if (used > (d[p] ?? 0)) {
+        d[p] = used;
+        await this.#write(d);
+    } }); }
+}
 //# sourceMappingURL=file-cache.js.map
