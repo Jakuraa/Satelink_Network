@@ -104,3 +104,28 @@ describe('BinanceSpotDataProvider.subscribe', () => {
     expect(mockWs.close).toHaveBeenCalledOnce();
   });
 });
+
+describe('BinanceSpotDataProvider.historicalCandles', () => {
+  it('paginates by startTime and drops bars that have not closed', async () => {
+    const { BinanceSpotDataProvider } = await import('../market/binance-data-provider.js');
+    const { PAPER_INSTRUMENTS } = await import('../market/instrument.js');
+    const DAY = 86_400_000;
+    const t0 = Date.UTC(2024, 0, 1);
+    const row = (i: number) => [t0 + i * DAY, '100.10', '101.00', '99.00', '100.50', '12.5', t0 + (i + 1) * DAY - 1];
+    const urls: string[] = [];
+    const fetch = async (url: string) => {
+      urls.push(url);
+      const start = Number(new URL(url).searchParams.get('startTime'));
+      const first = Math.ceil((start - t0) / DAY); // Binance returns bars with openTime >= startTime
+      const rows = Array.from({ length: Math.max(0, Math.min(1000, 1500 - first)) }, (_, k) => row(first + k));
+      return { ok: true, status: 200, json: async () => rows };
+    };
+    const p = new BinanceSpotDataProvider({ fetch });
+    const now = t0 + 1499 * DAY + 3_600_000; // bar 1499 still forming
+    const bars = await p.historicalCandles(PAPER_INSTRUMENTS.BTC_USDT, '1d', t0, t0 + 1500 * DAY, now);
+    expect(bars).toHaveLength(1499);
+    expect(urls).toHaveLength(2);
+    expect(bars[0]!.openMinor).toBe(10010n);
+    expect(new Set(bars.map((b) => b.eventTs)).size).toBe(1499);
+  });
+});

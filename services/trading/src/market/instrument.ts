@@ -97,6 +97,19 @@ export const PAPER_INSTRUMENTS = {
     tradingHours: null,  // 24/7
     brokerSymbols: { binance: 'BTCUSDT' },
   } as Instrument,
+  ETH_USDT: {
+    id: 'BINANCE:ETHUSDT',
+    symbol: 'ETHUSDT',
+    name: 'Ether / USDT',
+    assetClass: AssetClass.CRYPTO_SPOT,
+    exchange: Exchange.BINANCE,
+    currency: 'USDT',
+    pricePrecision: 2,
+    lotSize: 1,
+    tickSizeMinor: 1n, // $0.01 in 2-decimal minor-units
+    tradingHours: null,  // 24/7
+    brokerSymbols: { binance: 'ETHUSDT' },
+  } as Instrument,
   NIFTY50: {
     id: 'NSE:NIFTY50',
     symbol: 'NIFTY50',

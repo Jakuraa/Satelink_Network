@@ -1,4 +1,10 @@
-const DECISION_SCHEMA = {
+const SYSTEM_PROMPT = [
+    'You are a trading signal analyst. Your role is to propose a trading signal (BUY/SELL/HOLD) based on the provided market data.',
+    'You are NOT executing any trade. Your proposal is one input to a deterministic risk system that makes the final decision.',
+    'Be concise and factual. Do not invent data. Flag uncertainty as HOLD.',
+    'Respond ONLY with valid JSON matching the provided schema.',
+].join('\n');
+export const DECISION_SCHEMA = {
     type: 'object',
     required: ['signal', 'confidence', 'rationale', 'risks'],
     additionalProperties: false,
@@ -16,24 +22,17 @@ export class TradingDecisionAPI {
         this.#provider = opts.provider;
         this.#defaultModel = opts.defaultModel ?? 'anthropic/claude-3.5-haiku';
     }
+    /** The exact messages sent to the model. Contains market data only — never credentials. */
+    static buildMessages(input, baseline) {
+        return [
+            { role: 'system', content: SYSTEM_PROMPT },
+            { role: 'user', content: formatDecisionPrompt(input, baseline) },
+        ];
+    }
     async propose(req) {
         const requestedAt = new Date().toISOString();
         const { input, deterministicBaseline, model } = req;
-        const messages = [
-            {
-                role: 'system',
-                content: [
-                    'You are a trading signal analyst. Your role is to propose a trading signal (BUY/SELL/HOLD) based on the provided market data.',
-                    'You are NOT executing any trade. Your proposal is one input to a deterministic risk system that makes the final decision.',
-                    'Be concise and factual. Do not invent data. Flag uncertainty as HOLD.',
-                    'Respond ONLY with valid JSON matching the provided schema.',
-                ].join('\n'),
-            },
-            {
-                role: 'user',
-                content: formatDecisionPrompt(input, deterministicBaseline),
-            },
-        ];
+        const messages = TradingDecisionAPI.buildMessages(input, deterministicBaseline);
         const raw = await this.#provider.structuredOutput(messages, DECISION_SCHEMA, { model: model ?? this.#defaultModel });
         const respondedAt = new Date().toISOString();
         // structuredOutput already validated against schema; defensive normalize:
@@ -52,7 +51,7 @@ export class TradingDecisionAPI {
         return { proposal, baseline: deterministicBaseline, agreesWithBaseline, requestedAt, respondedAt };
     }
 }
-function formatDecisionPrompt(input, baseline) {
+export function formatDecisionPrompt(input, baseline) {
     const { instrument, latestQuote, recentCandles } = input;
     const lines = [
         `Instrument: ${instrument.symbol} (${instrument.assetClass}) on ${instrument.exchange}`,

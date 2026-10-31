@@ -89,6 +89,10 @@ Evidence keys: **P** = production probe 2026-10-20 (curl transcript in the ledge
 | Capability | Status | Evidence | Disagreement → resolution |
 |---|---|---|---|
 | Trading AI stages 09–35 | TESTED BUT NOT DEPLOYED | PR #492; `mountTradingRoutes` absent on main (RT) | W8 |
+| Eulerpool research adapter (Bearer, quota guard, evidence licensing) | IMPLEMENTED AND VERIFIED IN A TEST ENVIRONMENT | Session T1; 19 contract tests; live from Railway → 502 (`evidence/EULERPOOL_CONTRACT.md`) | Auth unverified live; FREE plan = internal R&D only |
+| Backtest / walk-forward StrategyEvaluation (append-only, migration 040) | IMPLEMENTED AND VERIFIED IN A TEST ENVIRONMENT | Session T1; PG integration 6/6; 4 real evaluations, all FAIL | Migration 040 not applied in production (F23) |
+| Decision API go/no-go (conditions a–f, signed demo mandate) | IMPLEMENTED AND VERIFIED IN A TEST ENVIRONMENT | Session T1; 15 tests | Not mounted on any route |
+| Binance Spot Demo broker + forward-test runner | BLOCKED (geo) | API runtime us-west2 → HTTP 451 (`evidence/TRADING_GEO_CHECK_2026-10-31.md`) | F22: worker outside the US |
 | Gate 0 register (B-01…B-12) | PARTIALLY IMPLEMENTED | `docs/trading-agent/BLOCKERS.md` on integration | Founder reports Part D cleared (rotations done, Paperclip decommissioned) on 2026-10-20 → update B-01/B-02/B-03/B-04 with that evidence in W8 |
 
 ## M10 Surfaces

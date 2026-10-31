@@ -1,0 +1,1709 @@
+{
+  "generatedAt": "2026-10-31T11:06:03.968Z",
+  "seed": 20261031,
+  "costs": "fee 10 bps (Binance spot default tier; account tier unknown — demo API blocked from Railway), half-spread 1 bp, slippage 2 bps + 0..3 bps seeded jitter",
+  "exchangeInfo": {
+    "BTCUSDT": {
+      "symbol": "BTCUSDT",
+      "tickSize": "0.01000000",
+      "stepSize": "0.00001000",
+      "minQty": "0.00001000",
+      "maxQty": "9000.00000000",
+      "minNotional": "5.00000000"
+    },
+    "ETHUSDT": {
+      "symbol": "ETHUSDT",
+      "tickSize": "0.01000000",
+      "stepSize": "0.00010000",
+      "minQty": "0.00010000",
+      "maxQty": "9000.00000000",
+      "minNotional": "5.00000000"
+    }
+  },
+  "evaluations": [
+    {
+      "createdAt": "2026-10-31T11:06:02.144Z",
+      "datasets": [
+        {
+          "bars": 2129,
+          "from": "2021-01-01T00:00:00.000Z",
+          "instrumentId": "BINANCE:BTCUSDT",
+          "period": "1d",
+          "sha256": "7c39c295006bd2e73794d2a54a4b0f606edd517c7ec9e94e57899442693e10f5",
+          "source": "binance-spot-klines",
+          "to": "2026-10-30T00:00:00.000Z"
+        }
+      ],
+      "evaluationId": "eval_1e1d3b6bb51e44e33d2c8e32a99832ed",
+      "expiresAt": "2026-11-30T11:06:02.144Z",
+      "flags": [],
+      "instrumentId": "BINANCE:BTCUSDT",
+      "params": {
+        "allocationBps": "10000",
+        "costs": {
+          "feeBps": "10",
+          "halfSpreadBps": "1",
+          "slippageBps": "2",
+          "slippageJitterBps": 3
+        },
+        "grid": [
+          {
+            "fastPeriod": 5,
+            "slowPeriod": 30
+          },
+          {
+            "fastPeriod": 5,
+            "slowPeriod": 50
+          },
+          {
+            "fastPeriod": 5,
+            "slowPeriod": 100
+          },
+          {
+            "fastPeriod": 10,
+            "slowPeriod": 30
+          },
+          {
+            "fastPeriod": 10,
+            "slowPeriod": 50
+          },
+          {
+            "fastPeriod": 10,
+            "slowPeriod": 100
+          },
+          {
+            "fastPeriod": 20,
+            "slowPeriod": 30
+          },
+          {
+            "fastPeriod": 20,
+            "slowPeriod": 50
+          },
+          {
+            "fastPeriod": 20,
+            "slowPeriod": 100
+          }
+        ],
+        "initialCashMinor": "100000",
+        "periodsPerYear": 365,
+        "seed": 20261031,
+        "testBars": 182,
+        "trainBars": 365,
+        "windows": 4
+      },
+      "resultHash": "a2cad1be41e96d0dd931afe252bafaa3477cd8e7d363993dc7dcd65137af2e29",
+      "strategyId": "sma-crossover",
+      "strategyVersion": "1.0.0",
+      "summary": {
+        "bestBaselineTotalReturnBps": "5873",
+        "buyAndHoldWorstDrawdownBps": "4309",
+        "candidateTotalReturnBps": "-1028",
+        "candidateWorstDrawdownBps": "1631",
+        "windowsBeaten": 1
+      },
+      "verdict": "FAIL",
+      "verdictReasons": [
+        "beat the best baseline in 1/4 OOS windows (need ≥ 3)"
+      ],
+      "windows": [
+        {
+          "baselines": {
+            "buy-and-hold": {
+              "bars": 182,
+              "calibration": {
+                "brier": 0.480663,
+                "n": 181
+              },
+              "exposure": 0.989011,
+              "feesPaidMinor": "240",
+              "finalEquityMinor": "139248",
+              "maxDrawdownBps": "2810",
+              "netReturnBps": "3924",
+              "sharpe": 1.521104,
+              "sortino": 2.433844,
+              "tradeCount": 1,
+              "turnover": 2.39268,
+              "winRate": 1
+            },
+            "no-trade": {
+              "bars": 182,
+              "calibration": null,
+              "exposure": 0,
+              "feesPaidMinor": "0",
+              "finalEquityMinor": "100000",
+              "maxDrawdownBps": "0",
+              "netReturnBps": "0",
+              "sharpe": 0,
+              "sortino": 0,
+              "tradeCount": 0,
+              "turnover": 0,
+              "winRate": 0
+            },
+            "sma-crossover-10-30": {
+              "bars": 182,
+              "calibration": {
+                "brier": 0.249562,
+                "n": 6
+              },
+              "exposure": 0.225275,
+              "feesPaidMinor": "564",
+              "finalEquityMinor": "100538",
+              "maxDrawdownBps": "1439",
+              "netReturnBps": "53",
+              "sharpe": 0.151011,
+              "sortino": 0.235767,
+              "tradeCount": 3,
+              "turnover": 5.61122,
+              "winRate": 0.333333
+            }
+          },
+          "beatBestBaseline": false,
+          "bestBaselineId": "buy-and-hold",
+          "candidate": {
+            "bars": 182,
+            "calibration": {
+              "brier": 0.249144,
+              "n": 8
+            },
+            "exposure": 0.203297,
+            "feesPaidMinor": "739",
+            "finalEquityMinor": "100122",
+            "maxDrawdownBps": "1631",
+            "netReturnBps": "12",
+            "sharpe": 0.112025,
+            "sortino": 0.169744,
+            "tradeCount": 4,
+            "turnover": 7.36301,
+            "winRate": 0.5
+          },
+          "index": 0,
+          "selectedParams": {
+            "fastPeriod": 5,
+            "slowPeriod": 50
+          },
+          "test": {
+            "bars": 182,
+            "from": "2024-11-02T00:00:00.000Z",
+            "to": "2025-05-02T00:00:00.000Z"
+          },
+          "train": {
+            "bars": 365,
+            "from": "2023-11-03T00:00:00.000Z",
+            "to": "2024-11-01T00:00:00.000Z"
+          }
+        },
+        {
+          "baselines": {
+            "buy-and-hold": {
+              "bars": 182,
+              "calibration": {
+                "brier": 0.475138,
+                "n": 181
+              },
+              "exposure": 0.989011,
+              "feesPaidMinor": "215",
+              "finalEquityMinor": "114003",
+              "maxDrawdownBps": "1462",
+              "netReturnBps": "1400",
+              "sharpe": 0.952276,
+              "sortino": 1.404665,
+              "tradeCount": 1,
+              "turnover": 2.1387,
+              "winRate": 1
+            },
+            "no-trade": {
+              "bars": 182,
+              "calibration": null,
+              "exposure": 0,
+              "feesPaidMinor": "0",
+              "finalEquityMinor": "100000",
+              "maxDrawdownBps": "0",
+              "netReturnBps": "0",
+              "sharpe": 0,
+              "sortino": 0,
+              "tradeCount": 0,
+              "turnover": 0,
+              "winRate": 0
+            },
+            "sma-crossover-10-30": {
+              "bars": 182,
+              "calibration": {
+                "brier": 0.249731,
+                "n": 11
+              },
+              "exposure": 0.412088,
+              "feesPaidMinor": "992",
+              "finalEquityMinor": "85687",
+              "maxDrawdownBps": "2246",
+              "netReturnBps": "-1432",
+              "sharpe": -1.27097,
+              "sortino": -1.612262,
+              "tradeCount": 5,
+              "turnover": 9.88697,
+              "winRate": 0.2
+            }
+          },
+          "beatBestBaseline": false,
+          "bestBaselineId": "buy-and-hold",
+          "candidate": {
+            "bars": 182,
+            "calibration": {
+              "brier": 0.249174,
+              "n": 5
+            },
+            "exposure": 0.137363,
+            "feesPaidMinor": "379",
+            "finalEquityMinor": "89678",
+            "maxDrawdownBps": "1476",
+            "netReturnBps": "-1033",
+            "sharpe": -1.379855,
+            "sortino": -1.561229,
+            "tradeCount": 2,
+            "turnover": 3.77529,
+            "winRate": 0
+          },
+          "index": 1,
+          "selectedParams": {
+            "fastPeriod": 5,
+            "slowPeriod": 100
+          },
+          "test": {
+            "bars": 182,
+            "from": "2025-05-03T00:00:00.000Z",
+            "to": "2025-10-31T00:00:00.000Z"
+          },
+          "train": {
+            "bars": 365,
+            "from": "2024-05-03T00:00:00.000Z",
+            "to": "2025-05-02T00:00:00.000Z"
+          }
+        },
+        {
+          "baselines": {
+            "buy-and-hold": {
+              "bars": 182,
+              "calibration": {
+                "brier": 0.530387,
+                "n": 181
+              },
+              "exposure": 0.989011,
+              "feesPaidMinor": "171",
+              "finalEquityMinor": "70865",
+              "maxDrawdownBps": "4309",
+              "netReturnBps": "-2914",
+              "sharpe": -1.126173,
+              "sortino": -1.527979,
+              "tradeCount": 1,
+              "turnover": 1.70832,
+              "winRate": 0
+            },
+            "no-trade": {
+              "bars": 182,
+              "calibration": null,
+              "exposure": 0,
+              "feesPaidMinor": "0",
+              "finalEquityMinor": "100000",
+              "maxDrawdownBps": "0",
+              "netReturnBps": "0",
+              "sharpe": 0,
+              "sortino": 0,
+              "tradeCount": 0,
+              "turnover": 0,
+              "winRate": 0
+            },
+            "sma-crossover-10-30": {
+              "bars": 182,
+              "calibration": {
+                "brier": 0.2507,
+                "n": 7
+              },
+              "exposure": 0.373626,
+              "feesPaidMinor": "711",
+              "finalEquityMinor": "88064",
+              "maxDrawdownBps": "2027",
+              "netReturnBps": "-1194",
+              "sharpe": -0.950195,
+              "sortino": -1.33277,
+              "tradeCount": 4,
+              "turnover": 7.06825,
+              "winRate": 0.25
+            }
+          },
+          "beatBestBaseline": true,
+          "bestBaselineId": "no-trade",
+          "candidate": {
+            "bars": 182,
+            "calibration": {
+              "brier": 0.246611,
+              "n": 1
+            },
+            "exposure": 0.032967,
+            "feesPaidMinor": "201",
+            "finalEquityMinor": "100722",
+            "maxDrawdownBps": "366",
+            "netReturnBps": "72",
+            "sharpe": 0.310986,
+            "sortino": 0.496406,
+            "tradeCount": 1,
+            "turnover": 2.00635,
+            "winRate": 1
+          },
+          "index": 2,
+          "selectedParams": {
+            "fastPeriod": 20,
+            "slowPeriod": 100
+          },
+          "test": {
+            "bars": 182,
+            "from": "2025-11-01T00:00:00.000Z",
+            "to": "2026-05-01T00:00:00.000Z"
+          },
+          "train": {
+            "bars": 365,
+            "from": "2024-11-01T00:00:00.000Z",
+            "to": "2025-10-31T00:00:00.000Z"
+          }
+        },
+        {
+          "baselines": {
+            "buy-and-hold": {
+              "bars": 182,
+              "calibration": {
+                "brier": 0.519337,
+                "n": 181
+              },
+              "exposure": 0.989011,
+              "feesPaidMinor": "199",
+              "finalEquityMinor": "98049",
+              "maxDrawdownBps": "2869",
+              "netReturnBps": "-196",
+              "sharpe": 0.07465,
+              "sortino": 0.114626,
+              "tradeCount": 1,
+              "turnover": 1.98034,
+              "winRate": 0
+            },
+            "no-trade": {
+              "bars": 182,
+              "calibration": null,
+              "exposure": 0,
+              "feesPaidMinor": "0",
+              "finalEquityMinor": "100000",
+              "maxDrawdownBps": "0",
+              "netReturnBps": "0",
+              "sharpe": 0,
+              "sortino": 0,
+              "tradeCount": 0,
+              "turnover": 0,
+              "winRate": 0
+            },
+            "sma-crossover-10-30": {
+              "bars": 182,
+              "calibration": {
+                "brier": 0.249534,
+                "n": 7
+              },
+              "exposure": 0.412088,
+              "feesPaidMinor": "603",
+              "finalEquityMinor": "97570",
+              "maxDrawdownBps": "1160",
+              "netReturnBps": "-243",
+              "sharpe": -0.127929,
+              "sortino": -0.200981,
+              "tradeCount": 3,
+              "turnover": 6.00951,
+              "winRate": 0.333333
+            }
+          },
+          "beatBestBaseline": false,
+          "bestBaselineId": "no-trade",
+          "candidate": {
+            "bars": 182,
+            "calibration": {
+              "brier": 0.249687,
+              "n": 2
+            },
+            "exposure": 0.368132,
+            "feesPaidMinor": "200",
+            "finalEquityMinor": "99241",
+            "maxDrawdownBps": "1082",
+            "netReturnBps": "-76",
+            "sharpe": 0.032625,
+            "sortino": 0.051549,
+            "tradeCount": 1,
+            "turnover": 1.99121,
+            "winRate": 0
+          },
+          "index": 3,
+          "selectedParams": {
+            "fastPeriod": 20,
+            "slowPeriod": 100
+          },
+          "test": {
+            "bars": 182,
+            "from": "2026-05-02T00:00:00.000Z",
+            "to": "2026-10-30T00:00:00.000Z"
+          },
+          "train": {
+            "bars": 365,
+            "from": "2025-05-02T00:00:00.000Z",
+            "to": "2026-05-01T00:00:00.000Z"
+          }
+        }
+      ]
+    },
+    {
+      "createdAt": "2026-10-31T11:06:02.434Z",
+      "datasets": [
+        {
+          "bars": 2129,
+          "from": "2021-01-01T00:00:00.000Z",
+          "instrumentId": "BINANCE:BTCUSDT",
+          "period": "1d",
+          "sha256": "7c39c295006bd2e73794d2a54a4b0f606edd517c7ec9e94e57899442693e10f5",
+          "source": "binance-spot-klines",
+          "to": "2026-10-30T00:00:00.000Z"
+        }
+      ],
+      "evaluationId": "eval_b65c96c6779eaef918727f8c70e8287f",
+      "expiresAt": "2026-11-30T11:06:02.434Z",
+      "flags": [],
+      "instrumentId": "BINANCE:BTCUSDT",
+      "params": {
+        "allocationBps": "10000",
+        "costs": {
+          "feeBps": "10",
+          "halfSpreadBps": "1",
+          "slippageBps": "2",
+          "slippageJitterBps": 3
+        },
+        "grid": [
+          {
+            "entry": 20,
+            "exit": 10
+          },
+          {
+            "entry": 20,
+            "exit": 20
+          },
+          {
+            "entry": 55,
+            "exit": 10
+          },
+          {
+            "entry": 55,
+            "exit": 20
+          }
+        ],
+        "initialCashMinor": "100000",
+        "periodsPerYear": 365,
+        "seed": 20261031,
+        "testBars": 182,
+        "trainBars": 365,
+        "windows": 4
+      },
+      "resultHash": "18cca0a4c5bef111e033314b22749e6ca48d552836b7909ca012c51c16d60148",
+      "strategyId": "donchian-breakout",
+      "strategyVersion": "1.0.0",
+      "summary": {
+        "bestBaselineTotalReturnBps": "5873",
+        "buyAndHoldWorstDrawdownBps": "4309",
+        "candidateTotalReturnBps": "763",
+        "candidateWorstDrawdownBps": "1735",
+        "windowsBeaten": 0
+      },
+      "verdict": "FAIL",
+      "verdictReasons": [
+        "beat the best baseline in 0/4 OOS windows (need ≥ 3)"
+      ],
+      "windows": [
+        {
+          "baselines": {
+            "buy-and-hold": {
+              "bars": 182,
+              "calibration": {
+                "brier": 0.480663,
+                "n": 181
+              },
+              "exposure": 0.989011,
+              "feesPaidMinor": "240",
+              "finalEquityMinor": "139248",
+              "maxDrawdownBps": "2810",
+              "netReturnBps": "3924",
+              "sharpe": 1.521104,
+              "sortino": 2.433844,
+              "tradeCount": 1,
+              "turnover": 2.39268,
+              "winRate": 1
+            },
+            "no-trade": {
+              "bars": 182,
+              "calibration": null,
+              "exposure": 0,
+              "feesPaidMinor": "0",
+              "finalEquityMinor": "100000",
+              "maxDrawdownBps": "0",
+              "netReturnBps": "0",
+              "sharpe": 0,
+              "sortino": 0,
+              "tradeCount": 0,
+              "turnover": 0,
+              "winRate": 0
+            },
+            "sma-crossover-10-30": {
+              "bars": 182,
+              "calibration": {
+                "brier": 0.249562,
+                "n": 6
+              },
+              "exposure": 0.225275,
+              "feesPaidMinor": "564",
+              "finalEquityMinor": "100538",
+              "maxDrawdownBps": "1439",
+              "netReturnBps": "53",
+              "sharpe": 0.151011,
+              "sortino": 0.235767,
+              "tradeCount": 3,
+              "turnover": 5.61122,
+              "winRate": 0.333333
+            }
+          },
+          "beatBestBaseline": false,
+          "bestBaselineId": "buy-and-hold",
+          "candidate": {
+            "bars": 182,
+            "calibration": {
+              "brier": 0.254286,
+              "n": 14
+            },
+            "exposure": 0.483516,
+            "feesPaidMinor": "488",
+            "finalEquityMinor": "129091",
+            "maxDrawdownBps": "1280",
+            "netReturnBps": "2909",
+            "sharpe": 1.685437,
+            "sortino": 2.839991,
+            "tradeCount": 2,
+            "turnover": 4.86831,
+            "winRate": 1
+          },
+          "index": 0,
+          "selectedParams": {
+            "entry": 55,
+            "exit": 10
+          },
+          "test": {
+            "bars": 182,
+            "from": "2024-11-02T00:00:00.000Z",
+            "to": "2025-05-02T00:00:00.000Z"
+          },
+          "train": {
+            "bars": 365,
+            "from": "2023-11-03T00:00:00.000Z",
+            "to": "2024-11-01T00:00:00.000Z"
+          }
+        },
+        {
+          "baselines": {
+            "buy-and-hold": {
+              "bars": 182,
+              "calibration": {
+                "brier": 0.475138,
+                "n": 181
+              },
+              "exposure": 0.989011,
+              "feesPaidMinor": "215",
+              "finalEquityMinor": "114003",
+              "maxDrawdownBps": "1462",
+              "netReturnBps": "1400",
+              "sharpe": 0.952276,
+              "sortino": 1.404665,
+              "tradeCount": 1,
+              "turnover": 2.1387,
+              "winRate": 1
+            },
+            "no-trade": {
+              "bars": 182,
+              "calibration": null,
+              "exposure": 0,
+              "feesPaidMinor": "0",
+              "finalEquityMinor": "100000",
+              "maxDrawdownBps": "0",
+              "netReturnBps": "0",
+              "sharpe": 0,
+              "sortino": 0,
+              "tradeCount": 0,
+              "turnover": 0,
+              "winRate": 0
+            },
+            "sma-crossover-10-30": {
+              "bars": 182,
+              "calibration": {
+                "brier": 0.249731,
+                "n": 11
+              },
+              "exposure": 0.412088,
+              "feesPaidMinor": "992",
+              "finalEquityMinor": "85687",
+              "maxDrawdownBps": "2246",
+              "netReturnBps": "-1432",
+              "sharpe": -1.27097,
+              "sortino": -1.612262,
+              "tradeCount": 5,
+              "turnover": 9.88697,
+              "winRate": 0.2
+            }
+          },
+          "beatBestBaseline": false,
+          "bestBaselineId": "buy-and-hold",
+          "candidate": {
+            "bars": 182,
+            "calibration": {
+              "brier": 0.46,
+              "n": 20
+            },
+            "exposure": 0.274725,
+            "feesPaidMinor": "588",
+            "finalEquityMinor": "89281",
+            "maxDrawdownBps": "1735",
+            "netReturnBps": "-1072",
+            "sharpe": -1.465338,
+            "sortino": -1.83967,
+            "tradeCount": 3,
+            "turnover": 5.85327,
+            "winRate": 0.333333
+          },
+          "index": 1,
+          "selectedParams": {
+            "entry": 55,
+            "exit": 10
+          },
+          "test": {
+            "bars": 182,
+            "from": "2025-05-03T00:00:00.000Z",
+            "to": "2025-10-31T00:00:00.000Z"
+          },
+          "train": {
+            "bars": 365,
+            "from": "2024-05-03T00:00:00.000Z",
+            "to": "2025-05-02T00:00:00.000Z"
+          }
+        },
+        {
+          "baselines": {
+            "buy-and-hold": {
+              "bars": 182,
+              "calibration": {
+                "brier": 0.530387,
+                "n": 181
+              },
+              "exposure": 0.989011,
+              "feesPaidMinor": "171",
+              "finalEquityMinor": "70865",
+              "maxDrawdownBps": "4309",
+              "netReturnBps": "-2914",
+              "sharpe": -1.126173,
+              "sortino": -1.527979,
+              "tradeCount": 1,
+              "turnover": 1.70832,
+              "winRate": 0
+            },
+            "no-trade": {
+              "bars": 182,
+              "calibration": null,
+              "exposure": 0,
+              "feesPaidMinor": "0",
+              "finalEquityMinor": "100000",
+              "maxDrawdownBps": "0",
+              "netReturnBps": "0",
+              "sharpe": 0,
+              "sortino": 0,
+              "tradeCount": 0,
+              "turnover": 0,
+              "winRate": 0
+            },
+            "sma-crossover-10-30": {
+              "bars": 182,
+              "calibration": {
+                "brier": 0.2507,
+                "n": 7
+              },
+              "exposure": 0.373626,
+              "feesPaidMinor": "711",
+              "finalEquityMinor": "88064",
+              "maxDrawdownBps": "2027",
+              "netReturnBps": "-1194",
+              "sharpe": -0.950195,
+              "sortino": -1.33277,
+              "tradeCount": 4,
+              "turnover": 7.06825,
+              "winRate": 0.25
+            }
+          },
+          "beatBestBaseline": false,
+          "bestBaselineId": "no-trade",
+          "candidate": {
+            "bars": 182,
+            "calibration": {
+              "brier": 0.392941,
+              "n": 17
+            },
+            "exposure": 0.10989,
+            "feesPaidMinor": "380",
+            "finalEquityMinor": "93530",
+            "maxDrawdownBps": "1293",
+            "netReturnBps": "-647",
+            "sharpe": -1.104789,
+            "sortino": -1.382495,
+            "tradeCount": 2,
+            "turnover": 3.78178,
+            "winRate": 0.5
+          },
+          "index": 2,
+          "selectedParams": {
+            "entry": 55,
+            "exit": 10
+          },
+          "test": {
+            "bars": 182,
+            "from": "2025-11-01T00:00:00.000Z",
+            "to": "2026-05-01T00:00:00.000Z"
+          },
+          "train": {
+            "bars": 365,
+            "from": "2024-11-01T00:00:00.000Z",
+            "to": "2025-10-31T00:00:00.000Z"
+          }
+        },
+        {
+          "baselines": {
+            "buy-and-hold": {
+              "bars": 182,
+              "calibration": {
+                "brier": 0.519337,
+                "n": 181
+              },
+              "exposure": 0.989011,
+              "feesPaidMinor": "199",
+              "finalEquityMinor": "98049",
+              "maxDrawdownBps": "2869",
+              "netReturnBps": "-196",
+              "sharpe": 0.07465,
+              "sortino": 0.114626,
+              "tradeCount": 1,
+              "turnover": 1.98034,
+              "winRate": 0
+            },
+            "no-trade": {
+              "bars": 182,
+              "calibration": null,
+              "exposure": 0,
+              "feesPaidMinor": "0",
+              "finalEquityMinor": "100000",
+              "maxDrawdownBps": "0",
+              "netReturnBps": "0",
+              "sharpe": 0,
+              "sortino": 0,
+              "tradeCount": 0,
+              "turnover": 0,
+              "winRate": 0
+            },
+            "sma-crossover-10-30": {
+              "bars": 182,
+              "calibration": {
+                "brier": 0.249534,
+                "n": 7
+              },
+              "exposure": 0.412088,
+              "feesPaidMinor": "603",
+              "finalEquityMinor": "97570",
+              "maxDrawdownBps": "1160",
+              "netReturnBps": "-243",
+              "sharpe": -0.127929,
+              "sortino": -0.200981,
+              "tradeCount": 3,
+              "turnover": 6.00951,
+              "winRate": 0.333333
+            }
+          },
+          "beatBestBaseline": false,
+          "bestBaselineId": "no-trade",
+          "candidate": {
+            "bars": 182,
+            "calibration": {
+              "brier": 0.197895,
+              "n": 19
+            },
+            "exposure": 0.307692,
+            "feesPaidMinor": "609",
+            "finalEquityMinor": "99860",
+            "maxDrawdownBps": "1256",
+            "netReturnBps": "-14",
+            "sharpe": 0.085747,
+            "sortino": 0.146949,
+            "tradeCount": 3,
+            "turnover": 6.07087,
+            "winRate": 0.333333
+          },
+          "index": 3,
+          "selectedParams": {
+            "entry": 55,
+            "exit": 10
+          },
+          "test": {
+            "bars": 182,
+            "from": "2026-05-02T00:00:00.000Z",
+            "to": "2026-10-30T00:00:00.000Z"
+          },
+          "train": {
+            "bars": 365,
+            "from": "2025-05-02T00:00:00.000Z",
+            "to": "2026-05-01T00:00:00.000Z"
+          }
+        }
+      ]
+    },
+    {
+      "createdAt": "2026-10-31T11:06:03.750Z",
+      "datasets": [
+        {
+          "bars": 2129,
+          "from": "2021-01-01T00:00:00.000Z",
+          "instrumentId": "BINANCE:ETHUSDT",
+          "period": "1d",
+          "sha256": "c568855b90758398f39c6075461eded28c84234de804cac521dc8c653e6c5550",
+          "source": "binance-spot-klines",
+          "to": "2026-10-30T00:00:00.000Z"
+        }
+      ],
+      "evaluationId": "eval_73e50ca5cec1bddbeda2e5781387c02f",
+      "expiresAt": "2026-11-30T11:06:03.750Z",
+      "flags": [],
+      "instrumentId": "BINANCE:ETHUSDT",
+      "params": {
+        "allocationBps": "10000",
+        "costs": {
+          "feeBps": "10",
+          "halfSpreadBps": "1",
+          "slippageBps": "2",
+          "slippageJitterBps": 3
+        },
+        "grid": [
+          {
+            "fastPeriod": 5,
+            "slowPeriod": 30
+          },
+          {
+            "fastPeriod": 5,
+            "slowPeriod": 50
+          },
+          {
+            "fastPeriod": 5,
+            "slowPeriod": 100
+          },
+          {
+            "fastPeriod": 10,
+            "slowPeriod": 30
+          },
+          {
+            "fastPeriod": 10,
+            "slowPeriod": 50
+          },
+          {
+            "fastPeriod": 10,
+            "slowPeriod": 100
+          },
+          {
+            "fastPeriod": 20,
+            "slowPeriod": 30
+          },
+          {
+            "fastPeriod": 20,
+            "slowPeriod": 50
+          },
+          {
+            "fastPeriod": 20,
+            "slowPeriod": 100
+          }
+        ],
+        "initialCashMinor": "100000",
+        "periodsPerYear": 365,
+        "seed": 20261031,
+        "testBars": 182,
+        "trainBars": 365,
+        "windows": 4
+      },
+      "resultHash": "fa54c600dc601331726e4dfb7a9c472babac327458fd79134608b1713c0aacf6",
+      "strategyId": "sma-crossover",
+      "strategyVersion": "1.0.0",
+      "summary": {
+        "bestBaselineTotalReturnBps": "18121",
+        "buyAndHoldWorstDrawdownBps": "6320",
+        "candidateTotalReturnBps": "8979",
+        "candidateWorstDrawdownBps": "2090",
+        "windowsBeaten": 2
+      },
+      "verdict": "FAIL",
+      "verdictReasons": [
+        "beat the best baseline in 2/4 OOS windows (need ≥ 3)"
+      ],
+      "windows": [
+        {
+          "baselines": {
+            "buy-and-hold": {
+              "bars": 182,
+              "calibration": {
+                "brier": 0.508287,
+                "n": 181
+              },
+              "exposure": 0.989011,
+              "feesPaidMinor": "174",
+              "finalEquityMinor": "73649",
+              "maxDrawdownBps": "6320",
+              "netReturnBps": "-2636",
+              "sharpe": -0.394356,
+              "sortino": -0.558706,
+              "tradeCount": 1,
+              "turnover": 1.73581,
+              "winRate": 0
+            },
+            "no-trade": {
+              "bars": 182,
+              "calibration": null,
+              "exposure": 0,
+              "feesPaidMinor": "0",
+              "finalEquityMinor": "100000",
+              "maxDrawdownBps": "0",
+              "netReturnBps": "0",
+              "sharpe": 0,
+              "sortino": 0,
+              "tradeCount": 0,
+              "turnover": 0,
+              "winRate": 0
+            },
+            "sma-crossover-10-30": {
+              "bars": 182,
+              "calibration": {
+                "brier": 0.247748,
+                "n": 4
+              },
+              "exposure": 0.269231,
+              "feesPaidMinor": "443",
+              "finalEquityMinor": "115864",
+              "maxDrawdownBps": "1819",
+              "netReturnBps": "1586",
+              "sharpe": 0.997816,
+              "sortino": 1.674173,
+              "tradeCount": 2,
+              "turnover": 4.41843,
+              "winRate": 1
+            }
+          },
+          "beatBestBaseline": true,
+          "bestBaselineId": "sma-crossover-10-30",
+          "candidate": {
+            "bars": 182,
+            "calibration": {
+              "brier": 0.24909,
+              "n": 4
+            },
+            "exposure": 0.274725,
+            "feesPaidMinor": "469",
+            "finalEquityMinor": "122119",
+            "maxDrawdownBps": "1804",
+            "netReturnBps": "2211",
+            "sharpe": 1.240878,
+            "sortino": 2.105729,
+            "tradeCount": 2,
+            "turnover": 4.66406,
+            "winRate": 0.5
+          },
+          "index": 0,
+          "selectedParams": {
+            "fastPeriod": 10,
+            "slowPeriod": 50
+          },
+          "test": {
+            "bars": 182,
+            "from": "2024-11-02T00:00:00.000Z",
+            "to": "2025-05-02T00:00:00.000Z"
+          },
+          "train": {
+            "bars": 365,
+            "from": "2023-11-03T00:00:00.000Z",
+            "to": "2024-11-01T00:00:00.000Z"
+          }
+        },
+        {
+          "baselines": {
+            "buy-and-hold": {
+              "bars": 182,
+              "calibration": {
+                "brier": 0.475138,
+                "n": 181
+              },
+              "exposure": 0.989011,
+              "feesPaidMinor": "310",
+              "finalEquityMinor": "209253",
+              "maxDrawdownBps": "2246",
+              "netReturnBps": "10925",
+              "sharpe": 2.354454,
+              "sortino": 4.281055,
+              "tradeCount": 1,
+              "turnover": 3.09349,
+              "winRate": 1
+            },
+            "no-trade": {
+              "bars": 182,
+              "calibration": null,
+              "exposure": 0,
+              "feesPaidMinor": "0",
+              "finalEquityMinor": "100000",
+              "maxDrawdownBps": "0",
+              "netReturnBps": "0",
+              "sharpe": 0,
+              "sortino": 0,
+              "tradeCount": 0,
+              "turnover": 0,
+              "winRate": 0
+            },
+            "sma-crossover-10-30": {
+              "bars": 182,
+              "calibration": {
+                "brier": 0.249371,
+                "n": 9
+              },
+              "exposure": 0.461538,
+              "feesPaidMinor": "948",
+              "finalEquityMinor": "122617",
+              "maxDrawdownBps": "3148",
+              "netReturnBps": "2261",
+              "sharpe": 1.039106,
+              "sortino": 1.69578,
+              "tradeCount": 4,
+              "turnover": 9.44293,
+              "winRate": 0.25
+            }
+          },
+          "beatBestBaseline": false,
+          "bestBaselineId": "buy-and-hold",
+          "candidate": {
+            "bars": 182,
+            "calibration": {
+              "brier": 0.2492,
+              "n": 4
+            },
+            "exposure": 0.681319,
+            "feesPaidMinor": "464",
+            "finalEquityMinor": "143243",
+            "maxDrawdownBps": "2090",
+            "netReturnBps": "4324",
+            "sharpe": 1.541546,
+            "sortino": 2.647076,
+            "tradeCount": 2,
+            "turnover": 4.61511,
+            "winRate": 1
+          },
+          "index": 1,
+          "selectedParams": {
+            "fastPeriod": 20,
+            "slowPeriod": 50
+          },
+          "test": {
+            "bars": 182,
+            "from": "2025-05-03T00:00:00.000Z",
+            "to": "2025-10-31T00:00:00.000Z"
+          },
+          "train": {
+            "bars": 365,
+            "from": "2024-05-03T00:00:00.000Z",
+            "to": "2025-05-02T00:00:00.000Z"
+          }
+        },
+        {
+          "baselines": {
+            "buy-and-hold": {
+              "bars": 182,
+              "calibration": {
+                "brier": 0.508287,
+                "n": 181
+              },
+              "exposure": 0.989011,
+              "feesPaidMinor": "160",
+              "finalEquityMinor": "59113",
+              "maxDrawdownBps": "5322",
+              "netReturnBps": "-4089",
+              "sharpe": -1.175172,
+              "sortino": -1.599051,
+              "tradeCount": 1,
+              "turnover": 1.59007,
+              "winRate": 0
+            },
+            "no-trade": {
+              "bars": 182,
+              "calibration": null,
+              "exposure": 0,
+              "feesPaidMinor": "0",
+              "finalEquityMinor": "100000",
+              "maxDrawdownBps": "0",
+              "netReturnBps": "0",
+              "sharpe": 0,
+              "sortino": 0,
+              "tradeCount": 0,
+              "turnover": 0,
+              "winRate": 0
+            },
+            "sma-crossover-10-30": {
+              "bars": 182,
+              "calibration": {
+                "brier": 0.25105,
+                "n": 9
+              },
+              "exposure": 0.412088,
+              "feesPaidMinor": "827",
+              "finalEquityMinor": "80639",
+              "maxDrawdownBps": "2440",
+              "netReturnBps": "-1937",
+              "sharpe": -1.038384,
+              "sortino": -1.46229,
+              "tradeCount": 5,
+              "turnover": 8.2178,
+              "winRate": 0.4
+            }
+          },
+          "beatBestBaseline": false,
+          "bestBaselineId": "no-trade",
+          "candidate": {
+            "bars": 182,
+            "calibration": {
+              "brier": 0.249996,
+              "n": 7
+            },
+            "exposure": 0.412088,
+            "feesPaidMinor": "759",
+            "finalEquityMinor": "91117",
+            "maxDrawdownBps": "1604",
+            "netReturnBps": "-889",
+            "sharpe": -0.401643,
+            "sortino": -0.574148,
+            "tradeCount": 4,
+            "turnover": 7.55052,
+            "winRate": 0.25
+          },
+          "index": 2,
+          "selectedParams": {
+            "fastPeriod": 20,
+            "slowPeriod": 30
+          },
+          "test": {
+            "bars": 182,
+            "from": "2025-11-01T00:00:00.000Z",
+            "to": "2026-05-01T00:00:00.000Z"
+          },
+          "train": {
+            "bars": 365,
+            "from": "2024-11-01T00:00:00.000Z",
+            "to": "2025-10-31T00:00:00.000Z"
+          }
+        },
+        {
+          "baselines": {
+            "buy-and-hold": {
+              "bars": 182,
+              "calibration": {
+                "brier": 0.491713,
+                "n": 181
+              },
+              "exposure": 0.989011,
+              "feesPaidMinor": "197",
+              "finalEquityMinor": "96646",
+              "maxDrawdownBps": "3388",
+              "netReturnBps": "-336",
+              "sharpe": 0.116549,
+              "sortino": 0.186278,
+              "tradeCount": 1,
+              "turnover": 1.96599,
+              "winRate": 0
+            },
+            "no-trade": {
+              "bars": 182,
+              "calibration": null,
+              "exposure": 0,
+              "feesPaidMinor": "0",
+              "finalEquityMinor": "100000",
+              "maxDrawdownBps": "0",
+              "netReturnBps": "0",
+              "sharpe": 0,
+              "sortino": 0,
+              "tradeCount": 0,
+              "turnover": 0,
+              "winRate": 0
+            },
+            "sma-crossover-10-30": {
+              "bars": 182,
+              "calibration": {
+                "brier": 0.249401,
+                "n": 7
+              },
+              "exposure": 0.538462,
+              "feesPaidMinor": "621",
+              "finalEquityMinor": "116004",
+              "maxDrawdownBps": "1086",
+              "netReturnBps": "1600",
+              "sharpe": 1.115932,
+              "sortino": 1.866754,
+              "tradeCount": 3,
+              "turnover": 6.18283,
+              "winRate": 0.666667
+            }
+          },
+          "beatBestBaseline": true,
+          "bestBaselineId": "sma-crossover-10-30",
+          "candidate": {
+            "bars": 182,
+            "calibration": {
+              "brier": 0.249315,
+              "n": 2
+            },
+            "exposure": 0.428571,
+            "feesPaidMinor": "220",
+            "finalEquityMinor": "119106",
+            "maxDrawdownBps": "1925",
+            "netReturnBps": "1910",
+            "sharpe": 1.113719,
+            "sortino": 2.268387,
+            "tradeCount": 1,
+            "turnover": 2.19096,
+            "winRate": 1
+          },
+          "index": 3,
+          "selectedParams": {
+            "fastPeriod": 10,
+            "slowPeriod": 100
+          },
+          "test": {
+            "bars": 182,
+            "from": "2026-05-02T00:00:00.000Z",
+            "to": "2026-10-30T00:00:00.000Z"
+          },
+          "train": {
+            "bars": 365,
+            "from": "2025-05-02T00:00:00.000Z",
+            "to": "2026-05-01T00:00:00.000Z"
+          }
+        }
+      ]
+    },
+    {
+      "createdAt": "2026-10-31T11:06:03.962Z",
+      "datasets": [
+        {
+          "bars": 2129,
+          "from": "2021-01-01T00:00:00.000Z",
+          "instrumentId": "BINANCE:ETHUSDT",
+          "period": "1d",
+          "sha256": "c568855b90758398f39c6075461eded28c84234de804cac521dc8c653e6c5550",
+          "source": "binance-spot-klines",
+          "to": "2026-10-30T00:00:00.000Z"
+        }
+      ],
+      "evaluationId": "eval_9f622e8226fd63a1b6e6b3c8a6f88c03",
+      "expiresAt": "2026-11-30T11:06:03.962Z",
+      "flags": [],
+      "instrumentId": "BINANCE:ETHUSDT",
+      "params": {
+        "allocationBps": "10000",
+        "costs": {
+          "feeBps": "10",
+          "halfSpreadBps": "1",
+          "slippageBps": "2",
+          "slippageJitterBps": 3
+        },
+        "grid": [
+          {
+            "entry": 20,
+            "exit": 10
+          },
+          {
+            "entry": 20,
+            "exit": 20
+          },
+          {
+            "entry": 55,
+            "exit": 10
+          },
+          {
+            "entry": 55,
+            "exit": 20
+          }
+        ],
+        "initialCashMinor": "100000",
+        "periodsPerYear": 365,
+        "seed": 20261031,
+        "testBars": 182,
+        "trainBars": 365,
+        "windows": 4
+      },
+      "resultHash": "f4e56c50b40eb7d0bd4a94805bad490471d4a6a167be0c1545588be34d3121a2",
+      "strategyId": "donchian-breakout",
+      "strategyVersion": "1.0.0",
+      "summary": {
+        "bestBaselineTotalReturnBps": "18121",
+        "buyAndHoldWorstDrawdownBps": "6320",
+        "candidateTotalReturnBps": "4260",
+        "candidateWorstDrawdownBps": "3070",
+        "windowsBeaten": 1
+      },
+      "verdict": "FAIL",
+      "verdictReasons": [
+        "beat the best baseline in 1/4 OOS windows (need ≥ 3)"
+      ],
+      "windows": [
+        {
+          "baselines": {
+            "buy-and-hold": {
+              "bars": 182,
+              "calibration": {
+                "brier": 0.508287,
+                "n": 181
+              },
+              "exposure": 0.989011,
+              "feesPaidMinor": "174",
+              "finalEquityMinor": "73649",
+              "maxDrawdownBps": "6320",
+              "netReturnBps": "-2636",
+              "sharpe": -0.394356,
+              "sortino": -0.558706,
+              "tradeCount": 1,
+              "turnover": 1.73581,
+              "winRate": 0
+            },
+            "no-trade": {
+              "bars": 182,
+              "calibration": null,
+              "exposure": 0,
+              "feesPaidMinor": "0",
+              "finalEquityMinor": "100000",
+              "maxDrawdownBps": "0",
+              "netReturnBps": "0",
+              "sharpe": 0,
+              "sortino": 0,
+              "tradeCount": 0,
+              "turnover": 0,
+              "winRate": 0
+            },
+            "sma-crossover-10-30": {
+              "bars": 182,
+              "calibration": {
+                "brier": 0.247748,
+                "n": 4
+              },
+              "exposure": 0.269231,
+              "feesPaidMinor": "443",
+              "finalEquityMinor": "115864",
+              "maxDrawdownBps": "1819",
+              "netReturnBps": "1586",
+              "sharpe": 0.997816,
+              "sortino": 1.674173,
+              "tradeCount": 2,
+              "turnover": 4.41843,
+              "winRate": 1
+            }
+          },
+          "beatBestBaseline": true,
+          "bestBaselineId": "sma-crossover-10-30",
+          "candidate": {
+            "bars": 182,
+            "calibration": {
+              "brier": 0.36,
+              "n": 15
+            },
+            "exposure": 0.230769,
+            "feesPaidMinor": "218",
+            "finalEquityMinor": "117666",
+            "maxDrawdownBps": "1479",
+            "netReturnBps": "1766",
+            "sharpe": 1.099748,
+            "sortino": 1.880389,
+            "tradeCount": 1,
+            "turnover": 2.17634,
+            "winRate": 1
+          },
+          "index": 0,
+          "selectedParams": {
+            "entry": 55,
+            "exit": 20
+          },
+          "test": {
+            "bars": 182,
+            "from": "2024-11-02T00:00:00.000Z",
+            "to": "2025-05-02T00:00:00.000Z"
+          },
+          "train": {
+            "bars": 365,
+            "from": "2023-11-03T00:00:00.000Z",
+            "to": "2024-11-01T00:00:00.000Z"
+          }
+        },
+        {
+          "baselines": {
+            "buy-and-hold": {
+              "bars": 182,
+              "calibration": {
+                "brier": 0.475138,
+                "n": 181
+              },
+              "exposure": 0.989011,
+              "feesPaidMinor": "310",
+              "finalEquityMinor": "209253",
+              "maxDrawdownBps": "2246",
+              "netReturnBps": "10925",
+              "sharpe": 2.354454,
+              "sortino": 4.281055,
+              "tradeCount": 1,
+              "turnover": 3.09349,
+              "winRate": 1
+            },
+            "no-trade": {
+              "bars": 182,
+              "calibration": null,
+              "exposure": 0,
+              "feesPaidMinor": "0",
+              "finalEquityMinor": "100000",
+              "maxDrawdownBps": "0",
+              "netReturnBps": "0",
+              "sharpe": 0,
+              "sortino": 0,
+              "tradeCount": 0,
+              "turnover": 0,
+              "winRate": 0
+            },
+            "sma-crossover-10-30": {
+              "bars": 182,
+              "calibration": {
+                "brier": 0.249371,
+                "n": 9
+              },
+              "exposure": 0.461538,
+              "feesPaidMinor": "948",
+              "finalEquityMinor": "122617",
+              "maxDrawdownBps": "3148",
+              "netReturnBps": "2261",
+              "sharpe": 1.039106,
+              "sortino": 1.69578,
+              "tradeCount": 4,
+              "turnover": 9.44293,
+              "winRate": 0.25
+            }
+          },
+          "beatBestBaseline": false,
+          "bestBaselineId": "buy-and-hold",
+          "candidate": {
+            "bars": 182,
+            "calibration": {
+              "brier": 0.285455,
+              "n": 22
+            },
+            "exposure": 0.785714,
+            "feesPaidMinor": "751",
+            "finalEquityMinor": "128481",
+            "maxDrawdownBps": "3070",
+            "netReturnBps": "2848",
+            "sharpe": 1.108847,
+            "sortino": 1.796028,
+            "tradeCount": 3,
+            "turnover": 7.49454,
+            "winRate": 0.666667
+          },
+          "index": 1,
+          "selectedParams": {
+            "entry": 20,
+            "exit": 20
+          },
+          "test": {
+            "bars": 182,
+            "from": "2025-05-03T00:00:00.000Z",
+            "to": "2025-10-31T00:00:00.000Z"
+          },
+          "train": {
+            "bars": 365,
+            "from": "2024-05-03T00:00:00.000Z",
+            "to": "2025-05-02T00:00:00.000Z"
+          }
+        },
+        {
+          "baselines": {
+            "buy-and-hold": {
+              "bars": 182,
+              "calibration": {
+                "brier": 0.508287,
+                "n": 181
+              },
+              "exposure": 0.989011,
+              "feesPaidMinor": "160",
+              "finalEquityMinor": "59113",
+              "maxDrawdownBps": "5322",
+              "netReturnBps": "-4089",
+              "sharpe": -1.175172,
+              "sortino": -1.599051,
+              "tradeCount": 1,
+              "turnover": 1.59007,
+              "winRate": 0
+            },
+            "no-trade": {
+              "bars": 182,
+              "calibration": null,
+              "exposure": 0,
+              "feesPaidMinor": "0",
+              "finalEquityMinor": "100000",
+              "maxDrawdownBps": "0",
+              "netReturnBps": "0",
+              "sharpe": 0,
+              "sortino": 0,
+              "tradeCount": 0,
+              "turnover": 0,
+              "winRate": 0
+            },
+            "sma-crossover-10-30": {
+              "bars": 182,
+              "calibration": {
+                "brier": 0.25105,
+                "n": 9
+              },
+              "exposure": 0.412088,
+              "feesPaidMinor": "827",
+              "finalEquityMinor": "80639",
+              "maxDrawdownBps": "2440",
+              "netReturnBps": "-1937",
+              "sharpe": -1.038384,
+              "sortino": -1.46229,
+              "tradeCount": 5,
+              "turnover": 8.2178,
+              "winRate": 0.4
+            }
+          },
+          "beatBestBaseline": false,
+          "bestBaselineId": "no-trade",
+          "candidate": {
+            "bars": 182,
+            "calibration": {
+              "brier": 0.4,
+              "n": 10
+            },
+            "exposure": 0.071429,
+            "feesPaidMinor": "195",
+            "finalEquityMinor": "94615",
+            "maxDrawdownBps": "700",
+            "netReturnBps": "-539",
+            "sharpe": -1.01838,
+            "sortino": -1.225238,
+            "tradeCount": 1,
+            "turnover": 1.94602,
+            "winRate": 0
+          },
+          "index": 2,
+          "selectedParams": {
+            "entry": 55,
+            "exit": 20
+          },
+          "test": {
+            "bars": 182,
+            "from": "2025-11-01T00:00:00.000Z",
+            "to": "2026-05-01T00:00:00.000Z"
+          },
+          "train": {
+            "bars": 365,
+            "from": "2024-11-01T00:00:00.000Z",
+            "to": "2025-10-31T00:00:00.000Z"
+          }
+        },
+        {
+          "baselines": {
+            "buy-and-hold": {
+              "bars": 182,
+              "calibration": {
+                "brier": 0.491713,
+                "n": 181
+              },
+              "exposure": 0.989011,
+              "feesPaidMinor": "197",
+              "finalEquityMinor": "96646",
+              "maxDrawdownBps": "3388",
+              "netReturnBps": "-336",
+              "sharpe": 0.116549,
+              "sortino": 0.186278,
+              "tradeCount": 1,
+              "turnover": 1.96599,
+              "winRate": 0
+            },
+            "no-trade": {
+              "bars": 182,
+              "calibration": null,
+              "exposure": 0,
+              "feesPaidMinor": "0",
+              "finalEquityMinor": "100000",
+              "maxDrawdownBps": "0",
+              "netReturnBps": "0",
+              "sharpe": 0,
+              "sortino": 0,
+              "tradeCount": 0,
+              "turnover": 0,
+              "winRate": 0
+            },
+            "sma-crossover-10-30": {
+              "bars": 182,
+              "calibration": {
+                "brier": 0.249401,
+                "n": 7
+              },
+              "exposure": 0.538462,
+              "feesPaidMinor": "621",
+              "finalEquityMinor": "116004",
+              "maxDrawdownBps": "1086",
+              "netReturnBps": "1600",
+              "sharpe": 1.115932,
+              "sortino": 1.866754,
+              "tradeCount": 3,
+              "turnover": 6.18283,
+              "winRate": 0.666667
+            }
+          },
+          "beatBestBaseline": false,
+          "bestBaselineId": "sma-crossover-10-30",
+          "candidate": {
+            "bars": 182,
+            "calibration": {
+              "brier": 0.22,
+              "n": 10
+            },
+            "exposure": 0.39011,
+            "feesPaidMinor": "200",
+            "finalEquityMinor": "99723",
+            "maxDrawdownBps": "1898",
+            "netReturnBps": "-28",
+            "sharpe": 0.117849,
+            "sortino": 0.179403,
+            "tradeCount": 1,
+            "turnover": 1.99717,
+            "winRate": 0
+          },
+          "index": 3,
+          "selectedParams": {
+            "entry": 55,
+            "exit": 20
+          },
+          "test": {
+            "bars": 182,
+            "from": "2026-05-02T00:00:00.000Z",
+            "to": "2026-10-30T00:00:00.000Z"
+          },
+          "train": {
+            "bars": 365,
+            "from": "2025-05-02T00:00:00.000Z",
+            "to": "2026-05-01T00:00:00.000Z"
+          }
+        }
+      ]
+    }
+  ]
+}

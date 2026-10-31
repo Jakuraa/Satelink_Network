@@ -93,6 +93,52 @@ export class BinanceSpotDataProvider extends MarketDataProvider {
             };
         });
     }
+    /**
+     * Closed historical klines in [startMs, endMs), oldest first, paginated 1000 at a time.
+     * Point-in-time: eventTs is the bar open; only bars whose close time is before `nowMs`
+     * are returned, so a still-forming bar never enters a backtest dataset.
+     */
+    async historicalCandles(instrument, period, startMs, endMs, nowMs = Date.now()) {
+        const sym = binanceSymbol(instrument);
+        const interval = toKlineInterval(period);
+        const out = [];
+        let cursor = startMs;
+        for (let page = 0; page < 1000 && cursor < endMs; page++) {
+            const url = `${BINANCE_REST}/api/v3/klines?symbol=${sym}&interval=${interval}&startTime=${cursor}&endTime=${endMs - 1}&limit=1000`;
+            const res = await this.#fetch(url);
+            if (!res.ok)
+                throw new Error(`Binance klines failed: HTTP ${res.status}`);
+            const rows = await res.json();
+            if (!Array.isArray(rows) || rows.length === 0)
+                break;
+            const retrievedAt = new Date().toISOString();
+            for (const r of rows) {
+                const openTime = Number(r[0]);
+                const closeTime = Number(r[6]);
+                if (!(closeTime < nowMs) || openTime < cursor)
+                    continue;
+                out.push({
+                    kind: 'CANDLE', instrument, period,
+                    eventTs: new Date(openTime).toISOString(),
+                    retrievalTs: retrievedAt,
+                    freshness: DataFreshness.SNAPSHOT,
+                    freshnessWindowSec: this.#freshnessWindowSec,
+                    licensing: BINANCE_LICENSING,
+                    openMinor: parseDecimalToMinor(r[1], instrument.pricePrecision),
+                    highMinor: parseDecimalToMinor(r[2], instrument.pricePrecision),
+                    lowMinor: parseDecimalToMinor(r[3], instrument.pricePrecision),
+                    closeMinor: parseDecimalToMinor(r[4], instrument.pricePrecision),
+                    volume: String(r[5]),
+                    isClosed: true,
+                });
+            }
+            const lastOpen = Number(rows[rows.length - 1][0]);
+            if (!(lastOpen + 1 > cursor) || rows.length < 1000)
+                break; // short page = last page
+            cursor = lastOpen + 1;
+        }
+        return out;
+    }
     subscribe(instrument, cb) {
         const sym = binanceSymbol(instrument).toLowerCase();
         const url = `${BINANCE_WS}/${sym}@bookTicker`;
