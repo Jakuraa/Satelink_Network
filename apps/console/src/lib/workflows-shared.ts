@@ -115,6 +115,17 @@ export type RunSummary = { id: string; template: Run["template"]; status: Run["s
 
 export type Template = { id: string; name: string; version: number; summary: string; approval: string; nodes: { id: string; label: string; kind: string }[]; edges: { from: string; to: string }[] };
 
+export type SavedStrategy = { strategy_id: string; name: string; spec: StrategySpec; created_at: string };
+
+export type McpTool = { name: string; mutating: boolean; description: string; inputSchema: { properties?: Record<string, { type?: string; description?: string }>; required?: string[] } };
+export type McpManifest = { version: string; status: string; auth: string; spending: string; idempotency: string; tools: McpTool[] };
+
+export type OpenApiDoc = {
+  openapi: string;
+  info: { title: string; version: string; description: string };
+  paths: Record<string, Record<string, { summary: string; security?: unknown[] }>>;
+};
+
 export const STATUS_TONE: Record<string, "neutral" | "good" | "warn" | "machine" | "market" | "settle"> = {
   live: "good", preview: "machine", evaluation: "warn", paused: "neutral", not_authorized: "neutral",
   available: "good", unavailable: "neutral",

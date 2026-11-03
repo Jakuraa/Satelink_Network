@@ -150,7 +150,7 @@ export function StrategyLabWorkspace({ template }: { template: Template | null }
         {err && <div role="alert" className="rounded-md border border-sl-warn/50 bg-sl-bg-raised px-3 py-2 text-sm text-sl-text">{err}</div>}
 
         {run && (
-          <Panel title="Scorecard" action={<div className="flex items-center gap-2"><StatusBadge status={run.status} /><Link href={`/workflows/${run.id}`} className="text-xs text-sl-accent hover:underline">Run details & trace</Link></div>}>
+          <Panel title="Scorecard" action={<div className="flex items-center gap-2"><StatusBadge status={run.status} /><Link href={`/strategy-lab/strategies/${run.input.spec?.id}`} className="text-xs text-sl-accent hover:underline">Saved strategy</Link><Link href={`/workflows/${run.id}`} className="text-xs text-sl-accent hover:underline">Run details & trace</Link></div>}>
             <RunResult run={run} />
             {run.status === "completed" && (
               <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-sl-border pt-3">

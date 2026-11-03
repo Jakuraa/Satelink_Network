@@ -5,6 +5,8 @@
 // request falls through (next()) so existing /v1 routes and 404s are unchanged.
 //
 //   GET  /v1/workflows/templates
+//   GET  /v1/workflows/openapi.json           (contract; config/workflows_openapi.v1.json)
+//   GET  /v1/workflows/mcp-tools              (MCP tool manifest)
 //   GET  /v1/marketplace/capabilities?q=&network=&category=
 //   GET  /v1/marketplace/capabilities/:id?network=
 //   POST /v1/marketplace/quote                {capability, network}
@@ -24,6 +26,9 @@
 // pricing is withheld until approved (see supplier_catalog.v1.json).
 
 import express, { Router } from 'express';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { resolveAccount } from '../billing/credit_service.mjs';
 import { keyRef } from '../security/key_mask.mjs';
 import { compileStrategy, describeSupported } from '../workflows/strategy_compiler.js';
@@ -31,6 +36,10 @@ import { WorkflowService, WorkflowError } from '../workflows/workflow_service.js
 import { PgRunStore } from '../workflows/run_store.js';
 import { PgDurableStore } from '../vnext/reliability/pg_durable_store.js';
 import { PgEvaluationStore } from '../trading/engine/index.js';
+
+const CONFIG = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'config');
+const OPENAPI = JSON.parse(fs.readFileSync(path.join(CONFIG, 'workflows_openapi.v1.json'), 'utf8'));
+const MCP_TOOLS = JSON.parse(fs.readFileSync(path.join(CONFIG, 'mcp_workflow_tools.v1.json'), 'utf8'));
 
 const RUN_ID = /^run_[0-9a-f]{8,64}$/;
 const RECEIPT_ID = /^rcpt_[0-9a-f]{8,64}$/;
@@ -128,6 +137,11 @@ export function createWorkflowsRouter(pool, opts = {}) {
   const open = (fn) => async (req, res) => {
     try { return await fn(req, res, await service()); } catch (e) { return send(res, e); }
   };
+
+  // Contracts: the OpenAPI document and the MCP tool manifest (identical to
+  // apps/mcp-server/src/workflow-tools.json — enforced by a test there).
+  router.get('/workflows/openapi.json', (_req, res) => res.json(OPENAPI));
+  router.get('/workflows/mcp-tools', (_req, res) => res.json({ ok: true, beta: true, manifest: MCP_TOOLS }));
 
   router.get('/workflows/templates', open((_req, res, svc) => res.json({ ok: true, beta: true, templates: svc.templates() })));
 

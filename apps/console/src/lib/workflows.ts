@@ -12,7 +12,7 @@ export function workflowsBetaEnabled() {
 }
 
 export * from "./workflows-shared";
-import type { Capability, Run, RunSummary, Template } from "./workflows-shared";
+import type { Capability, McpManifest, OpenApiDoc, Run, RunSummary, SavedStrategy, Template } from "./workflows-shared";
 
 /** Identity headers for run endpoints: console session (accounts V1) or the connected key. */
 export async function workflowIdentity(): Promise<Record<string, string> | null> {
@@ -49,4 +49,29 @@ export async function loadRun(id: string): Promise<ApiResult<{ ok: true; run: Ru
   const headers = await workflowIdentity();
   if (!headers) return null;
   return apiFetch(`/v1/workflows/runs/${encodeURIComponent(id)}`, { headers });
+}
+
+export async function loadStrategies(): Promise<ApiResult<{ ok: true; strategies: SavedStrategy[] }> | null> {
+  const headers = await workflowIdentity();
+  if (!headers) return null;
+  return apiFetch("/v1/strategy-lab/strategies", { headers });
+}
+
+export async function loadStrategy(id: string): Promise<ApiResult<{ ok: true; strategy: SavedStrategy & { runs: RunSummary[] } }> | null> {
+  const headers = await workflowIdentity();
+  if (!headers) return null;
+  return apiFetch(`/v1/strategy-lab/strategies/${encodeURIComponent(id)}`, { headers });
+}
+
+export function loadMcpTools(): Promise<ApiResult<{ ok: true; manifest: McpManifest }>> {
+  return apiFetch("/v1/workflows/mcp-tools");
+}
+
+export function loadOpenApi(): Promise<ApiResult<OpenApiDoc>> {
+  return apiFetch("/v1/workflows/openapi.json");
+}
+
+export type RpcPricing = { ok: true; price_per_call_usdt: number; settlement_chain?: { name: string; chain_id: number }; tiers?: { tier: string; daily_limit: number }[] };
+export function loadRpcPricing(): Promise<ApiResult<RpcPricing>> {
+  return apiFetch("/v1/pricing", { revalidate: 300 });
 }

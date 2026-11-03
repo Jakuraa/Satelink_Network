@@ -87,6 +87,17 @@ app.use('/v1', createWorkflowsRouter(pool, {
   resolvePrincipal: async (req) => (req.get('X-API-Key') === PREVIEW_KEY ? { id: 'kref_preview_customer' } : null),
 }));
 
+// The one production read the preview makes: public RPC pricing (GET, no credentials),
+// so the API & MCP page shows the real live price instead of a copy.
+app.get('/v1/pricing', async (_req, res) => {
+  try {
+    const r = await fetch('https://api.satelink.network/v1/pricing', { signal: AbortSignal.timeout(8000) });
+    res.status(r.status).json(await r.json());
+  } catch {
+    res.status(503).json({ ok: false, error: 'pricing_unavailable' });
+  }
+});
+
 app.get('/health', async (_req, res) => {
   const { rows: [r] } = await pool.query('SELECT count(*)::int AS runs FROM workflow_runs');
   res.json({ ok: true, preview: true, store: 'postgres', database: new URL(DB_URL).pathname.slice(1), runs: r.runs, recovered: service.lastRecovery });

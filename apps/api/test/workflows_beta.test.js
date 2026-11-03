@@ -502,6 +502,19 @@ describe('workflows beta — HTTP router', function () {
     }
   });
 
+  it('contract: every router route is in the OpenAPI document and every documented path is routed', async () => {
+    const router = createWorkflowsRouter(null, { enabled: true, service: (await makeService()).svc });
+    const routed = new Set(router.stack.filter((l) => l.route).flatMap((l) => Object.keys(l.route.methods).map((m) => `${m} /v1${l.route.path.replace(/:(\w+)/g, '{$1}')}`)));
+    const res = await request(appWith({ enabled: true, service: (await makeService()).svc })).get('/v1/workflows/openapi.json');
+    expect(res.status).to.equal(200);
+    expect(res.body.openapi).to.equal('3.1.0');
+    const documented = new Set(Object.entries(res.body.paths).flatMap(([p, ops]) => Object.keys(ops).map((m) => `${m} ${p}`)));
+    expect([...routed].filter((r) => !documented.has(r)), 'undocumented routes').to.deep.equal([]);
+    expect([...documented].filter((d) => !routed.has(d)), 'documented but not routed').to.deep.equal([]);
+    const tools = await request(appWith({ enabled: true, service: (await makeService()).svc })).get('/v1/workflows/mcp-tools');
+    expect(tools.body.manifest.tools.map((t) => t.name)).to.include.members(['list_capabilities', 'approve_purchase', 'run_backtest']);
+  });
+
   it('a database that is missing migration 041 yields a typed 503, never a crash or a 500', async () => {
     const app = express();
     const brokenPool = { query: async () => { throw Object.assign(new Error('relation "workflow_definitions" does not exist'), { code: '42P01' }); } };

@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity, BarChart3, Bell, BookOpen, Code2, CreditCard, KeyRound, LayoutDashboard, Menu, MoreHorizontal, Moon, PlayCircle, Search,
-  Server, Settings, Sun, Wallet, X, Zap, FlaskConical, Store, Workflow,
+  Server, Settings, Sun, Wallet, X, Zap, FlaskConical, Store, Workflow, Plug,
 } from "lucide-react";
 
 type NavItem = { href: string; label: string; key: string; icon: React.ComponentType<{ className?: string }>; group?: string };
@@ -53,6 +53,7 @@ const BETA_NAV: NavItem[] = [
   { href: "/strategy-lab", label: "Strategy Lab", key: "t", icon: FlaskConical },
   { href: "/marketplace", label: "Agent Marketplace", key: "a", icon: Store },
   { href: "/workflows", label: "Workflows", key: "w", icon: Workflow },
+  { href: "/api-mcp", label: "API & MCP", key: "i", icon: Plug },
 ];
 const withBeta = (items: NavItem[]) => [items[0], ...BETA_NAV, ...items.slice(1)];
 
