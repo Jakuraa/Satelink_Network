@@ -14,8 +14,8 @@ controlled external beta needs the unchecked items in "Before an external beta".
 - [x] MCP workflow tools: 8 tools, opt-in, customer-scoped, spending cap, derived idempotency — 8/8 tests incl. real MCP client↔server
 - [x] OpenAPI 3.1 contract (`GET /v1/workflows/openapi.json`) with route-drift test
 - [x] Console: tsc + eslint clean; `next build` green (B1); browser E2E 8/8 + after-restart phase 1/1
-- [ ] CI green on the PR head (Financial OS suite has a pre-existing teardown flake — rerun requested)
-- [ ] Migration 041 integration test in CI (needs Docker; local machine has none — F19)
+- [x] CI green on the PR head — 13/13 checks at `42aac026` (incl. Build Verification, API baseline guard, Financial OS integration 23/23 files)
+- [x] Migration 041 integration test in CI — `migrations.integration.test.ts` 15/15 in a real Postgres container (CI run 41570951084)
 
 ## Before an external beta
 - [ ] Founder applies migrations 040 + 041 to production (F14/F23) — **review the down script; never run it in production**
