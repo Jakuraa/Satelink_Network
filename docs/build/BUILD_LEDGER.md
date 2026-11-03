@@ -14,7 +14,7 @@ Customer-journey matrix: `BETA_READINESS_MATRIX.md`. Suppliers: `SUPPLIER_INTEGR
 ### Verified state (read-only)
 - Railway: Satelink-api, Postgres, Redis, reconciler all deployed in **`us-west2`** (manifests 2026-11-02 23:18 UTC). The brief's "moved to Europe" is not reflected; Binance 451 from the API still applies.
 - Prod: `/health` ok @ `dd279db4`; anon `/rpc/polygon` → JSON-RPC `-32005` with x402 + deposit instructions.
-- Supplier mail (read-only): Space Command Kits and FreeTier share sender domain `mail.grokbot.com`; the founder's dRPC answer went to `team@betamarkets.app`, not dRPC.
+- Supplier mail (read-only): Space Command Kits and FreeTier share sender domain `mail.grokbot.com`; the founder's dRPC answer did not reach dRPC (misaddressed; detail in `evidence/private/`).
 - Space Command Kits zero-cost probes: manifests 200; unpaid → 402 v2 (Base+Polygon USDC, $0.005, timeout 300 s ≠ claimed 120 s); Polygon → 503 paused; free previews 503/502 (their Base RPC 429). No paid call.
 
 ### Delivered
@@ -36,7 +36,7 @@ Customer-journey matrix: `BETA_READINESS_MATRIX.md`. Suppliers: `SUPPLIER_INTEGR
 3. Expose the same workflow service as MCP tools; OpenAPI for `/v1/workflows|marketplace|strategy-lab`.
 
 ### Founder actions added
-- F26 Resend the dRPC answer to `craci@drpc.org` (it went only to betamarkets.app).
+- F26 Resend the 2026-11-02 dRPC answer to dRPC's contact (it went only to a third party copied on the thread).
 - F27 Reply to Space Command Kits accepting the free test keys (token-risk, bal-check) for a capped 40-call evaluation.
 - F28 Decide Strategy Lab data path: licensed vendor vs F22 worker outside the US; until then Strategy Lab is non-commercial preview.
 - F29 Approve (or change) list prices before any workflow meter charges (catalog `pricing.approved`).

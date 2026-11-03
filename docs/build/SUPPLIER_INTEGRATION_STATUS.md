@@ -46,8 +46,8 @@ handover or self-hosting rights; avoid a single-supplier dependency (catalog alr
 ## dRPC (Polygon RPC upstream candidate)
 
 - dRPC (Strategy Lead) replied 2026-11-02 asking for offering/customers/model/volumes/SLA.
-- **The founder's detailed answer was sent only to `team@betamarkets.app`** (a different company copied on dRPC's
-  email), **not to `craci@drpc.org`**. dRPC has therefore not received Satelink's answer. → Founder: resend to dRPC.
+- **The founder's detailed answer was sent only to a different company copied on dRPC's email, not to dRPC**
+  (detail in `evidence/private/`). dRPC has therefore not received Satelink's answer. → Founder: resend to dRPC.
 - The "~100k requests/month, ~$25/month" planning figures in the mission brief match that third party's own request.
   Satelink's real volume is ~100k–500k **free/anonymous** req/day (CLAUDE.md, 2026-07-16; re-measure before quoting).
 - Public ToS restricts proxying/resale without agreement (Step T/U). **Paid routing stays off.** Not a customer

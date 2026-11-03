@@ -25,7 +25,7 @@ on-chain/ledger. Founder, test, free or simulated activity never counts. No outr
 - **Why first:** it is the only product whose payment, metering and charge path are already live and tested; the
   remaining blockers are commercial, not engineering.
 - **Pre-conditions (founder):** (1) one upstream with written resale permission — resend the dRPC reply to
-  `craci@drpc.org`, or approve keyed Ankr/Alchemy terms (F20); (2) merge #565 (refund on upstream failure) so a
+  dRPC's contact, or approve keyed Ankr/Alchemy terms (F20); (2) merge #565 (refund on upstream failure) so a
   paid failure is never kept.
 - **Offer:** existing public price, $0.10 USDC per 1,000 calls via x402 on Base, or USDT credits on Polygon. No new pricing.
 - **Who:** the 3 verified Polygon developers from Step T + x402 Bazaar listing (already indexed).
