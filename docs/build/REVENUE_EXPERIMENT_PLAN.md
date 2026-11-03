@@ -43,3 +43,39 @@ on-chain/ledger. Founder, test, free or simulated activity never counts. No outr
 
 The Step T/V drafts for the three Polygon developers remain valid; add one line per draft after the upstream is
 authorized: "Pay per call with x402 on Base — no account, $0.10 per 1,000 calls; failed calls are refunded."
+
+## Unit economics and pricing proposal — Strategy Lab and Agent Marketplace (Session B2, 2026-11-03)
+
+**Proposal only. No price is live; every workflow charge stays $0 until the founder approves prices (catalog
+`pricing.approved`) and the Financial OS reserve/capture path replaces `WithheldSettlement`.**
+Legend: **M** = measured this session · **V** = vendor's public claim (confirm in writing) · **F** = formula, rate to confirm.
+
+### Cost per operation
+
+| Cost line | Strategy Lab evaluation | Marketplace call (wallet balance, Polygon, first-party) | Marketplace call (external supplier) |
+|---|---|---|---|
+| Model / AI | $0 today (rule-based compiler, **M**). If a model drafter is added: tokens × model price (**F**); ~1–2k tokens per compile | $0 | $0 |
+| Compute | engine ~0.2–0.5 s CPU per evaluation on cached data (**M**: 231–465 ms in tests); first fetch ~2.5 s wall incl. data | negligible | negligible |
+| Data | licensed source: CoinGecko paid tier ~$35/mo for 100k credits (**V**) ≈ $0.00035/credit; one evaluation ≈ 1–2 credits with a 1 h cache | — | — |
+| Supplier | — | upstream RPC cost per call: unknown until dRPC/Ankr quote (F20, F26) | $0.002–$0.01 per call (**V**: Space Command, FreeTier) |
+| Payment rail | x402 (USDC on Base): facilitator fee + gas — to confirm per facilitator (**F**); card/fiat via Dodo: merchant-of-record fee to confirm (**F**) | same | same + Satelink pays supplier per call |
+| Refunds | none for usage: failed/unverified calls are never charged (**M**, tested) | same | same; supplier only settles after 2xx (**V**) |
+| Infrastructure | shared Railway API + Postgres (existing fixed cost); per-run storage < 10 kB (run + receipt + journal) | same | same |
+
+### Proposed prices (for founder decision)
+
+| Product | Option A — usage | Option B — subscription | Gross margin estimate |
+|---|---|---|---|
+| Strategy Lab | first 3 evaluations/day free; then **$0.25 per evaluation** | **$19/mo** for 200 evaluations + saved strategies + paper-trading simulations at the existing $0.05 | cost ≈ data credit + CPU ≪ $0.01 → > 95% at $0.25 (before payment fees; after a licensed data plan) |
+| Marketplace — first-party (wallet balance via Satelink RPC) | existing RPC list rate **$0.00003/call** (no change) | included in RPC credits | depends on upstream quote |
+| Marketplace — external suppliers | **supplier cost + max(30%, $0.001)**, shown on the quote as supplier cost + Satelink fee | — | 23–33% per call; low absolute $ (e.g. $0.005 → $0.0065) |
+
+Rationale and risks:
+- Strategy Lab is the higher-margin product, but charging requires a commercial data licence (CoinGecko written
+  confirmation) — until then it is a free preview and cannot be counted as revenue.
+- Marketplace margins per call are tiny; it only matters at agent volume. Its near-term value is as the trust layer
+  (quote → approval → verification → receipt) in front of RPC and Strategy Lab.
+- Payment-rail fees can exceed the margin on sub-cent calls: sell external capabilities in prepaid credit bundles
+  (like the existing $0.10 = 1,000 RPC calls) rather than one on-chain payment per call.
+- No subscription or usage charge goes live without founder-approved prices, the legal/CA items (F5), and a
+  reconciliation test that ties every charge to a receipt and a revenue event.

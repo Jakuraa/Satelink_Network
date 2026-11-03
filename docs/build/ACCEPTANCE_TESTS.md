@@ -75,6 +75,11 @@ Status key: **PREVIEW-VERIFIED** = passes in tests and in the local preview with
 | | Failure | Supplier error / invalid result → FAILED, no SETTLE, hold released, charge 0 | PREVIEW-VERIFIED (mutation-checked) |
 | | Honesty | Evaluation / paused / unconfigured offers block with per-offer reasons | PREVIEW-VERIFIED |
 | | Receipt | Receipt shows charge, list price, supplier cost, margin, settlement (`withheld`, money moved false), revenue counted false | PREVIEW-VERIFIED |
-| | Durability | Runs + hash chain survive restart on the same store; replay after restart does not execute | PREVIEW-VERIFIED (memory store; PG store not yet wired) |
+| | Durability | Runs + hash chain survive restart on the same store; replay after restart does not execute | **POSTGRES-VERIFIED (B2)**: crash after kernel CLOSED → finalized without re-calling the supplier; crash before SUBMIT → resubmitted once; browser E2E after a real API restart |
+| | Tenant isolation | Another customer's run, receipt or strategy is 404 | POSTGRES-VERIFIED (B2) |
+| | Concurrency | Concurrent approvals execute the supplier once (SQL compare-and-set) | POSTGRES-VERIFIED (B2, mutation-checked) |
+| | Receipt integrity | Receipt carries sha256 of its canonical body, verified on read; table append-only | POSTGRES-VERIFIED (B2) |
+| | Revenue truth | Workflow usage can never be counted as revenue or move money (SQL CHECK) | POSTGRES-VERIFIED (B2) |
 | C RPC | existing rows above (x402, receipt) | — | production (pre-existing) |
-| D MCP | Tool discovery / execution / usage | Workflows exposed as MCP tools sharing the same service | NOT BUILT |
+| D MCP | Tool discovery / execution / auth / spending cap / idempotency | 8 workflow tools on the same API; opt-in; caller-scoped key; approval cap | **BUILT, NOT PUBLISHED (B2)**: mcp-server 8/8 incl. real MCP client↔server |
+| Contract | OpenAPI | Every router route documented and every documented path routed | VERIFIED (B2 drift test) |

@@ -5,6 +5,47 @@ categories only (R14); details in `docs/build/evidence/private/` on the build ma
 
 ---
 
+## Session B2 — 2026-11-03 Beta: persistence, independent review, MCP, suppliers (Opus 5.5, background job)
+
+Scope: founder briefs "B2 — Stabilize, Persist, Review and Complete" + "PR #609 release readiness". Branch
+`feat/beta-unified-workflow`, PR #609 (draft). No merge, deploy, env change, paid call, publish or message sent.
+
+### Privacy incident (commit `5f08020a`, public repo)
+Third-party business email addresses (a dRPC staff member, another company that wrote to dRPC) and the fact that a
+reply was misaddressed were committed; redacted in `aa6435df`, still in branch history. **No credentials, tokens or
+secrets → no rotation needed.** Severity low/low-medium. Cleanup plan (needs approval): squash-merge #609 so main
+never contains it, delete the branch; full purge = rebase + force-push + GitHub Support for cached PR refs.
+
+### Delivered
+| Commit | What |
+|---|---|
+| `d0b2bdca` | Migration 041 (`wf_*` kernel store + owner-scoped read model; usage never revenue; append-only receipts/journal) + `PgDurableStore` prefix |
+| `a617b16f` | `run_store.js` (Memory/Pg), Postgres wiring, boot `recover()`, receipts/strategies endpoints; **all HIGH/MED review fixes** (except M8) with regression tests that fail on the pre-fix commit |
+| `13269b5e` | MCP workflow tools (8, opt-in, caller-scoped, approval cap), OpenAPI 3.1 + drift test, saved strategies + `/api-mcp` console page |
+| `6dcb4b17` | Browser E2E (journeys A–D, mobile, auth) + after-restart phase |
+| (this) | Supplier catalog evidence, docs |
+
+### Tests
+- API workflows: 40/40 memory + 8/8 Postgres (mutation-checked: SQL CAS, recovery). MCP: 8/8.
+- Full apps/api suite, same local DB: branch 916/867/50 vs pristine main 868/818/51 — zero failures unique to the branch.
+- Console: tsc + eslint clean. Browser E2E phase 1: 8/8; API restarted on the same DB → phase 2: 1/1.
+- Not run locally: migration integration tests (testcontainers; no Docker, F19) — CI.
+
+### Findings
+- Railway: only `satelink-reconciler` is in `europe-west4`; API/Postgres/Redis remain `us-west2`.
+- Space Command Kits previews fail because their workers' free Base RPC (`mainnet.base.org`) returns 429 to Cloudflare egress (200 from Satelink's network). Not a Satelink defect.
+- FreeTier: public catalogue 83 paths / 74 MCP tools; two free calls 200, balance matched on-chain. Same operator signal. 0.5% share not accepted.
+- dRPC: corrected enquiry saved as a Gmail **draft** to dRPC (unsent).
+
+### Founder actions added
+- F30 Apply migrations 040 + 041 in production when the beta goes to staging/production (review first).
+- F31 Send (or edit) the dRPC draft; reply to Space Command (test keys, 120 s vs 300 s timeout, Base RPC dependency).
+- F32 Choose the Strategy Lab data licence (CoinGecko paid tier first) and approve/adjust the pricing proposal.
+- F33 Decide MCP publication scope (BETA_RELEASE_CHECKLIST).
+- F34 Approve the privacy cleanup plan above (or accept squash-merge-only).
+
+---
+
 ## Session B1 — 2026-11-03 Customer beta: one workflow foundation for trading + procurement (Opus 5.5, background job)
 
 Scope: founder mandate "MASTER PRODUCT RECOVERY, UNIFICATION & BETA LAUNCH". Branch `feat/beta-unified-workflow`
