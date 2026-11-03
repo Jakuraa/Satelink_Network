@@ -16,8 +16,8 @@
 //   POST /v1/workflows/runs/:id/cancel
 //
 // Discovery (templates, capabilities, quote, compile) is public. Runs require an
-// API key (X-API-Key, resolved via the canonical api_credits account) — the
-// customer id is a key reference, never the key. No route here charges money:
+// API key (X-API-Key, resolved via the canonical api_credits account; the customer
+// id is a key reference, never the key) or a console session (accounts V1). No route here charges money:
 // pricing is withheld until approved (see supplier_catalog.v1.json).
 
 import express, { Router } from 'express';
@@ -46,13 +46,28 @@ export function createWorkflowsRouter(pool, opts = {}) {
   let servicePromise = opts.service ? Promise.resolve(opts.service) : null;
   const service = () => (servicePromise ||= WorkflowService.create());
 
+  // API key (machines, developers) first; else a console Better Auth session when
+  // CONSOLE_ACCOUNTS_V1 is on. Session requests must carry X-Satelink-Console: 1
+  // (the console accounts CSRF contract, enforced by csrfGuard below).
   const resolvePrincipal = opts.resolvePrincipal || (async (req) => {
     const apiKey = req.get('X-API-Key');
-    if (!apiKey) return null;
-    const account = await resolveAccount(pool, { apiKey });
-    if (!account || account.status === 'suspended') return null;
-    return { id: keyRef(account.api_key) };
+    if (apiKey) {
+      const account = await resolveAccount(pool, { apiKey });
+      if (!account || account.status === 'suspended') return null;
+      return { id: keyRef(account.api_key) };
+    }
+    if (process.env.CONSOLE_ACCOUNTS_V1 === 'true' && req.get('x-satelink-console') === '1') {
+      const { betterAuthSession } = await import('../console_accounts/router.mjs');
+      const s = await betterAuthSession(pool, req);
+      return s ? { id: `user:${s.accountId}` } : null;
+    }
+    return null;
   });
+  const sessionCsrf = async (req, res, next) => {
+    if (req.get('X-API-Key') || opts.resolvePrincipal) return next();
+    const { csrfGuard } = await import('../console_accounts/router.mjs');
+    return csrfGuard(req, res, next);
+  };
 
   const json = express.json({ limit: '32kb' });
   const send = (res, e) => {
@@ -96,10 +111,10 @@ export function createWorkflowsRouter(pool, opts = {}) {
   router.post('/strategy-lab/compile', json, (req, res) => {
     const { prompt, answers } = req.body || {};
     const out = compileStrategy(prompt, answers && typeof answers === 'object' ? answers : {});
-    res.status(out.status === 'compiled' ? 200 : 422).json({ ok: out.status === 'compiled', beta: true, ...out, supported: describeSupported() });
+    res.status(out.status === 'unsupported' ? 422 : 200).json({ ok: out.status === 'compiled', beta: true, ...out, supported: describeSupported() });
   });
 
-  router.post('/workflows/runs', json, authed(async (req, res, principal, svc) => {
+  router.post('/workflows/runs', json, sessionCsrf, authed(async (req, res, principal, svc) => {
     const out = await svc.createRun(principal, req.body || {});
     res.status(out.replayed ? 200 : 201).json({ ok: true, beta: true, replayed: out.replayed, run: out.run });
   }));
@@ -108,12 +123,12 @@ export function createWorkflowsRouter(pool, opts = {}) {
 
   router.get('/workflows/runs/:id', authed((req, res, principal, svc) => res.json({ ok: true, beta: true, run: svc.getRun(principal, req.params.id) })));
 
-  router.post('/workflows/runs/:id/approve', authed(async (req, res, principal, svc) => {
+  router.post('/workflows/runs/:id/approve', json, sessionCsrf, authed(async (req, res, principal, svc) => {
     const out = await svc.approve(principal, req.params.id);
     res.json({ ok: true, beta: true, changed: out.changed, run: out.run });
   }));
 
-  router.post('/workflows/runs/:id/cancel', authed(async (req, res, principal, svc) => {
+  router.post('/workflows/runs/:id/cancel', json, sessionCsrf, authed(async (req, res, principal, svc) => {
     const out = await svc.cancel(principal, req.params.id);
     res.json({ ok: true, beta: true, run: out.run });
   }));

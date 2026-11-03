@@ -385,6 +385,22 @@ describe('workflows beta — HTTP router', function () {
     expect(bad.status).to.equal(422);
   });
 
+  it('console-session runs (accounts V1) require the CSRF header; without a key or session → 401', async () => {
+    const { svc } = await makeService();
+    const app = appWith({ enabled: true, service: svc });
+    const prev = process.env.CONSOLE_ACCOUNTS_V1;
+    process.env.CONSOLE_ACCOUNTS_V1 = 'true';
+    try {
+      const noHeader = await request(app).post('/v1/workflows/runs').send(balanceRun('http-csrf-0001'));
+      expect(noHeader.status).to.equal(403);
+      expect(noHeader.body.error).to.equal('csrf_header_missing');
+      const list = await request(app).get('/v1/workflows/runs');
+      expect(list.status).to.equal(401);
+    } finally {
+      if (prev === undefined) delete process.env.CONSOLE_ACCOUNTS_V1; else process.env.CONSOLE_ACCOUNTS_V1 = prev;
+    }
+  });
+
   it('x402 supplier connector refuses to pay (no wallet, no authorization)', async () => {
     const c = createX402HttpConnector();
     try { await c.call({ provider: { name: 'X' } }); expect.fail('expected refusal'); } catch (e) {

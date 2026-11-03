@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity, BarChart3, Bell, BookOpen, Code2, CreditCard, KeyRound, LayoutDashboard, Menu, MoreHorizontal, Moon, PlayCircle, Search,
-  Server, Settings, Sun, Wallet, X, Zap,
+  Server, Settings, Sun, Wallet, X, Zap, FlaskConical, Store, Workflow,
 } from "lucide-react";
 
 type NavItem = { href: string; label: string; key: string; icon: React.ComponentType<{ className?: string }>; group?: string };
@@ -48,6 +48,14 @@ export const ADVANCED_NAV: NavItem[] = [
   { href: "/alerts", label: "Alerts", key: "l", icon: Bell, group: "Account" },
   { href: "/settings", label: "Settings", key: "e", icon: Settings, group: "Account" },
 ];
+// Customer workflows beta — shown only where WORKFLOWS_BETA_ENABLED is on.
+const BETA_NAV: NavItem[] = [
+  { href: "/strategy-lab", label: "Strategy Lab", key: "t", icon: FlaskConical },
+  { href: "/marketplace", label: "Agent Marketplace", key: "a", icon: Store },
+  { href: "/workflows", label: "Workflows", key: "w", icon: Workflow },
+];
+const withBeta = (items: NavItem[]) => [items[0], ...BETA_NAV, ...items.slice(1)];
+
 const TABS = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
   { href: "/paper-trading", label: "Paper", icon: PlayCircle },
@@ -61,11 +69,13 @@ type Props = {
   keys: { fp: string; label: string }[];
   activeFp: string | null;
   theme: "dark" | "light";
+  beta?: boolean;
   children: React.ReactNode;
 };
 
-export function Shell({ mode = null, user, keys, activeFp, theme: initialTheme, children }: Props) {
-  const nav = mode === "simple" ? SIMPLE_NAV : mode === "advanced" ? ADVANCED_NAV : NAV;
+export function Shell({ mode = null, user, keys, activeFp, theme: initialTheme, beta = false, children }: Props) {
+  const base = mode === "simple" ? SIMPLE_NAV : mode === "advanced" ? ADVANCED_NAV : NAV;
+  const nav = useMemo(() => (beta ? withBeta(base) : base), [beta, base]);
   const pathname = usePathname();
   const router = useRouter();
   const [theme, setTheme] = useState(initialTheme);

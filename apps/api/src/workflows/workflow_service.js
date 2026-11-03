@@ -80,6 +80,9 @@ function graph(template, run, kernelPhases) {
     else if (n.id === 'approval') status = run.approval?.approved_at ? 'done' : run.status === 'awaiting_approval' ? 'waiting' : run.status === 'cancelled' ? 'cancelled' : 'pending';
     else if (n.id === 'paper') status = run.status === 'completed' ? 'available' : 'pending';
     else if (n.phases.length && n.phases.every((p) => done.has(p))) status = 'done';
+    // The pre-approval quote already discovered and compared suppliers (the kernel
+    // re-discovers at execution; this only reflects what the customer has seen).
+    else if (run.quote?.available && ['discover', 'quote'].includes(n.kind)) status = 'done';
     if (status === 'pending' && firstPending === null) firstPending = n.id;
     return { id: n.id, label: n.label, kind: n.kind, status };
   });
@@ -395,6 +398,7 @@ export class WorkflowService {
     const { _request, ...pub } = r;
     const out = {
       ...pub,
+      title: this.summary(r).title,
       graph: graph(r.template, r, kernel.map((e) => e.phase)),
       labels: r.template === 'strategy_lab.backtest.v1' ? { simulation: SIMULATION_LABEL } : {},
     };
