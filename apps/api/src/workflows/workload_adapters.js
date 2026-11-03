@@ -41,23 +41,27 @@ const INSTRUMENTS = { 'BINANCE:BTCUSDT': PAPER_INSTRUMENTS.BTC_USDT, 'BINANCE:ET
  * Closed daily candles with a small in-process cache (1h TTL). Not a dataset
  * store: every evaluation records the dataset hash/range it actually used.
  */
-export function createCandleSource({ provider = new BinanceSpotDataProvider(), clock = () => Date.now(), ttlMs = 3_600_000 } = {}) {
-  const cache = new Map();
+export function createCandleSource({ provider = new BinanceSpotDataProvider(), clock = () => Date.now(), ttlMs = 3_600_000, maxEntries = 8 } = {}) {
+  const cache = new Map(); // insertion-ordered → oldest evicted first (bounded)
   return {
     async load(instrumentId, startIso) {
-      const inst = INSTRUMENTS[instrumentId];
+      const inst = Object.hasOwn(INSTRUMENTS, instrumentId) ? INSTRUMENTS[instrumentId] : null;
       if (!inst) throw new ConnectorError('bad_input', `unsupported market ${instrumentId}`);
-      const key = `${instrumentId}|${startIso}`;
+      const startMs = Date.parse(startIso);
+      if (!Number.isFinite(startMs)) throw new ConnectorError('bad_input', 'invalid evaluation start');
+      const key = `${instrumentId}|${new Date(startMs).toISOString().slice(0, 10)}`;
       const hit = cache.get(key);
       if (hit && clock() - hit.at < ttlMs) return hit.candles;
       let candles;
       try {
-        candles = await provider.historicalCandles(inst, '1d', Date.parse(startIso), clock());
+        candles = await provider.historicalCandles(inst, '1d', startMs, clock());
       } catch (e) {
         const msg = String(e?.message || e);
         throw new ConnectorError(/451/.test(msg) ? 'data_geo_restricted' : 'data_unavailable', `market data unavailable: ${msg}`);
       }
+      cache.delete(key);
       cache.set(key, { at: clock(), candles });
+      while (cache.size > maxEntries) cache.delete(cache.keys().next().value);
       return candles;
     },
   };
@@ -123,17 +127,21 @@ export function toScorecard(spec, evaluation, offer) {
 }
 
 export class StrategyEvaluationAdapter extends WorkloadAdapter {
-  constructor({ catalog, candleSource, clock }) {
+  constructor({ catalog, candleSource, evaluationStore = null, clock }) {
     super();
     this.catalog = catalog;
     this.candles = candleSource;
+    this.evaluations = evaluationStore; // append-only trading_strategy_evaluations (040) when wired
     this.clock = clock || (() => Date.now());
   }
   capabilities() { return { key: WORKLOADS.STRATEGY, resourceTypes: ['strategy_spec'], settlementMode: SettlementMode.POST, executionSafety: ExecutionSafety.IDEMPOTENT }; }
   async discover() { return []; } // candidates come from the SupplierRegistry
+  // Kernel contract: quote.cost is what SETTLE pays the supplier. The customer charge
+  // travels separately and is never confused with supplier cost.
   async quote(_req, s) {
     const offer = this.catalog.offer(s.supplierId);
-    return { cost: this.catalog.price(offer).chargeMicros.toString(), unit: 'uUSD', supplierId: s.supplierId };
+    const p = this.catalog.price(offer);
+    return { cost: p.supplierCostMicros.toString(), customerCharge: p.chargeMicros.toString(), unit: 'uUSD', supplierId: s.supplierId };
   }
   async execute(req, s) {
     const spec = req.payload?.spec;
@@ -155,6 +163,11 @@ export class StrategyEvaluationAdapter extends WorkloadAdapter {
       seed: 20261103, periodsPerYear: 365,
       now: () => new Date(this.clock()),
     });
+    if (this.evaluations) {
+      try { await this.evaluations.append(evaluation); } catch (e) {
+        if (e?.name !== 'DuplicateEvaluationError') throw new ConnectorError('evaluation_store_failed', 'the evaluation could not be recorded');
+      }
+    }
     const scorecard = toScorecard(spec, evaluation, offer);
     // Result verification: the engine's own invariants, re-checked at the boundary.
     if (!['PASS', 'FAIL'].includes(scorecard.verdict) || scorecard.windows.length !== spec.evaluation.windows) {
@@ -173,9 +186,12 @@ export class CapabilityProcurementAdapter extends WorkloadAdapter {
   }
   capabilities() { return { key: procurementWorkload(this.capability), resourceTypes: ['capability_call'], settlementMode: SettlementMode.POST, executionSafety: ExecutionSafety.IDEMPOTENT }; }
   async discover() { return []; }
+  // Kernel contract: quote.cost is what SETTLE pays the supplier. The customer charge
+  // travels separately and is never confused with supplier cost.
   async quote(_req, s) {
     const offer = this.catalog.offer(s.supplierId);
-    return { cost: this.catalog.price(offer).chargeMicros.toString(), unit: 'uUSD', supplierId: s.supplierId };
+    const p = this.catalog.price(offer);
+    return { cost: p.supplierCostMicros.toString(), customerCharge: p.chargeMicros.toString(), unit: 'uUSD', supplierId: s.supplierId };
   }
   async execute(req, s) {
     const offer = this.catalog.offer(s.supplierId);

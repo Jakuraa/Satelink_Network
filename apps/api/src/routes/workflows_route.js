@@ -14,6 +14,9 @@
 //   GET  /v1/workflows/runs/:id               (graph + journal trace + receipt)
 //   POST /v1/workflows/runs/:id/approve
 //   POST /v1/workflows/runs/:id/cancel
+//   GET  /v1/workflows/receipts/:id           (hash-verified receipt)
+//   POST /v1/strategy-lab/strategies          {spec} | {prompt, answers?}  save a strategy
+//   GET  /v1/strategy-lab/strategies[/:id]    saved strategies (+ their runs)
 //
 // Discovery (templates, capabilities, quote, compile) is public. Runs require an
 // API key (X-API-Key, resolved via the canonical api_credits account; the customer
@@ -25,6 +28,13 @@ import { resolveAccount } from '../billing/credit_service.mjs';
 import { keyRef } from '../security/key_mask.mjs';
 import { compileStrategy, describeSupported } from '../workflows/strategy_compiler.js';
 import { WorkflowService, WorkflowError } from '../workflows/workflow_service.js';
+import { PgRunStore } from '../workflows/run_store.js';
+import { PgDurableStore } from '../vnext/reliability/pg_durable_store.js';
+import { PgEvaluationStore } from '../trading/engine/index.js';
+
+const RUN_ID = /^run_[0-9a-f]{8,64}$/;
+const RECEIPT_ID = /^rcpt_[0-9a-f]{8,64}$/;
+const STRATEGY_ID = /^strat_[0-9a-f]{16}$/;
 
 export function workflowsEnabled(env = process.env) { return env.WORKFLOWS_BETA_ENABLED === 'true'; }
 
@@ -43,8 +53,24 @@ export function createWorkflowsRouter(pool, opts = {}) {
     return router;
   }
 
+  // Production binding: kernel store wf_* + run store + evaluation store on the API's pool
+  // (needs migrations 040 + 041). A failed boot (e.g. migration missing) answers 503 and
+  // is retried on the next request — it never crashes the host app.
   let servicePromise = opts.service ? Promise.resolve(opts.service) : null;
-  const service = () => (servicePromise ||= WorkflowService.create());
+  const service = () => {
+    if (!servicePromise) {
+      servicePromise = (pool ? WorkflowService.create({
+        store: new PgDurableStore(pool, { prefix: 'wf_' }),
+        runStore: new PgRunStore(pool),
+        evaluationStore: new PgEvaluationStore((t, p) => pool.query(t, p)),
+      }) : WorkflowService.create()).catch((e) => {
+        console.error('[workflows] boot failed:', e?.message || e);
+        servicePromise = null;
+        throw new WorkflowError(503, 'workflows_unavailable', 'Workflows are temporarily unavailable.');
+      });
+    }
+    return servicePromise;
+  };
 
   // API key (machines, developers) first; else a console Better Auth session when
   // CONSOLE_ACCOUNTS_V1 is on. Session requests must carry X-Satelink-Console: 1
@@ -53,7 +79,8 @@ export function createWorkflowsRouter(pool, opts = {}) {
     const apiKey = req.get('X-API-Key');
     if (apiKey) {
       const account = await resolveAccount(pool, { apiKey });
-      if (!account || account.status === 'suspended') return null;
+      // Same rule as billing (credit_service precheck): only active keys act.
+      if (!account || (account.status && account.status !== 'active')) return null;
       return { id: keyRef(account.api_key) };
     }
     if (process.env.CONSOLE_ACCOUNTS_V1 === 'true' && req.get('x-satelink-console') === '1') {
@@ -69,10 +96,26 @@ export function createWorkflowsRouter(pool, opts = {}) {
     return csrfGuard(req, res, next);
   };
 
-  const json = express.json({ limit: '32kb' });
+  // Note: earlier /v1 mounts in app_factory parse JSON at 16kb first; this limit only
+  // applies when the router is mounted on its own (tests, preview).
+  const json = express.json({ limit: '16kb' });
+
+  // Per-customer cap on run creation: backtests cost CPU and market-data requests and
+  // are free during the beta, so they must not be an amplification lever.
+  const RUNS_PER_MINUTE = Number(process.env.WORKFLOWS_RUNS_PER_MINUTE || 10);
+  const recent = new Map(); // principal -> timestamps (ms) within the last minute
+  const rateLimited = (principal) => {
+    const now = Date.now();
+    const ts = (recent.get(principal.id) || []).filter((t) => now - t < 60_000);
+    if (ts.length >= RUNS_PER_MINUTE) { recent.set(principal.id, ts); return true; }
+    ts.push(now); recent.set(principal.id, ts);
+    if (recent.size > 10_000) recent.delete(recent.keys().next().value);
+    return false;
+  };
   const send = (res, e) => {
     if (e instanceof WorkflowError) return res.status(e.status).json({ ok: false, error: e.code, message: e.message, ...e.extra });
-    console.error('[workflows] unexpected error:', e?.message || e);
+    if (e?.name === 'ReceiptIntegrityError') console.error('[workflows] RECEIPT INTEGRITY FAILURE:', e.message);
+    else console.error('[workflows] unexpected error:', e?.message || e);
     return res.status(500).json({ ok: false, error: 'internal_error' });
   };
   const authed = (fn) => async (req, res) => {
@@ -115,13 +158,36 @@ export function createWorkflowsRouter(pool, opts = {}) {
   });
 
   router.post('/workflows/runs', json, sessionCsrf, authed(async (req, res, principal, svc) => {
+    if (rateLimited(principal)) return res.status(429).set('Retry-After', '60').json({ ok: false, error: 'rate_limited', message: `At most ${RUNS_PER_MINUTE} runs per minute.` });
     const out = await svc.createRun(principal, req.body || {});
     res.status(out.replayed ? 200 : 201).json({ ok: true, beta: true, replayed: out.replayed, run: out.run });
   }));
 
-  router.get('/workflows/runs', authed((req, res, principal, svc) => res.json({ ok: true, beta: true, runs: svc.listRuns(principal) })));
+  router.get('/workflows/runs', authed(async (req, res, principal, svc) => {
+    const limit = Math.min(Math.max(Number.parseInt(req.query.limit, 10) || 50, 1), 200);
+    res.json({ ok: true, beta: true, runs: await svc.listRuns(principal, { limit }) });
+  }));
 
-  router.get('/workflows/runs/:id', authed((req, res, principal, svc) => res.json({ ok: true, beta: true, run: svc.getRun(principal, req.params.id) })));
+  router.get('/workflows/runs/:id', authed(async (req, res, principal, svc) => {
+    if (!RUN_ID.test(req.params.id)) return res.status(404).json({ ok: false, error: 'run_not_found' });
+    return res.json({ ok: true, beta: true, run: await svc.getRun(principal, req.params.id) });
+  }));
+
+  router.get('/workflows/receipts/:id', authed(async (req, res, principal, svc) => {
+    if (!RECEIPT_ID.test(req.params.id)) return res.status(404).json({ ok: false, error: 'receipt_not_found' });
+    return res.json({ ok: true, beta: true, receipt: await svc.getReceipt(principal, req.params.id) });
+  }));
+
+  router.post('/strategy-lab/strategies', json, sessionCsrf, authed(async (req, res, principal, svc) => {
+    res.status(201).json({ ok: true, beta: true, strategy: await svc.saveStrategy(principal, req.body || {}) });
+  }));
+
+  router.get('/strategy-lab/strategies', authed(async (_req, res, principal, svc) => res.json({ ok: true, beta: true, strategies: await svc.listStrategies(principal) })));
+
+  router.get('/strategy-lab/strategies/:id', authed(async (req, res, principal, svc) => {
+    if (!STRATEGY_ID.test(req.params.id)) return res.status(404).json({ ok: false, error: 'strategy_not_found' });
+    return res.json({ ok: true, beta: true, strategy: await svc.getStrategy(principal, req.params.id) });
+  }));
 
   router.post('/workflows/runs/:id/approve', json, sessionCsrf, authed(async (req, res, principal, svc) => {
     const out = await svc.approve(principal, req.params.id);

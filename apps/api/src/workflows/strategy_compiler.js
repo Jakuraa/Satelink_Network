@@ -37,6 +37,10 @@ export const EVALUATION = Object.freeze({ timeframe: '1d', train_bars: 365, test
 
 const MAX_PROMPT = 2000;
 
+// Own-property lookups only: a plain `FAMILIES[x]` resolves '__proto__'/'constructor'.
+const isFamily = (x) => typeof x === 'string' && Object.hasOwn(FAMILIES, x);
+const isMarket = (x) => typeof x === 'string' && Object.hasOwn(MARKETS, x);
+
 const MARKET_WORDS = [
   [/\b(btc|bitcoin|xbt)\b/, 'BTCUSDT'],
   [/\b(eth|ether|ethereum)\b/, 'ETHUSDT'],
@@ -44,7 +48,7 @@ const MARKET_WORDS = [
 
 // Requests the engine cannot evaluate. Order matters only for message clarity.
 const UNSUPPORTED = [
-  [/\b(short|shorting|short-sell|sell short)\b/, 'Short selling is not supported — strategies are long-only.'],
+  [/\b(short(?![- ]?(term|er|est)\b)|shorting|short-sell|sell short)\b/, 'Short selling is not supported — strategies are long-only.'],
   [/\b(leverage|leveraged|margin|\d+x)\b/, 'Leverage and margin are not supported.'],
   [/\b(option|options|calls?|puts?|straddle)\b/, 'Options strategies are not supported.'],
   [/\b(futures?|perp|perpetual|funding rate)\b/, 'Futures and perpetuals are not supported.'],
@@ -116,15 +120,36 @@ function parseAllocation(t, assumptions) {
   return 100;
 }
 
+/**
+ * Normalize a client-supplied spec: validate it, then re-derive everything the client
+ * must not choose (id, version, costs, evaluation window, interpreter). Returns
+ * { spec } or { problems }.
+ */
+export function normalizeSpec(raw) {
+  if (!raw || typeof raw !== 'object') return { problems: ['spec must be an object'] };
+  const problems = validateSpec({ ...raw, evaluation: EVALUATION });
+  if (problems.length) return { problems };
+  const spec = {
+    schema: SPEC_SCHEMA, version: 1, family: raw.family, family_version: FAMILIES[raw.family].version,
+    name: typeof raw.name === 'string' && raw.name.length <= 120 ? raw.name : `${FAMILIES[raw.family].name} · ${raw.market.symbol}`,
+    source_prompt: typeof raw.source_prompt === 'string' ? raw.source_prompt.slice(0, MAX_PROMPT) : '',
+    params: { ...raw.params }, market: { ...MARKETS[raw.market.symbol] }, timeframe: EVALUATION.timeframe,
+    direction: 'long_only', risk: { allocation_pct: raw.risk.allocation_pct },
+    costs: { ...COSTS }, evaluation: { ...EVALUATION }, interpreter: { ...INTERPRETER },
+  };
+  spec.id = specId(spec);
+  return { spec };
+}
+
 /** Validate a spec. Returns a list of problems (empty = valid). Used for compiled and client-supplied specs. */
 export function validateSpec(spec) {
   const p = [];
   if (!spec || typeof spec !== 'object') return ['spec must be an object'];
   if (spec.schema !== SPEC_SCHEMA) p.push(`schema must be '${SPEC_SCHEMA}'`);
-  const fam = FAMILIES[spec.family];
+  const fam = isFamily(spec.family) ? FAMILIES[spec.family] : null;
   if (!fam) p.push(`unsupported family '${spec.family}'`);
   else if (spec.family_version !== fam.version) p.push(`family_version must be '${fam.version}'`);
-  const market = spec.market && MARKETS[spec.market.symbol];
+  const market = spec.market && isMarket(spec.market.symbol) ? MARKETS[spec.market.symbol] : null;
   if (!market || spec.market.instrument_id !== market.instrument_id) p.push('market must be BINANCE:BTCUSDT or BINANCE:ETHUSDT');
   if (spec.timeframe !== EVALUATION.timeframe) p.push(`timeframe must be '${EVALUATION.timeframe}'`);
   if (spec.direction !== 'long_only') p.push("direction must be 'long_only'");
@@ -139,12 +164,17 @@ export function validateSpec(spec) {
     if (!int(pr.entry, 2, 200)) p.push('entry must be an integer 2–200');
     if (!int(pr.exit, 2, 200)) p.push('exit must be an integer 2–200');
   }
+  // The evaluation method is the platform's, never the client's: a custom window would
+  // let a PASS be searched for while the scorecard still prints the standard pass rule.
+  const ev = spec.evaluation || {};
+  if (Object.keys(EVALUATION).some((k) => ev[k] !== EVALUATION[k])) p.push('evaluation window is fixed by Satelink and cannot be changed');
   const r = spec.risk || {};
   if (!int(r.allocation_pct, 1, 100)) p.push('risk.allocation_pct must be an integer 1–100 (no leverage)');
   return p;
 }
 
-function specId(spec) {
+/** Content hash of a spec's semantic fields — the only valid strategy id. */
+export function specId(spec) {
   return 'strat_' + hashObject({ family: spec.family, family_version: spec.family_version, params: spec.params, market: spec.market.instrument_id, timeframe: spec.timeframe, risk: spec.risk }).slice(0, 16);
 }
 
@@ -171,7 +201,7 @@ export function compileStrategy(prompt, answers = {}) {
     assumptions.push('Intraday timeframes are not available in this beta — the strategy is evaluated on daily bars.');
   }
 
-  let symbol = answers.market && MARKETS[answers.market] ? answers.market : null;
+  let symbol = isMarket(answers.market) ? answers.market : null;
   if (!symbol) {
     const hits = MARKET_WORDS.filter(([re]) => re.test(t)).map(([, s]) => s);
     if (hits.length === 1) symbol = hits[0];
@@ -179,7 +209,7 @@ export function compileStrategy(prompt, answers = {}) {
     else questions.push({ id: 'market', text: 'Which market should this run on?', options: ['BTCUSDT', 'ETHUSDT'] });
   }
 
-  let family = answers.family && FAMILIES[answers.family] ? answers.family : pickFamily(t);
+  let family = isFamily(answers.family) ? answers.family : pickFamily(t);
   if (!family || family === 'ambiguous') {
     family = null;
     questions.push({

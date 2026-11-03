@@ -142,6 +142,8 @@ export class SupplierRegistry {
       if (query.settlementMode && !s.supportedSettlementModes.includes(query.settlementMode)) continue;
       if (query.paymentRail && !s.supportedPaymentRails.includes(query.paymentRail)) continue;
       if (query.chain && !s.supportedChains.includes(query.chain)) continue;
+      // Additive: pin to one supplier (a customer approved a quote for this offer).
+      if (query.supplierId && s.supplierId !== query.supplierId) continue;
       out.push({
         supplierId: s.supplierId,
         adapterId: s.adapterId,

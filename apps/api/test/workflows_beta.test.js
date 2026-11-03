@@ -24,6 +24,7 @@ import { SupplierCatalog, validateCatalog, usdToMicros, microsToUsd, loadCatalog
 import { WorkflowService } from '../src/workflows/workflow_service.js';
 import { createJsonRpcBalanceConnector, createX402HttpConnector, ConnectorError } from '../src/workflows/connectors.js';
 import { SIMULATION_LABEL } from '../src/workflows/workload_adapters.js';
+import { MemoryRunStore } from '../src/workflows/run_store.js';
 import { MemoryDurableStore, createMemoryBacking } from '../src/vnext/reliability/memory_durable_store.js';
 import { SupplierRegistry } from '../src/vnext/registry/supplier_registry.js';
 import { PAPER_INSTRUMENTS } from '../src/trading/engine/index.js';
@@ -59,9 +60,9 @@ function rpcFetch({ status = 200, result = '0xde0b6b3a7640000', error = null } =
   return f;
 }
 
-async function makeService({ fetchImpl = rpcFetch(), env = RPC_ENV, backing, candleSource = fixtureCandles } = {}) {
+async function makeService({ fetchImpl = rpcFetch(), env = RPC_ENV, backing, runStore, candleSource = fixtureCandles } = {}) {
   const connectors = { jsonrpc_balance: createJsonRpcBalanceConnector({ fetchImpl, env }), x402_http: createX402HttpConnector() };
-  const svc = await WorkflowService.create({ store: new MemoryDurableStore(backing), connectors, candleSource, clock: () => Date.UTC(2026, 10, 3) });
+  const svc = await WorkflowService.create({ store: new MemoryDurableStore(backing), runStore, connectors, candleSource, clock: () => Date.UTC(2026, 10, 3) });
   return { svc, fetchImpl };
 }
 
@@ -178,7 +179,7 @@ describe('workflows beta — agent procurement', () => {
     expect(run.receipt.revenue.counted).to.equal(false);
     expect(run.budget_hold.status).to.equal('captured');
 
-    const full = svc.getRun(ME, run.id);
+    const full = await svc.getRun(ME, run.id);
     const phases = full.trace.filter((e) => e.stream === 'kernel').map((e) => e.phase);
     expect(phases).to.deep.equal(['SUBMIT', 'DISCOVER', 'QUOTE', 'ROUTE', 'EXECUTE', 'SETTLE', 'CLOSED']);
     expect(full.graph.nodes.every((n) => n.status === 'done')).to.equal(true);
@@ -194,7 +195,7 @@ describe('workflows beta — agent procurement', () => {
     await Promise.all([svc.approve(ME, a.run.id), svc.approve(ME, a.run.id)]);
     await svc.approve(ME, a.run.id);
     expect(fetchImpl.calls).to.equal(1);
-    const settles = svc.getRun(ME, a.run.id).trace.filter((e) => e.phase === 'SETTLE');
+    const settles = (await svc.getRun(ME, a.run.id)).trace.filter((e) => e.phase === 'SETTLE');
     expect(settles).to.have.length(1);
     expect(svc.settlement.records).to.have.length(1);
   });
@@ -216,7 +217,7 @@ describe('workflows beta — agent procurement', () => {
     expect(run.error.code).to.equal('supplier_error');
     expect(run.receipt.customer_charge_usd).to.equal('0');
     expect(run.budget_hold.status).to.equal('released');
-    const phases = svc.getRun(ME, run.id).trace.map((e) => e.phase);
+    const phases = (await svc.getRun(ME, run.id)).trace.map((e) => e.phase);
     expect(phases).to.include('FAILED');
     expect(phases).to.not.include('SETTLE');
     expect(svc.settlement.records).to.have.length(0);
@@ -228,7 +229,7 @@ describe('workflows beta — agent procurement', () => {
     const { run } = await svc.approve(ME, c.run.id);
     expect(run.status).to.equal('failed');
     expect(run.error.code).to.equal('invalid_result');
-    expect(svc.getRun(ME, run.id).trace.map((e) => e.phase)).to.not.include('SETTLE');
+    expect((await svc.getRun(ME, run.id)).trace.map((e) => e.phase)).to.not.include('SETTLE');
   });
 
   it('evaluation-only and paused suppliers block the run with per-offer reasons (no execution)', async () => {
@@ -256,7 +257,7 @@ describe('workflows beta — agent procurement', () => {
     for (const fn of [() => svc.getRun(OTHER, c.run.id), () => svc.approve(OTHER, c.run.id)]) {
       try { await fn(); expect.fail('expected 404'); } catch (e) { expect(e.status).to.equal(404); }
     }
-    expect(svc.listRuns(OTHER)).to.have.length(0);
+    expect(await svc.listRuns(OTHER)).to.have.length(0);
     const { run } = await svc.cancel(ME, c.run.id);
     expect(run.status).to.equal('cancelled');
     expect(run.budget_hold.status).to.equal('released');
@@ -320,11 +321,12 @@ describe('workflows beta — Strategy Lab runs', function () {
 
   it('runs and the journal survive a restart on the same durable store', async () => {
     const backing = createMemoryBacking();
-    const first = await makeService({ backing });
+    const runStore = new MemoryRunStore();
+    const first = await makeService({ backing, runStore });
     const c = await first.svc.createRun(ME, balanceRun('proc-durable-01'));
     await first.svc.approve(ME, c.run.id);
-    const second = await makeService({ backing });
-    const r = second.svc.getRun(ME, c.run.id);
+    const second = await makeService({ backing, runStore });
+    const r = await second.svc.getRun(ME, c.run.id);
     expect(r.status).to.equal('completed');
     expect(r.receipt.customer_charge_usd).to.equal('0');
     expect(second.svc.dk.journal.verifyChain()).to.equal(true);
@@ -332,6 +334,79 @@ describe('workflows beta — Strategy Lab runs', function () {
     const again = await second.svc.createRun(ME, balanceRun('proc-durable-01'));
     expect(again.replayed).to.equal(true);
     expect(second.fetchImpl.calls).to.equal(0);
+  });
+});
+
+describe('workflows beta — review findings (PR #609) regressions', function () {
+  this.timeout(30000);
+
+  it('#2 prototype keys never pass as a family or market', () => {
+    const { spec } = compileStrategy('BTC 10/30 moving average crossover');
+    expect(validateSpec({ ...spec, family: '__proto__', params: { entry: -5 } })).to.include("unsupported family '__proto__'");
+    expect(validateSpec({ ...spec, market: { symbol: 'constructor', instrument_id: 'x' } }).join()).to.match(/market must be/);
+    expect(compileStrategy('buy btc entry 20 exit 10', { family: 'constructor', market: '__proto__' }).status).to.equal('needs_clarification');
+  });
+
+  it('#3 a client cannot change the evaluation window, the costs or the spec id', async () => {
+    const { spec } = compileStrategy('BTC 10/30 moving average crossover');
+    expect(validateSpec({ ...spec, evaluation: { ...spec.evaluation, windows: 1 } }).join()).to.match(/evaluation window is fixed/);
+    const { svc } = await makeService();
+    const { run } = await svc.createRun(ME, { template: 'strategy_lab.backtest.v1', input: { spec: { ...spec, id: 'strat_ffffffffffffffff', evaluation: { ...spec.evaluation, windows: 1, test_bars: 5 }, costs: { fee_bps: 0, half_spread_bps: 0, slippage_bps: 0 } } }, idempotency_key: 'rev-eval-00001' });
+    expect(run.input.spec.id).to.equal(spec.id);
+    expect(run.result.scorecard.windows).to.have.length(4);
+    expect(run.result.scorecard.method.costs_bps.fee).to.equal(10);
+  });
+
+  it('#6 the kernel settles the supplier cost; the receipt shows the approved customer charge', async () => {
+    const raw = loadCatalog();
+    const o = raw.offers.find((x) => x.id === 'satelink.polygon-rpc.balance');
+    o.pricing = { ...o.pricing, supplier_cost_usd: '0.00001', customer_price_usd: '0.00003', approved: true };
+    const connectors = { jsonrpc_balance: createJsonRpcBalanceConnector({ fetchImpl: rpcFetch(), env: RPC_ENV }), x402_http: createX402HttpConnector() };
+    const svc = await WorkflowService.create({ catalog: new SupplierCatalog(raw), connectors, candleSource: fixtureCandles });
+    const c = await svc.createRun(ME, balanceRun('rev-cost-00001'));
+    const { run } = await svc.approve(ME, c.run.id);
+    expect(run.status).to.equal('completed');
+    expect(svc.settlement.records[0].ref.amount_usd).to.equal('0.00001'); // supplier cost, not the customer price
+    expect(run.receipt.customer_charge_usd).to.equal('0.00003');
+    expect(run.receipt.supplier_cost_usd).to.equal('0.00001');
+    expect(run.receipt.margin_usd).to.equal('0.00002');
+    expect(run.receipt.revenue.counted).to.equal(false);
+  });
+
+  it('#6 a price change between quote and approval fails the run before anything executes', async () => {
+    const raw = loadCatalog();
+    const connectorsFetch = rpcFetch();
+    const connectors = { jsonrpc_balance: createJsonRpcBalanceConnector({ fetchImpl: connectorsFetch, env: RPC_ENV }), x402_http: createX402HttpConnector() };
+    const svc = await WorkflowService.create({ catalog: new SupplierCatalog(raw), connectors, candleSource: fixtureCandles });
+    const c = await svc.createRun(ME, balanceRun('rev-stale-0001'));
+    const offer = svc.catalog.offer('satelink.polygon-rpc.balance');
+    offer.pricing = { ...offer.pricing, approved: true, customer_price_usd: '0.5' };
+    const { run } = await svc.approve(ME, c.run.id);
+    expect(run.status).to.equal('failed');
+    expect(run.error.code).to.equal('quote_expired');
+    expect(connectorsFetch.calls).to.equal(0);
+  });
+
+  it('#7 the same idempotency key with a different input is a 409, not a silent replay', async () => {
+    const { svc } = await makeService();
+    await svc.createRun(ME, balanceRun('rev-idem-00001'));
+    for (const body of [
+      { ...balanceRun('rev-idem-00001'), input: { capability: 'wallet.balance', network: 'polygon', address: '0x0000000000000000000000000000000000000001' } },
+      { ...balanceRun('rev-idem-00001'), budget_usd: '5' },
+    ]) {
+      try { await svc.createRun(ME, body); expect.fail('expected 409'); } catch (e) { expect(e.code).to.equal('idempotency_conflict'); }
+    }
+    expect((await svc.createRun(ME, balanceRun('rev-idem-00001'))).replayed).to.equal(true);
+  });
+
+  it('LOW: "short-term" is not short selling; unknown internal errors are not shown to customers', async () => {
+    expect(compileStrategy('buy BTC when the short-term moving average crosses above the long-term one').status).to.equal('compiled');
+    const boom = { async load() { throw new TypeError('Cannot read properties of undefined (reading secret_internal)'); } };
+    const { svc } = await makeService({ candleSource: boom });
+    const { run } = await svc.createRun(ME, { template: 'strategy_lab.backtest.v1', input: { prompt: 'BTC 10/30 moving average crossover' }, idempotency_key: 'rev-err-000001' });
+    expect(run.status).to.equal('failed');
+    expect(run.error.code).to.equal('execution_failed');
+    expect(JSON.stringify(run)).to.not.match(/secret_internal|TypeError/);
   });
 });
 
@@ -399,6 +474,44 @@ describe('workflows beta — HTTP router', function () {
     } finally {
       if (prev === undefined) delete process.env.CONSOLE_ACCOUNTS_V1; else process.env.CONSOLE_ACCOUNTS_V1 = prev;
     }
+  });
+
+  it('#1 revoked or inactive API keys are refused (same rule as billing); run creation is rate limited', async () => {
+    const { svc } = await makeService();
+    const accounts = { sk_fx_active_000000000000000000: 'active', sk_fx_revoke_000000000000000000: 'revoked', sk_fx_paused_000000000000000000: 'paused' };
+    const pool = { query: async (_sql, params) => ({ rows: accounts[params[0]] ? [{ api_key: params[0], status: accounts[params[0]] }] : [] }) };
+    const app = express();
+    app.use('/v1', createWorkflowsRouter(pool, { enabled: true, service: svc }));
+    for (const k of ['sk_fx_revoke_000000000000000000', 'sk_fx_paused_000000000000000000']) {
+      const r = await request(app).get('/v1/workflows/runs').set('X-API-Key', k);
+      expect(r.status, k).to.equal(401);
+    }
+    expect((await request(app).get('/v1/workflows/runs').set('X-API-Key', 'sk_fx_active_000000000000000000')).status).to.equal(200);
+    const prev = process.env.WORKFLOWS_RUNS_PER_MINUTE;
+    process.env.WORKFLOWS_RUNS_PER_MINUTE = '2';
+    try {
+      const limited = express();
+      limited.use('/v1', createWorkflowsRouter(pool, { enabled: true, service: svc }));
+      const codes = [];
+      for (let i = 0; i < 3; i++) {
+        codes.push((await request(limited).post('/v1/workflows/runs').set('X-API-Key', 'sk_fx_active_000000000000000000').send(balanceRun(`rev-rate-${i}0000`))).status);
+      }
+      expect(codes).to.deep.equal([201, 201, 429]);
+    } finally {
+      if (prev === undefined) delete process.env.WORKFLOWS_RUNS_PER_MINUTE; else process.env.WORKFLOWS_RUNS_PER_MINUTE = prev;
+    }
+  });
+
+  it('a database that is missing migration 041 yields a typed 503, never a crash or a 500', async () => {
+    const app = express();
+    const brokenPool = { query: async () => { throw Object.assign(new Error('relation "workflow_definitions" does not exist'), { code: '42P01' }); } };
+    app.use('/v1', createWorkflowsRouter(brokenPool, { enabled: true, resolvePrincipal: async () => ME }));
+    const caps = await request(app).get('/v1/marketplace/capabilities');
+    expect(caps.status).to.equal(503);
+    expect(caps.body.error).to.equal('workflows_unavailable');
+    expect(JSON.stringify(caps.body)).to.not.match(/relation|workflow_definitions/);
+    const runs = await request(app).get('/v1/workflows/runs');
+    expect(runs.status).to.equal(503);
   });
 
   it('x402 supplier connector refuses to pay (no wallet, no authorization)', async () => {

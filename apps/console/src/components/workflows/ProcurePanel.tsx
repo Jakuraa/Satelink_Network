@@ -28,6 +28,8 @@ export function ProcurePanel({ capability, networks, addressLabel }: { capabilit
   const [run, setRun] = useState<Run | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  // One idempotency key per quote: retrying "Create" never creates a second purchase.
+  const [buyKey, setBuyKey] = useState<string | null>(null);
   const router = useRouter();
 
   const validAddress = /^0x[0-9a-fA-F]{40}$/.test(address);
@@ -38,11 +40,12 @@ export function ProcurePanel({ capability, networks, addressLabel }: { capabilit
     setBusy(null);
     if (!data.ok || !data.quote) { setErr(data.error || "Quote unavailable."); return; }
     setQuote(data.quote);
+    setBuyKey(idemKey());
   }
 
   async function create() {
     setBusy("create"); setErr(null);
-    const { status, data } = await post<RunResp>("workflows/runs", { template: "procurement.capability_call.v1", input: { capability, network, address }, budget_usd: budget, idempotency_key: idemKey() });
+    const { status, data } = await post<RunResp>("workflows/runs", { template: "procurement.capability_call.v1", input: { capability, network, address }, budget_usd: budget, idempotency_key: buyKey || idemKey() });
     setBusy(null);
     if (status === 401) { setErr("Connect or create an API key to make purchases — runs are recorded against your account."); return; }
     if (!data.ok || !data.run) { setErr(data.message || data.error || "Could not create the purchase."); return; }

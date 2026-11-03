@@ -21,8 +21,10 @@ import { DecisionEngine } from '../vnext/routing/decision_engine.js';
 import { Policies } from '../vnext/routing/policies.js';
 import { SupplierRegistry } from '../vnext/registry/supplier_registry.js';
 import { SupplierCatalog, usdToMicros, microsToUsd } from './supplier_catalog.js';
-import { compileStrategy, validateSpec } from './strategy_compiler.js';
+import { compileStrategy, normalizeSpec } from './strategy_compiler.js';
 import { parseReason, createJsonRpcBalanceConnector, createX402HttpConnector } from './connectors.js';
+import { MemoryRunStore } from './run_store.js';
+import { canonicalJSON } from '../utils/canonical_json.js';
 import {
   WORKLOADS, procurementWorkload, StrategyEvaluationAdapter, CapabilityProcurementAdapter,
   WithheldSettlement, createCandleSource, SIMULATION_LABEL,
@@ -101,6 +103,8 @@ export class WorkflowService {
    *  - store: DurableStore (default: in-memory; pass PgDurableStore for production)
    *  - connectors: {[type]: connector}  (default: JSON-RPC balance + refusing x402)
    *  - candleSource: {load(instrumentId, startIso)}
+   *  - runStore: MemoryRunStore | PgRunStore (default: memory)
+   *  - evaluationStore: append-only StrategyEvaluation store (PgEvaluationStore in production)
    *  - clock
    */
   static async create(o = {}) {
@@ -109,14 +113,14 @@ export class WorkflowService {
     return svc;
   }
 
-  constructor({ catalog, clock } = {}) {
+  constructor({ catalog, clock, runStore } = {}) {
     this.catalog = catalog || SupplierCatalog.fromFile();
     this.clock = clock || (() => Date.now());
-    this.runs = new Map();
-    this.inflight = new Map();
+    this.runs = runStore || new MemoryRunStore();
   }
 
-  async _boot({ store, connectors, candleSource, env = process.env, fetchImpl } = {}) {
+  async _boot({ store, connectors, candleSource, evaluationStore = null, env = process.env, fetchImpl } = {}) {
+    await this.runs.ensureDefinitions(Object.values(TEMPLATES));
     this.connectors = connectors || {
       jsonrpc_balance: createJsonRpcBalanceConnector({ env, fetchImpl }),
       x402_http: createX402HttpConnector(),
@@ -136,7 +140,7 @@ export class WorkflowService {
     configured.registerInto(this.supplierRegistry, workloadFor);
 
     const registry = new Registry();
-    registry.register(new StrategyEvaluationAdapter({ catalog: this.catalog, candleSource: candleSource || createCandleSource({ clock: this.clock }), clock: this.clock }));
+    registry.register(new StrategyEvaluationAdapter({ catalog: this.catalog, candleSource: candleSource || createCandleSource({ clock: this.clock }), evaluationStore, clock: this.clock }));
     for (const c of this.catalog.capabilities.values()) {
       if (c.id === 'market_data.candles') continue;
       registry.register(new CapabilityProcurementAdapter({ catalog: this.catalog, connectors: this.connectors, capability: c.id }));
@@ -151,7 +155,9 @@ export class WorkflowService {
       policy: Policies.balanced,
       supplierRegistry: this.supplierRegistry,
     });
-    this._rehydrate();
+    // DurableKernel.boot already resumed interrupted kernel transactions; now bring
+    // every run still marked 'running' to its terminal state.
+    this.lastRecovery = await this.recover();
   }
 
   // ---------- read models ----------
@@ -219,18 +225,15 @@ export class WorkflowService {
     await this.dk.journal.append(`run:${runId}`, phase, structuredClone(payload), this.clock());
   }
 
-  _rehydrate() {
-    for (const e of this.dk.journal.all()) {
-      if (!String(e.txId).startsWith('run:')) continue;
-      const id = e.txId.slice(4);
-      if (e.phase === 'RUN_CREATED') this.runs.set(id, structuredClone(e.payload));
-      else if (e.phase === 'RUN_UPDATED' && this.runs.has(id)) Object.assign(this.runs.get(id), structuredClone(e.payload));
+  /** Compare-and-set a status change; journals it only if it happened. */
+  async _transition(run, from, patch) {
+    const full = { ...patch, updated_at: new Date(this.clock()).toISOString() };
+    const next = await this.runs.transition(run.id, from, full);
+    if (next) {
+      await this._event(run.id, 'RUN_UPDATED', full);
+      await this.runs.upsertSteps(run.id, this.view(next).graph.nodes);
     }
-  }
-
-  async _update(run, patch) {
-    Object.assign(run, patch, { updated_at: new Date(this.clock()).toISOString() });
-    await this._event(run.id, 'RUN_UPDATED', { ...patch, updated_at: run.updated_at });
+    return next;
   }
 
   _validateBudget(budget) {
@@ -248,24 +251,13 @@ export class WorkflowService {
     if (!KEY.test(idempotency_key || '')) throw new WorkflowError(422, 'idempotency_key_required', 'idempotency_key (8–128 chars, [A-Za-z0-9._:-]) is required.');
     const budget = this._validateBudget(budget_usd);
     const id = 'run_' + deriveTxId(`${principal.id}|${idempotency_key}`).slice(3);
-    const existing = this.runs.get(id);
-    if (existing) {
-      if (existing.template !== template) throw new WorkflowError(409, 'idempotency_conflict', 'idempotency_key was already used for a different workflow.');
-      return { run: this.view(existing), replayed: true };
-    }
 
     let request; let quote; let planInput;
     if (template === 'strategy_lab.backtest.v1') {
-      const spec = input.spec || (input.prompt ? (() => {
-        const c = compileStrategy(input.prompt, input.answers || {});
-        if (c.status !== 'compiled') throw new WorkflowError(422, c.status, 'Strategy request needs changes before it can run.', { compile: c });
-        return c.spec;
-      })() : null);
-      const problems = validateSpec(spec);
-      if (problems.length) throw new WorkflowError(422, 'invalid_spec', problems.join('; '));
+      const spec = this._spec(input, 'run');
       const network = `${spec.market.instrument_id}@${spec.timeframe}`;
       quote = this.quote({ capability: 'market_data.candles', network });
-      request = { workload: WORKLOADS.STRATEGY, query: { chain: network }, payload: { spec }, payer: principal.id };
+      request = { workload: WORKLOADS.STRATEGY, query: { chain: network, ...(quote.chosen ? { supplierId: quote.chosen.offer_id } : {}) }, payload: { spec }, payer: principal.id };
       planInput = { spec };
     } else {
       const { capability, network, address } = input;
@@ -273,9 +265,14 @@ export class WorkflowService {
       if (typeof network !== 'string' || !network) throw new WorkflowError(422, 'network_required', 'network is required.');
       if (!ADDRESS.test(address || '')) throw new WorkflowError(422, 'invalid_address', 'address must be a public 0x address (40 hex characters).');
       quote = this.quote({ capability, network });
-      request = { workload: procurementWorkload(capability), query: { chain: network }, payload: { capability, network, address }, payer: principal.id };
+      request = { workload: procurementWorkload(capability), query: { chain: network, ...(quote.chosen ? { supplierId: quote.chosen.offer_id } : {}) }, payload: { capability, network, address }, payer: principal.id };
       planInput = { capability, network, address };
     }
+
+    // Idempotent replay — but only for the SAME request. A reused key with a different
+    // workflow, input or budget is a client bug and must not silently return old work.
+    const existing = await this.runs.getRun(principal.id, id);
+    if (existing) return this._replay(existing, template, planInput, budget);
 
     const now = new Date(this.clock()).toISOString();
     const charge = quote.available ? usdToMicros(quote.customer_charge_usd) : 0n;
@@ -299,46 +296,82 @@ export class WorkflowService {
       input: planInput, budget_usd: budget == null ? null : microsToUsd(budget),
       quote, approval, blocked,
       budget_hold: { amount_usd: microsToUsd(charge), status: status === 'blocked' ? 'none' : 'held', money_moved: false },
-      result: null, receipt: null, error: null,
+      result: null, receipt: null, error: null, decision: null,
+      // Beta: every run is test data (never revenue); Strategy Lab runs are simulations.
+      is_simulation: template === 'strategy_lab.backtest.v1',
+      is_test_data: true,
       _request: request,
     };
-    this.runs.set(id, run);
-    await this._event(id, 'RUN_CREATED', run);
-    if (status === 'running') await this._execute(run);
+    const ins = await this.runs.insertRun(run);
+    if (!ins.inserted) return this._replay(ins.run, template, planInput, budget); // lost a concurrent create race
+    if (planInput.spec) await this.runs.saveStrategy(principal.id, planInput.spec);
+    const { _request: _r, ...audit } = run;
+    await this._event(id, 'RUN_CREATED', audit);
+    await this.runs.upsertSteps(id, this.view(run).graph.nodes);
+    if (status === 'running') return { run: this.view(await this._execute(run)), replayed: false };
     return { run: this.view(run), replayed: false };
   }
 
-  _own(principal, id) {
-    const run = this.runs.get(id);
-    if (!run || run.principal !== principal?.id) throw new WorkflowError(404, 'run_not_found', 'Run not found.');
+  _replay(existing, template, planInput, budget) {
+    const same = existing.template === template
+      && canonicalJSON(existing.input) === canonicalJSON(planInput)
+      && (existing.budget_usd ?? null) === (budget == null ? null : microsToUsd(budget));
+    if (!same) throw new WorkflowError(409, 'idempotency_conflict', 'idempotency_key was already used for a different request.');
+    return { run: this.view(existing), replayed: true };
+  }
+
+  async _own(principal, id) {
+    const run = principal?.id ? await this.runs.getRun(principal.id, id) : null;
+    if (!run) throw new WorkflowError(404, 'run_not_found', 'Run not found.');
     return run;
   }
 
   async approve(principal, id) {
-    const run = this._own(principal, id);
-    if (run.status !== 'awaiting_approval') return { run: this.view(run), changed: false };
-    if (this.inflight.has(id)) { await this.inflight.get(id); return { run: this.view(run), changed: false }; }
-    const p = (async () => {
-      await this._update(run, { status: 'running', approval: { ...run.approval, approved_at: new Date(this.clock()).toISOString(), approved_by: principal.id } });
-      await this._execute(run);
-    })();
-    this.inflight.set(id, p);
-    try { await p; } finally { this.inflight.delete(id); }
-    return { run: this.view(run), changed: true };
+    const run = await this._own(principal, id);
+    const next = await this._transition(run, ['awaiting_approval'], {
+      status: 'running',
+      approval: { ...run.approval, approved_at: new Date(this.clock()).toISOString(), approved_by: principal.id },
+    });
+    // Not awaiting approval (already approved, finished or cancelled): report the current state.
+    if (!next) return { run: this.view(await this._own(principal, id)), changed: false };
+    return { run: this.view(await this._execute(next)), changed: true };
   }
 
   async cancel(principal, id) {
-    const run = this._own(principal, id);
-    if (run.status !== 'awaiting_approval') throw new WorkflowError(409, 'not_cancellable', `A ${run.status} run cannot be cancelled.`);
-    await this._update(run, { status: 'cancelled', budget_hold: { ...run.budget_hold, status: 'released' } });
-    return { run: this.view(run) };
+    const run = await this._own(principal, id);
+    const next = await this._transition(run, ['awaiting_approval'], { status: 'cancelled', budget_hold: { ...run.budget_hold, status: 'released' } });
+    if (!next) throw new WorkflowError(409, 'not_cancellable', `A ${run.status} run cannot be cancelled.`);
+    return { run: this.view(next) };
   }
 
   async _execute(run) {
-    const tx = await this.dk.submit(run._request, { txId: run.id });
+    // The customer approved a specific offer at a specific price. If either changed, stop
+    // before anything runs (the kernel is pinned to the quoted offer via query.supplierId).
+    const now = this.quote({ capability: run.quote.capability, network: run.quote.network });
+    if (run.quote.available && (!now.available || now.chosen?.offer_id !== run.quote.chosen?.offer_id || now.customer_charge_usd !== run.quote.customer_charge_usd)) {
+      return this._finalize(run, { state: 'FAILED', reason: '[quote_expired] the quoted supplier or price changed; request a new quote' });
+    }
+    let tx;
+    try { tx = await this.dk.submit(run._request, { txId: run.id }); } catch (e) {
+      console.error('[workflows] kernel submit failed:', e?.message || e);
+      tx = { state: 'FAILED', reason: '[execution_failed] the workflow could not be executed' };
+    }
+    return this._finalize(run, tx);
+  }
+
+  /** Move a 'running' run to completed/failed from a kernel outcome; issue receipt + usage. */
+  async _finalize(run, tx) {
+    const issuedAt = new Date(this.clock()).toISOString();
+    const receiptId = 'rcpt_' + run.id.slice(4);
     if (tx.state === 'CLOSED') {
       const offer = this.catalog.offer(tx.supplier.supplierId);
-      const p = this.catalog.price(offer);
+      // Amounts come from the quote the customer approved (re-checked in _execute), not a re-price.
+      const p = {
+        chargeMicros: usdToMicros(run.quote.customer_charge_usd),
+        supplierCostMicros: usdToMicros(run.quote.supplier_cost_usd),
+        listPriceMicros: run.quote.list_price_usd == null ? null : usdToMicros(run.quote.list_price_usd),
+        approved: run.quote.pricing_approved,
+      };
       const receipt = {
         receipt_id: 'rcpt_' + run.id.slice(4),
         run_id: run.id,
@@ -352,35 +385,106 @@ export class WorkflowService {
         settlement: tx.settlementOutRef,
         verification: 'verified',
         revenue: { counted: false, reason: p.approved ? 'pending_revenue_integration' : 'pricing_not_approved' },
-        issued_at: new Date(this.clock()).toISOString(),
+        is_test_data: true,
+        issued_at: issuedAt,
       };
-      await this._update(run, {
+      // Receipt and usage are written before the status flips, so a completed run always
+      // has both; both inserts are idempotent (a recovery replay writes nothing new).
+      await this.runs.insertReceipt({ receipt_id: receiptId, run_id: run.id, principal: run.principal, body: receipt, issued_at: issuedAt });
+      await this.runs.insertUsage({
+        run_id: run.id, principal: run.principal, offer_id: offer.id, capability: offer.capability,
+        supplier_cost_micros: p.supplierCostMicros.toString(), customer_charge_micros: p.chargeMicros.toString(),
+        list_price_micros: p.listPriceMicros == null ? null : p.listPriceMicros.toString(),
+        pricing_approved: p.approved, is_test_data: true, counted_as_revenue: false, money_moved: false,
+      });
+      return (await this._transition(run, ['running'], {
         status: 'completed',
         result: tx.result,
-        receipt,
+        receipt_id: receiptId,
         decision: tx.decision ? { chosen: tx.decision.chosen?.supplierId ?? null, policy: tx.decision.policy?.name ?? null } : null,
         budget_hold: { ...run.budget_hold, status: 'captured', captured_usd: receipt.customer_charge_usd },
-      });
-    } else {
-      const { code, detail } = parseReason(tx.reason);
-      await this._update(run, {
-        status: 'failed',
-        error: { code, detail },
-        budget_hold: { ...run.budget_hold, status: 'released' },
-        receipt: { run_id: run.id, customer_charge_usd: '0', supplier_payment: 'none', note: 'Failed calls are never charged.' },
-      });
+      })) || this.runs.getRunInternal(run.id);
     }
+    let { code, detail } = tx.state === 'REJECTED'
+      ? { code: 'quoted_supplier_unavailable', detail: 'The quoted supplier is no longer available; request a new quote.' }
+      : parseReason(tx.reason);
+    if (code === 'execution_failed') {
+      // Unknown internal error: log it, never show internals to the customer.
+      console.error('[workflows] run failed:', run.id, tx.reason);
+      detail = 'The workflow failed. Nothing was charged.';
+    }
+    await this.runs.insertReceipt({
+      receipt_id: receiptId, run_id: run.id, principal: run.principal, issued_at: issuedAt,
+      body: { receipt_id: receiptId, run_id: run.id, idempotency_key: run.idempotency_key, outcome: 'failed', error_code: code, customer_charge_usd: '0', supplier_payment: 'none', note: 'Failed calls are never charged.', is_test_data: true, issued_at: issuedAt },
+    });
+    return (await this._transition(run, ['running'], {
+      status: 'failed', error: { code, detail }, receipt_id: receiptId,
+      budget_hold: { ...run.budget_hold, status: 'released' },
+    })) || this.runs.getRunInternal(run.id);
   }
 
-  listRuns(principal, { limit = 50 } = {}) {
-    return [...this.runs.values()]
-      .filter((r) => r.principal === principal?.id)
-      .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
-      .slice(0, limit)
-      .map((r) => this.summary(r));
+  /**
+   * Restart recovery. For every run still 'running':
+   *  - kernel stream CLOSED  → rebuild the outcome from the memoized phases (no re-execution)
+   *  - kernel stream FAILED  → fail the run with the journaled reason
+   *  - dead-lettered          → fail the run (operator inspects the DLQ)
+   *  - never submitted        → submit now (the crash was between create/approve and SUBMIT)
+   */
+  async recover() {
+    const out = { finalized: [], resubmitted: [] };
+    for (const run of await this.runs.listOpenRuns()) {
+      const phases = this.dk.journal.read(run.id).map((e) => e.phase);
+      let tx;
+      if (phases.includes('CLOSED')) tx = await this.dk.kernel.execute(run._request, { txId: run.id });
+      else if (phases.includes('REJECTED')) tx = { state: 'REJECTED', reason: 'no_supply' };
+      else if (phases.includes('FAILED')) {
+        const failed = this.dk.journal.read(run.id).filter((e) => e.phase === 'FAILED').pop();
+        tx = { state: 'FAILED', reason: failed.payload?.reason };
+      } else if (await this.dk.store.dlqGet(run.id)) tx = { state: 'FAILED', reason: '[recovery_dead_lettered] the run could not be completed after retries' };
+      else { tx = await this.dk.submit(run._request, { txId: run.id }); out.resubmitted.push(run.id); }
+      await this._finalize(run, tx);
+      out.finalized.push(run.id);
+    }
+    return out;
   }
 
-  getRun(principal, id) { return this.view(this._own(principal, id), { trace: true }); }
+  async listRuns(principal, { limit = 50, strategyId = null } = {}) {
+    if (!principal?.id) return [];
+    return (await this.runs.listRuns(principal.id, { limit, strategyId })).map((r) => this.summary(r));
+  }
+
+  async getRun(principal, id) { return this.view(await this._own(principal, id), { trace: true }); }
+
+  async getReceipt(principal, receiptId) {
+    const r = principal?.id ? await this.runs.getReceipt(principal.id, receiptId) : null;
+    if (!r) throw new WorkflowError(404, 'receipt_not_found', 'Receipt not found.');
+    return r;
+  }
+
+  async saveStrategy(principal, { spec, prompt, answers } = {}) {
+    if (!principal?.id) throw new WorkflowError(401, 'unauthenticated', 'A customer identity is required.');
+    return this.runs.saveStrategy(principal.id, this._spec({ spec, prompt, answers }, 'save'));
+  }
+
+  /** A validated spec from {spec} or {prompt, answers}. Client ids/costs are never trusted. */
+  _spec({ spec, prompt, answers } = {}, verb) {
+    if (spec) {
+      const n = normalizeSpec(spec);
+      if (n.problems) throw new WorkflowError(422, 'invalid_spec', n.problems.join('; '));
+      return n.spec;
+    }
+    const c = compileStrategy(prompt, answers || {});
+    if (c.status !== 'compiled') throw new WorkflowError(422, c.status, `Strategy request needs changes before it can ${verb === 'save' ? 'be saved' : 'run'}.`, { compile: c });
+    return c.spec;
+  }
+
+  async listStrategies(principal) { return principal?.id ? this.runs.listStrategies(principal.id) : []; }
+
+  async getStrategy(principal, strategyId) {
+    const s = principal?.id ? await this.runs.getStrategy(principal.id, strategyId) : null;
+    if (!s) throw new WorkflowError(404, 'strategy_not_found', 'Strategy not found.');
+    return { ...s, runs: await this.listRuns(principal, { strategyId }) };
+  }
 
   summary(r) {
     return {
@@ -395,7 +499,7 @@ export class WorkflowService {
 
   view(r, { trace = false } = {}) {
     const kernel = this._kernelEvents(r.id);
-    const { _request, ...pub } = r;
+    const { _request, principal: _p, ...pub } = r;
     const out = {
       ...pub,
       title: this.summary(r).title,

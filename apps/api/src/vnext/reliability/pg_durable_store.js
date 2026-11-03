@@ -21,6 +21,8 @@ export class PgDurableStore {
 
   async init() {
     // Idempotent schema creation (mirrors schema.sql). Safe to call on boot.
+    // NOTE: creates every vnext table under the prefix (incl. outbound/treasury/withdrawal).
+    // The workflow store ('wf_') does NOT call this — its tables come from migration 041.
     const { readFileSync } = await import('node:fs');
     const { fileURLToPath } = await import('node:url');
     const path = fileURLToPath(new URL('./schema.sql', import.meta.url));

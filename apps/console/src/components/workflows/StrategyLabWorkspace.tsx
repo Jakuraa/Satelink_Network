@@ -32,6 +32,8 @@ export function StrategyLabWorkspace({ template }: { template: Template | null }
   const [busy, setBusy] = useState<"compile" | "run" | null>(null);
   const [run, setRun] = useState<Run | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  // One idempotency key per compiled spec: a retry or double-click never creates a second run.
+  const [runKey, setRunKey] = useState<string | null>(null);
 
   async function compile(nextAnswers = answers) {
     setBusy("compile"); setErr(null); setRun(null);
@@ -39,13 +41,14 @@ export function StrategyLabWorkspace({ template }: { template: Template | null }
     setBusy(null);
     if (status >= 500 || (!data.status && data.error)) { setErr("The Strategy Lab service is unavailable. Try again shortly."); return; }
     setCompiled(data);
+    setRunKey(data.status === "compiled" ? idemKey() : null);
   }
 
   async function runBacktest() {
     if (!compiled?.spec) return;
     setBusy("run"); setErr(null);
     const { status, data } = await post<{ ok: boolean; run?: Run; error?: string; message?: string }>("workflows/runs", {
-      template: "strategy_lab.backtest.v1", input: { spec: compiled.spec }, idempotency_key: idemKey(),
+      template: "strategy_lab.backtest.v1", input: { spec: compiled.spec }, idempotency_key: runKey || idemKey(),
     });
     setBusy(null);
     if (status === 401) { setErr("Connect or create an API key to run backtests — runs are recorded against your account."); return; }
