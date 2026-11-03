@@ -22,6 +22,7 @@ import { buildPayingFetch } from './src/pay.mjs';
 import { createRpcExecutor } from './src/rpc.mjs';
 import { createIntelligenceExecutor, INTELLIGENCE_ENDPOINTS } from './src/intelligence.mjs';
 import { createSatelinkMcpServer } from './src/server-factory.mjs';
+import { createWorkflowExecutor } from './src/workflows.mjs';
 
 const PORT = parseInt(process.env.PORT || '8402', 10);
 const RPC_URL = process.env.SATELINK_RPC_URL || 'https://rpc.satelink.network/rpc/polygon';
@@ -92,7 +93,14 @@ app.get('/.well-known/mcp.json', (_req, res) => {
 // independent (no session handshake required to persist), which is what a
 // per-request server/transport pair needs.
 app.post('/mcp', async (req, res) => {
-  const server = createSatelinkMcpServer({ executeRpc, executeIntelligence, rpcUrl: RPC_URL, wallet, canPay });
+  // Workflow tools act for the CALLER: their own X-API-Key, never the operator's env key.
+  const executeWorkflowTool = createWorkflowExecutor({
+    fetch: globalThis.fetch,
+    apiBase: process.env.SATELINK_API_BASE || 'https://api.satelink.network',
+    apiKey: req.get('x-api-key') || undefined,
+    autoApproveMaxUsd: process.env.SATELINK_MCP_AUTO_APPROVE_MAX_USD || '0',
+  });
+  const server = createSatelinkMcpServer({ executeRpc, executeIntelligence, executeWorkflowTool, rpcUrl: RPC_URL, wallet, canPay });
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
     enableJsonResponse: true,
