@@ -5,6 +5,44 @@ categories only (R14); details in `docs/build/evidence/private/` on the build ma
 
 ---
 
+## Session B1 — 2026-11-03 Customer beta: one workflow foundation for trading + procurement (Opus 5.5, background job)
+
+Scope: founder mandate "MASTER PRODUCT RECOVERY, UNIFICATION & BETA LAUNCH". Branch `feat/beta-unified-workflow`
+(worktree `.claude/worktrees/beta-unified`), base `origin/main` `dd279db4` = production `/health.commit` (verified).
+Customer-journey matrix: `BETA_READINESS_MATRIX.md`. Suppliers: `SUPPLIER_INTEGRATION_STATUS.md`.
+
+### Verified state (read-only)
+- Railway: Satelink-api, Postgres, Redis, reconciler all deployed in **`us-west2`** (manifests 2026-11-02 23:18 UTC). The brief's "moved to Europe" is not reflected; Binance 451 from the API still applies.
+- Prod: `/health` ok @ `dd279db4`; anon `/rpc/polygon` → JSON-RPC `-32005` with x402 + deposit instructions.
+- Supplier mail (read-only): Space Command Kits and FreeTier share sender domain `mail.grokbot.com`; the founder's dRPC answer went to `team@betamarkets.app`, not dRPC.
+- Space Command Kits zero-cost probes: manifests 200; unpaid → 402 v2 (Base+Polygon USDC, $0.005, timeout 300 s ≠ claimed 120 s); Polygon → 503 paused; free previews 503/502 (their Base RPC 429). No paid call.
+
+### Delivered
+| Commit | What |
+|---|---|
+| `d13fab1a` | `apps/api/src/workflows/*`: supplier catalog → vNext SupplierRegistry; NL strategy compiler (`satelink.strategy/v1`); kernel workloads `trading.strategy_evaluation` (real walk-forward engine) and `procurement:<capability>`; quote → approval → execute → verify → receipt; `WithheldSettlement` (charge 0, no money moved, not revenue); `/v1` router inert unless `WORKFLOWS_BETA_ENABLED=true` |
+| `7bdbb129` | Console `/strategy-lab`, `/marketplace`, `/marketplace/[id]`, `/workflows`, `/workflows/[id]` (flag-gated nav); console-session principal with existing `csrfGuard`; local preview (`scripts/preview/beta-preview.sh`) |
+| (docs) | BETA_READINESS_MATRIX, SUPPLIER_INTEGRATION_STATUS, REVENUE_EXPERIMENT_PLAN, BETA_RELEASE_CHECKLIST, ACCEPTANCE_TESTS §Customer journeys |
+
+### Tests
+- `workflows_beta.test.js` 31/31; mutation checks: removing the result verifier → 2 fail; removing the journal-payload clone → 2 fail (chain breaks on restart).
+- Full apps/api suite, local PG, branch vs pristine `origin/main` worktree with identical env: main 868/819 pass/50 fail; branch 898/848/51. Only diff = `identity rate limits … same Vercel IP` (known flake; 17/17 ×3 on rerun). The ~50 local failures exist on main too (local DB env), CI uses its own Postgres.
+- Console: `tsc --noEmit` 0 errors, `eslint` clean, `next build` exit 0.
+- Browser walkthrough (Playwright, desktop + 390 px): Journey A real BTC data, 20/50 SMA → **FAIL** (1/4 windows; +4.02% vs buy-and-hold +49.39%); Journey B real Polygon balance of `0x966E…` (0.2287 POL), receipt charge $0 withheld; token-risk on Base blocked (evaluation). `evidence/beta-preview/`.
+
+### Not done / next (in order)
+1. Independent code review of `d13fab1a`/`7bdbb129`; open PR (draft) → founder review.
+2. Durable store for workflows (`PgDurableStore` + reviewed migration of `vnext/reliability/schema.sql`) and staging (F3) before any flag-on deploy.
+3. Expose the same workflow service as MCP tools; OpenAPI for `/v1/workflows|marketplace|strategy-lab`.
+
+### Founder actions added
+- F26 Resend the dRPC answer to `craci@drpc.org` (it went only to betamarkets.app).
+- F27 Reply to Space Command Kits accepting the free test keys (token-risk, bal-check) for a capped 40-call evaluation.
+- F28 Decide Strategy Lab data path: licensed vendor vs F22 worker outside the US; until then Strategy Lab is non-commercial preview.
+- F29 Approve (or change) list prices before any workflow meter charges (catalog `pricing.approved`).
+
+---
+
 ## Session T1 — 2026-10-31 Trading AI: Eulerpool + evaluation harness + go/no-go (Opus 5.5, background job)
 
 Scope: founder prompt "TRADING AI: EULERPOOL DATA + DECISION API GO/NO-GO + BINANCE DEMO EXECUTION".
