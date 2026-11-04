@@ -461,7 +461,7 @@ export class TaskService {
       simulated_spend_usd: formatUsd(credits), satelink_fees_usd: formatUsd(fees),
       simulated_spend_by_capability_usd: Object.fromEntries(Object.entries(byCap).map(([k, v]) => [k, formatUsd(BigInt(v))])),
       promo_credit: { granted_usd: formatUsd(PROMO_DEMO_CREDIT_MINOR), available_usd: formatUsd(await this.sim.available(accounts.customer)), origin: 'promotional' },
-      receipts: receipts.map((r) => ({ receipt_id: r.receipt_id, run_id: r.run_id, outcome: r.body.outcome, credits_charged_usd: r.body.charges.credits_charged_usd, issued_at: r.issued_at })),
+      receipts: receipts.map((r) => ({ ...SIM, receipt_id: r.receipt_id, run_id: r.run_id, outcome: r.body.outcome, credits_charged_usd: r.body.charges.credits_charged_usd, issued_at: r.issued_at })),
       external_revenue_usd: formatUsd(BigInt(rows[0].r)), external_revenue_note: 'External revenue: $0.00 (preview) — simulated and promotional activity is never revenue.',
     };
   }
