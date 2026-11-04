@@ -8,14 +8,27 @@ categories only (R14); details in `docs/build/evidence/private/` on the build ma
 ## ▶ RESUME CAPSULE — Release State A (updated after each phase)
 1. Mandate: Release State A master prompt v2026-11-04b + founder conditions 1–6 (2026-11-04).
 2. Worktree: `.claude/worktrees/release-a`; stack `build/p0-safety` (#610) → `build/integration-base` (#611) → `build/p2-foundation` → `build/s1-primary-journey`.
-3. Last phase done: **P2** (foundation): engine + registry + router (FIXTURE) + planner + simulated money + API + restart drill PASS. P0/PT/P1 done.
+3. Last phase done: **S1** (console journey) — local gate met; CI E2E runs pending (two consecutive greens required). P0–P2 done.
 4. Last SHA: see `git log -1 build/p0-safety`.
-5. Next sub-step: **S1** primary journey UI (branch `build/s1-primary-journey` from `build/p2-foundation`): signup/onboarding/assistant/tasks/receipts/usage/explore + Playwright 390/768/1440 + axe.
+5. Next sub-step: confirm 2 consecutive green CI runs on #616 (Release A E2E + CI) → then **S2** food procurement via MCP (branch `build/s2-food-mcp` from `build/s1-primary-journey`).
 6. Open risks: E1 JWT secret + webhooks public (OB-1/2); plaintext signer/treasury keys in local stash (OB-3); single-copy backup (OB-5).
 7. Rule: no work touching auth secrets, payment config or production (D-A2); local test credentials only.
 8. Backups: never touch `backups/protected/*.dump`, `docs/release/*.dump` (BACKUP_POSTURE.md).
 9. Blockers: `OPEN_BLOCKERS.md` (7 open, all FOUNDER).
 10. Decisions: `DECISION_LOG.md` (D-A1…D-A5, ADR-1…4).
+
+## Release A — Slice S1 — 2026-11-04
+- Console (SATELINK_PREVIEW=1 only): /signup → /onboarding → /assistant → /tasks/[id] (SSE) → /receipts/[id] (JSON/CSV) →
+  /wallet (Wallet & Usage) → /explore; SimulationBadge; origin-guarded proxy; Shell "Preview" group; styled 404.
+- Auth: the existing Better Auth (magic link) on the local DB with preview-only switches (dev mail sink, host-only cookies,
+  per-IP limit off for E2E) — each refused in production (unit test 3/3).
+- E2E `tests/e2e/s1-primary-journey.spec.ts` **15/15** at 390/768/1440: journey, supplier failure (no charge), expired quote
+  (UI + server), tenant isolation (HTTP 404), axe zero serious/critical on every page. Screenshots `artifacts/screenshots/s1/`.
+- Browser restart drill `scripts/preview/restart-drill-browser.sh`: **PASS** (1 order, 1 capture, unknown-outcome recovery).
+- Bugs found and fixed: pre-hydration native form submit; cross-tenant 404 served as HTTP 200 (loading boundary; no data
+  leaked); axe definition-list; auth rate limit vs E2E; "Satelink Trading AI" branding on preview sign-in.
+- Deviations: /wallet (not /usage — existing RPC page); Turnstile not wired (OB-11); stack runs `next dev` locally, `next start` in CI.
+- Draft PR #616 (stacked on #612); CI workflow `release-a-e2e.yml`.
 
 ## Release A — Phase P2 — 2026-11-04
 - Extends #609 (one kernel/journal/run table): 18-state machine (`task_state_machine.js`), migration 043, unified registry

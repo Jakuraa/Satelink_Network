@@ -25,9 +25,13 @@ Evidence keys: **P** = production probe 2026-10-20 (curl transcript in the ledge
 | Model routing (OpenRouter) | VERIFIED (FIXTURE) | model_router 7/7 (fake fetch); no live key (OB-10) |
 | Planner / quote / approval / simulated money / receipts | VERIFIED | planner 8/8, pricing 8/8, sim_ledger 13/13, task_engine 12/12, tasks_http 7/7 |
 | Postgres reservation store | VERIFIED (preview, JS writer — ADR-5) | sim_ledger parity 13/13; mutation killed |
-| Slices S1–S6 | NOT STARTED | — |
+| S1 primary journey (browser) | VERIFIED (local) — CI pending | s1 E2E 15/15 @390/768/1440; axe clean; browser restart drill PASS; PR #616 |
+| Slices S2–S6 | NOT STARTED | — |
 
 ### Release A tech debt
+- Console preview uses `/wallet`; mandate path `/usage` is the existing RPC analytics page (rename decision for P3).
+- Turnstile (Cloudflare test keys) not wired on preview sign-up (OB-11).
+- `apps/console/CLAUDE.md` names `packages/ui` for tokens; actual Signal tokens are `packages/web-ui/src/styles/tokens.css`.
 - Timing-sensitive apps/api tests flake under high machine load (api_keys limiter, identity rate limits, SEC-5, x402 r7); testcontainers port-mapping flake under parallel load.
 - Two OpenRouter adapters once #579 lands (workflows/model_router.js vs trading_agent/providers/openrouter.mjs) → consolidate.
 - Task engine executes single-step plans (multi-step quoting supported; execution uses step 1) → extend before multi-step slices.
