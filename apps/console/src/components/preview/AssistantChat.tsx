@@ -7,6 +7,7 @@ import { STATE_LABEL, usd, type Task } from "@/lib/preview-shared";
 import { PlanPanel, QuoteCard } from "./QuoteCard";
 import { SimulationBadge } from "./SimulationBadge";
 import { formatMicros, newKey, post, type ApiError } from "./taskClient";
+import { ConnectButton } from "./ConnectButton";
 
 type Turn =
   | { role: "user"; text: string }
@@ -100,7 +101,13 @@ function TaskTurn({ task, onUpdate, onOpen }: { task: Task; onUpdate: (t: Task) 
       </div>
       {task.plan?.model && <p className="text-[11px] text-sl-text-subtle" data-testid="turn-model">Model: {task.plan.model.served_by} · {usd(formatMicros(task.plan.model.cost_minor))}</p>}
       {err && <p role="alert" className="text-[13px]">{err}</p>}
-      {task.state === "AWAITING_INPUT" && task.question && (
+      {task.state === "AWAITING_INPUT" && task.question?.field === "connection" && task.question.connector_id && (
+        <div className="space-y-2" data-testid="connect-needed">
+          <p className="text-[13px] text-sl-text">{task.question.text}</p>
+          <ConnectButton connectorId={task.question.connector_id} returnTo={`/tasks/${task.id}`} />
+        </div>
+      )}
+      {task.state === "AWAITING_INPUT" && task.question && task.question.field !== "connection" && (
         <form className="space-y-2" onSubmit={(e) => { e.preventDefault(); act("input", { field: task.question!.field, value: answer }); }}>
           <label htmlFor={`a-${task.id}`} className="block text-[13px] text-sl-text">{task.question.text}</label>
           <div className="flex gap-2">

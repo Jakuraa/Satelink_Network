@@ -43,7 +43,7 @@ function csv(receipt) {
  * @param {import('../workflows/task_service.js').TaskService} svc
  * @param {{ resolvePrincipal(req): Promise<{id:string, via:'session'|'api_key', actor_type?:string}|null> }} opts
  */
-export function createTasksRouter(svc, { resolvePrincipal }) {
+export function createTasksRouter(svc, { resolvePrincipal, connections = null, consoleOrigin = 'http://localhost:3400' }) {
   const r = express.Router();
   r.use(express.json({ limit: '32kb' }));
 
@@ -127,6 +127,27 @@ export function createTasksRouter(svc, { resolvePrincipal }) {
     res.json({ ok: true, receipt });
   }));
   r.get('/usage', authed(async (_req, res, p) => { res.json({ ok: true, usage: await svc.usage(p) }); }));
+
+  // ── Connector connections (OAuth 2.1 + PKCE; S2). The callback is bound to its single-use state, not a session.
+  if (connections) {
+    r.get('/connections', authed(async (_req, res, p) => { res.json({ ok: true, connections: await connections.list(p.id) }); }));
+    r.post('/connections/:id/start', authed(async (req, res, p) => {
+      res.json({ ok: true, ...(await connections.start(p.id, req.params.id, { returnTo: req.body?.return_to || '/connections' })) });
+    }, { mutating: true }));
+    r.post('/connections/:id/revoke', authed(async (req, res, p) => { res.json({ ok: true, ...(await connections.revoke(p.id, req.params.id)) }); }, { mutating: true }));
+    r.get('/connections/:id/callback', async (req, res) => {
+      try {
+        const done = await connections.finish({ state: req.query.state, code: req.query.code, error: req.query.error });
+        const back = new URL(done.return_to || '/connections', consoleOrigin);
+        back.searchParams.set('connected', done.connector_id);
+        res.redirect(302, back.toString());
+      } catch (e) {
+        const back = new URL(e?.extra?.return_to || '/connections', consoleOrigin);
+        back.searchParams.set('connection_error', e?.code || 'OAUTH_FAILED');
+        res.redirect(302, back.toString());
+      }
+    });
+  }
 
   return r;
 }

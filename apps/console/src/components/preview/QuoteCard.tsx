@@ -70,7 +70,7 @@ function ApproveButton({ quote, disabled, onConfirm }: { quote: Quote; disabled?
           <ul className="space-y-1.5 text-[13px]">
             {quote.lines.filter((l) => l.capability_id !== "ai.model.inference").map((l) => <li key={l.description}><span className="text-sl-text-muted">Exact action:</span> {l.description}</li>)}
             <li><span className="text-sl-text-muted">Merchant total:</span> <strong className="tnum">{usd(quote.merchant_paid_by_user_usd)}</strong> — paid by you directly to the merchant at its checkout (simulated)</li>
-            <li><span className="text-sl-text-muted">Satelink fee:</span> <strong className="tnum">{usd(quote.credit_charge_usd)}</strong> — from Satelink credits (simulated); charged only after the order is verified</li>
+            <li><span className="text-sl-text-muted">Satelink fee:</span> <strong className="tnum">{usd(quote.credit_charge_usd)}</strong> — from Satelink credits (simulated); charged only after merchant confirmation</li>
             <li className="text-sl-text-muted">Nothing is charged in the preview. No real order is placed. Fees are {quote.fee_policy_status}.</li>
           </ul>
           <div className="flex justify-end gap-2 pt-1">

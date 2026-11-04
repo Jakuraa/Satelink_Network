@@ -18,6 +18,8 @@ import { createMockStoreConnector } from '../src/workflows/mock_store_connector.
 import { PgDurableStore } from '../src/vnext/reliability/pg_durable_store.js';
 import { PgRunStore } from '../src/workflows/run_store.js';
 import { createTasksRouter } from '../src/routes/tasks_route.js';
+import { ConnectionStore } from '../src/workflows/connectors/oauth_pkce.js';
+import { createMcpFoodConnector } from '../src/workflows/connectors/mcp_food_connector.js';
 import { getBetterAuth, mountBetterAuth } from '../src/auth/better_auth.mjs';
 import { getMigrations } from 'better-auth/db/migration';
 import { fromNodeHeaders } from 'better-auth/node';
@@ -48,13 +50,25 @@ Object.assign(process.env, {
 delete process.env.GOOGLE_CLIENT_ID; delete process.env.GOOGLE_CLIENT_SECRET; delete process.env.RESEND_API_KEY;
 
 const pool = new pg.Pool({ connectionString: DB_URL, max: 8 });
+// Connector token encryption key: fresh LOCAL key (D-A2), never stored in the database.
+const keyFile = path.join(PREVIEW_DIR, 'connector-key');
+if (!fs.existsSync(keyFile)) fs.writeFileSync(keyFile, crypto.randomBytes(32).toString('hex'), { mode: 0o600 });
+const FOOD_URL = process.env.MOCK_FOOD_URL || 'http://127.0.0.1:4420';
+const API_ORIGIN = `http://127.0.0.1:${Number(process.env.PREVIEW_API_PORT || 4500)}`;
+const connections = new ConnectionStore({ pool, keyHex: fs.readFileSync(keyFile, 'utf8').trim(), connectors: {
+  food_delivery_mock: { issuer: FOOD_URL, clientId: 'satelink-preview', scopes: 'food.read food.order', name: 'Food Delivery (MOCK — not connected to Swiggy)',
+    redirectUri: `${API_ORIGIN}/v1/connections/food_delivery_mock/callback` },
+} });
 const auth = await getBetterAuth(pool);
 const { runMigrations } = await getMigrations(auth.options);
 await runMigrations(); // Better Auth's own tables (user/session/account/verification…) on the LOCAL db
 const svc = await TaskService.create({
   pool, registry: new CapabilityRegistry(pool), router: createModelRouter(), pricing: loadPricing(),
   quoteTtlMs: Number(process.env.PREVIEW_QUOTE_TTL_MS) > 0 ? Number(process.env.PREVIEW_QUOTE_TTL_MS) : 10 * 60_000,
-  connectors: { mock_store: createMockStoreConnector({ baseUrl: process.env.MOCK_STORE_URL || 'http://127.0.0.1:4410' }) },
+  connectors: {
+    mock_store: createMockStoreConnector({ baseUrl: process.env.MOCK_STORE_URL || 'http://127.0.0.1:4410' }),
+    mcp_food: createMcpFoodConnector({ url: `${FOOD_URL}/mcp`, connectorId: 'food_delivery_mock', connections }),
+  },
   workflowOptions: { store: new PgDurableStore(pool, { prefix: 'wf_' }), runStore: new PgRunStore(pool), env: {} },
 });
 console.log(`[preview] recovered at boot: ${JSON.stringify(svc.lastRecovery)}`);
@@ -82,7 +96,7 @@ app.get('/preview/mailbox', (req, res) => {
   const mail = lines.map((l) => JSON.parse(l)).filter((m) => m.to.toLowerCase() === to).pop() || null;
   res.json({ ok: true, preview: true, mail });
 });
-app.use('/v1', createTasksRouter(svc, { resolvePrincipal }));
+app.use('/v1', createTasksRouter(svc, { resolvePrincipal, connections, consoleOrigin: CONSOLE_ORIGIN }));
 // Local operator check (preview only): ledger ↔ steps ↔ receipts.
 app.post('/preview/reconcile', async (_req, res) => { res.json({ ok: true, ...(await svc.reconcile()) }); });
 app.use((_req, res) => res.status(404).json({ ok: false, error: { code: 'NOT_FOUND', message: 'Not available in the preview.', retryable: false } }));

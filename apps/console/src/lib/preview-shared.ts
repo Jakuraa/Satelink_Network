@@ -19,7 +19,7 @@ export type PlanStep = {
 export type Task = {
   id: string; state: string; version: number; intent: string; simulated: true; simulation_label: string;
   created_at: string; updated_at: string;
-  question: { text: string; field: string } | null;
+  question: { text: string; field: string; connector_id?: string | null } | null;
   plan: { steps: PlanStep[]; model: { served_by: string; cost_minor?: string; fixture?: boolean } | null } | null;
   model_badge: string | null;
   quote: Quote | null;

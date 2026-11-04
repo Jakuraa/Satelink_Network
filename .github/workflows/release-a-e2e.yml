@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   s1:
-    name: S1 journey (390/768/1440) + restart drill
+    name: S1 + S2 journeys (390/768/1440) + restart drill
     runs-on: ubuntu-latest
     timeout-minutes: 30
     services:
@@ -34,6 +34,7 @@ jobs:
       PREVIEW_QUOTE_TTL_MS: '25000'
       AUTH_PREVIEW_RATE_LIMIT: 'off'
       MOCK_STORE_URL: http://127.0.0.1:4410
+      MOCK_FOOD_URL: http://127.0.0.1:4420
       NODE_ENV: development
     steps:
       - uses: actions/checkout@v7
@@ -62,11 +63,12 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/preview"
           MOCK_STORE_PORT=4410 MOCK_STORE_STATE="$RUNNER_TEMP/preview/orders.json" nohup node tools/mock-digital-store/server.mjs > "$RUNNER_TEMP/preview/store.log" 2>&1 &
+          MOCK_FOOD_PORT=4420 MOCK_FOOD_STATE="$RUNNER_TEMP/preview/food.json" nohup node tools/mock-food-mcp/server.mjs > "$RUNNER_TEMP/preview/food.log" 2>&1 &
           DATABASE_URL_LOCAL="$PG_BASE/satelink_e2e" PREVIEW_STATE_DIR="$RUNNER_TEMP/preview" nohup node apps/api/scripts/preview_release_a.mjs > "$RUNNER_TEMP/preview/api.log" 2>&1 &
           (cd apps/console && SATELINK_PREVIEW=1 SATELINK_API_BASE=http://127.0.0.1:4500 CONSOLE_ORIGINS=http://localhost:3400 NODE_ENV=production nohup npx next start -p 3400 > "$RUNNER_TEMP/preview/console.log" 2>&1 &)
           for i in $(seq 1 90); do curl -sf http://127.0.0.1:4500/health >/dev/null && curl -sf -o /dev/null http://localhost:3400/sign-in && break; sleep 2; done
           curl -sf http://127.0.0.1:4500/health
-      - name: S1 Playwright (390 / 768 / 1440)
+      - name: S1 + S2 Playwright (390 / 768 / 1440)
         run: npx playwright test -c tests/e2e/playwright.config.ts
       - name: Restart drill (kill -9 during EXECUTING)
         run: DRILL_PG_BASE="$PG_BASE" PREVIEW_API_PORT=4590 MOCK_STORE_PORT=4591 bash scripts/preview/restart-drill.sh
@@ -76,6 +78,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: s1-screenshots
-          path: artifacts/screenshots/s1
+          name: release-a-screenshots
+          path: artifacts/screenshots
           retention-days: 14
