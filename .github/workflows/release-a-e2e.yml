@@ -1,0 +1,78 @@
+name: Release A E2E
+
+# Local-preview journey in CI: Postgres service + Demo Digital Store (MOCK) + preview API + console (preview mode).
+# No secrets, no external services, no deploys. Simulated money only.
+on:
+  pull_request:
+    branches: [main, 'build/**']
+
+concurrency:
+  group: release-a-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  s1:
+    name: S1 journey (390/768/1440) + restart drill
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: preview
+          POSTGRES_PASSWORD: preview_ci_only
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U preview"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PG_BASE: postgresql://preview:preview_ci_only@127.0.0.1:5432
+      PREVIEW_QUOTE_TTL_MS: '25000'
+      AUTH_PREVIEW_RATE_LIMIT: 'off'
+      MOCK_STORE_URL: http://127.0.0.1:4410
+      NODE_ENV: development
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci --prefer-offline
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Fresh preview database + migrations
+        run: |
+          psql "$PG_BASE/postgres" -qc "CREATE DATABASE satelink_e2e"
+          npx tsx scripts/preview/migrate-local.mts "$PG_BASE/satelink_e2e"
+      - name: Build console
+        working-directory: apps/console
+        run: npx next build
+        env:
+          NODE_ENV: production
+          NEXT_TELEMETRY_DISABLED: '1'
+      - name: Start mock store, preview API and console
+        run: |
+          mkdir -p "$RUNNER_TEMP/preview"
+          MOCK_STORE_PORT=4410 MOCK_STORE_STATE="$RUNNER_TEMP/preview/orders.json" nohup node tools/mock-digital-store/server.mjs > "$RUNNER_TEMP/preview/store.log" 2>&1 &
+          DATABASE_URL_LOCAL="$PG_BASE/satelink_e2e" PREVIEW_STATE_DIR="$RUNNER_TEMP/preview" nohup node apps/api/scripts/preview_release_a.mjs > "$RUNNER_TEMP/preview/api.log" 2>&1 &
+          (cd apps/console && SATELINK_PREVIEW=1 SATELINK_API_BASE=http://127.0.0.1:4500 CONSOLE_ORIGINS=http://localhost:3400 NODE_ENV=production nohup npx next start -p 3400 > "$RUNNER_TEMP/preview/console.log" 2>&1 &)
+          for i in $(seq 1 90); do curl -sf http://127.0.0.1:4500/health >/dev/null && curl -sf -o /dev/null http://localhost:3400/sign-in && break; sleep 2; done
+          curl -sf http://127.0.0.1:4500/health
+      - name: S1 Playwright (390 / 768 / 1440)
+        run: npx playwright test -c tests/e2e/playwright.config.ts
+      - name: Restart drill (kill -9 during EXECUTING)
+        run: DRILL_PG_BASE="$PG_BASE" PREVIEW_API_PORT=4590 MOCK_STORE_PORT=4591 bash scripts/preview/restart-drill.sh
+      - name: Service logs on failure
+        if: failure()
+        run: tail -n 80 "$RUNNER_TEMP"/preview/*.log || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: s1-screenshots
+          path: artifacts/screenshots/s1
+          retention-days: 14
