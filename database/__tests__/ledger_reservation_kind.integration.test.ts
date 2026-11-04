@@ -1,10 +1,10 @@
 /**
- * Migration 020 — ledger_txns.kind accepts the reservation postings (S-5).
+ * Migration 042 (was #583's 020) — ledger_txns.kind accepts the reservation postings (S-5).
  * Real Postgres: a testcontainer, or (no Docker) a fresh database on the server in LEDGER_TEST_DB
  * (e.g. postgresql://postgres@127.0.0.1:5432/postgres).
  *
- *   - through 019, a 'hold' / 'capture' / 'release' header FAILS the kind CHECK;
- *   - with 020 all three insert, the six earlier kinds still do, and an unknown kind is still refused;
+ *   - through 041 (incl. 038's payment kinds), a 'hold' / 'capture' / 'release' header FAILS the kind CHECK;
+ *   - with 042 all three insert, every earlier kind (incl. 038's) still does, and an unknown kind is still refused;
  *   - LEDGER_KINDS (domain) and the CHECK constraint (DB) list exactly the same set.
  */
 import { describe, it, expect, afterAll } from 'vitest';
@@ -75,10 +75,10 @@ afterAll(async () => {
   await container?.stop();
 });
 
-describe('migration 020 — reservation ledger kinds', () => {
-  it('through 019 the reservation kinds fail the CHECK (the gap 020 closes)', async () => {
-    const url = await freshDb('rsv019');
-    const dir = migrationsThrough('019_ledger_kind_refund.sql');
+describe('migration 042 — reservation ledger kinds', () => {
+  it('through 041 the reservation kinds fail the CHECK (the gap 042 closes)', async () => {
+    const url = await freshDb('rsv041');
+    const dir = migrationsThrough('041_customer_workflows.sql');
     try {
       const r = await applyMigrationsForTest(url, dir);
       expect(r.errors).toHaveLength(0);
@@ -86,8 +86,8 @@ describe('migration 020 — reservation ledger kinds', () => {
     } finally { rmSync(dir, { recursive: true, force: true }); }
   }, 120_000);
 
-  it('with 020: hold, capture and release insert; earlier kinds still do; unknown kinds are refused', async () => {
-    const url = await freshDb('rsv020');
+  it('with 042: hold, capture and release insert; earlier kinds still do; unknown kinds are refused', async () => {
+    const url = await freshDb('rsv042');
     const r = await applyMigrationsForTest(url, MIGRATIONS_DIR);
     expect(r.errors).toHaveLength(0);
     for (const k of LEDGER_KINDS) expect(await insertKind(url, k), k).toBe('ok');

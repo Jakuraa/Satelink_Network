@@ -139,11 +139,11 @@ describe('M2 — ledger schema migrations', { timeout: 120_000 }, () => {
       '017_satelink_app_role.sql',
       '018_subscriptions.sql',
       '019_ledger_kind_refund.sql',
-      '020_ledger_kind_reservation.sql',
       '038_ledger_kind_payments.sql',
       '039_payments_core.sql',
       '040_trading_strategy_evaluations.sql',
       '041_customer_workflows.sql',
+      '042_ledger_kind_reservation.sql',
     ]);
     expect(result.skipped).toHaveLength(0);
   });
