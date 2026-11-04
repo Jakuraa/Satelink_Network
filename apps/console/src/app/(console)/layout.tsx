@@ -6,6 +6,7 @@ import { getSession } from "@/lib/session";
 import { accountsEnabled } from "@/lib/account";
 import { loadSettings } from "@/lib/v2";
 import { loadOnboarding, onboardingEnabled } from "@/lib/onboarding-server";
+import { workflowsBetaEnabled } from "@/lib/workflows";
 
 export default async function ConsoleLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
@@ -24,7 +25,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
     const settings = cookieMode === "simple" || cookieMode === "advanced" ? null : await loadSettings();
     const mode = cookieMode === "simple" || cookieMode === "advanced" ? cookieMode : settings?.ok ? settings.data.defaultMode : "simple";
     return (
-      <Shell mode={mode} user={{ name: session.user.name, email: session.user.email }} keys={[]} activeFp={null} theme={theme}>
+      <Shell beta={workflowsBetaEnabled()} mode={mode} user={{ name: session.user.name, email: session.user.email }} keys={[]} activeFp={null} theme={theme}>
         {children}
       </Shell>
     );
@@ -33,6 +34,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   const active = await getActiveKey();
   return (
     <Shell
+      beta={workflowsBetaEnabled()}
       user={{ name: session.user.name, email: session.user.email }}
       keys={keys.map((k) => ({ fp: fingerprint(k.k), label: k.label }))}
       activeFp={active ? fingerprint(active.k) : null}
