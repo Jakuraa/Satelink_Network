@@ -219,6 +219,21 @@ jobs:
       - name: Pre-commit secret scanner tests (real keys still caught; masked placeholder allowed)
         run: node --test scripts/security/secret_scan.test.mjs
 
+      # P0 2026-11-04: no database dump may enter the tree (name AND content check).
+      - name: No database dumps in tracked files
+        run: |
+          bash scripts/security/check-no-dumps.test.sh
+          bash scripts/security/check-no-dumps.sh --tracked
+
+      # Scans only the commits this PR/push adds, so findings already in history
+      # (tracked in docs/build/SECURITY_INCIDENT_2026-11-04.md) do not mask new ones.
+      - name: gitleaks (new commits only, redacted)
+        env:
+          RANGE: ${{ github.event_name == 'pull_request' && format('{0}..{1}', github.event.pull_request.base.sha, github.sha) || format('{0}..{1}', github.event.before, github.sha) }}
+        run: |
+          docker run --rm -v "$PWD:/repo" -w /repo ghcr.io/gitleaks/gitleaks:v8.30.0 \
+            git /repo --redact --no-banner --config /repo/.gitleaks.toml --log-opts="$RANGE"
+
   build:
     name: Build Verification
     runs-on: ubuntu-latest
