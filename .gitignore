@@ -38,7 +38,16 @@ satelink-env/
 agent/memory/CURRENT_TASK.md
 
 # ── CLAUDE CODE & TOOLS ──────────────
-.claude/
+# Release A (2026-11-04): shared project config is committed; local state stays ignored.
+.claude/*
+!.claude/CLAUDE.md
+!.claude/commands/
+!.claude/settings.json
+!.claude/hooks/
+.claude/hooks/.state/
+!.claude/agents/
+!.claude/skills/
+!.claude/subagents/
 .playwright-mcp/
 
 # ── NODE ─────────────────────────────
