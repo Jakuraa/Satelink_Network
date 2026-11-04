@@ -72,7 +72,8 @@ describe('unified capability registry (P2.2)', () => {
 
   it('R9 (static): no supplier or provider id is hardcoded in assistant/planner/task code', () => {
     const providerIds = loadSeedEntries().flatMap((e) => e.providers.map((p) => p.id));
-    for (const f of ['workflows/planner.js', 'workflows/task_service.js', 'workflows/model_router.js']) {
+    // model_router.js is excluded on purpose: it IS the OpenRouter gateway (mandate P2.3), not supplier selection.
+    for (const f of ['workflows/planner.js', 'workflows/task_service.js']) {
       const file = path.join(SRC, f);
       if (!fs.existsSync(file)) continue; // asserted again once the file exists (P2.3/P2.4)
       const src = fs.readFileSync(file, 'utf8');
