@@ -8,9 +8,9 @@ categories only (R14); details in `docs/build/evidence/private/` on the build ma
 ## ▶ RESUME CAPSULE — Release State A (updated after each phase)
 1. Mandate: Release State A master prompt v2026-11-04b + founder conditions 1–6 (2026-11-04).
 2. Worktree: `.claude/worktrees/release-a`; stack `build/p0-safety` (#610) → `build/integration-base` (#611) → `build/p2-foundation` → `build/s1-primary-journey`.
-3. Last phase done: **S1** (console journey) — local gate met; CI E2E runs pending (two consecutive greens required). P0–P2 done.
+3. Last phase done: **S1** — all gates met (E2E 15/15 ×3 viewports, axe, browser restart drill, 2 consecutive green CI runs on `de142340`).
 4. Last SHA: see `git log -1 build/p0-safety`.
-5. Next sub-step: confirm 2 consecutive green CI runs on #616 (Release A E2E + CI) → then **S2** food procurement via MCP (branch `build/s2-food-mcp` from `build/s1-primary-journey`).
+5. Next sub-step: **S2** food procurement via MCP client driver (branch `build/s2-food-mcp` from `build/s1-primary-journey`).
 6. Open risks: E1 JWT secret + webhooks public (OB-1/2); plaintext signer/treasury keys in local stash (OB-3); single-copy backup (OB-5).
 7. Rule: no work touching auth secrets, payment config or production (D-A2); local test credentials only.
 8. Backups: never touch `backups/protected/*.dump`, `docs/release/*.dump` (BACKUP_POSTURE.md).
@@ -30,7 +30,7 @@ categories only (R14); details in `docs/build/evidence/private/` on the build ma
 - Deviations: /wallet (not /usage — existing RPC page); Turnstile not wired (OB-11); stack runs `next dev` locally, `next start` in CI.
 - Draft PR #616 (stacked on #612); CI workflow `release-a-e2e.yml`.
 - CI on `de142340`: run 1 **all green** (S1 E2E job incl. restart drill: run 41898308212; CI 41898308300; architecture
-  41898308215). First E2E CI attempt failed for a build-time reason (preview rewrite missing from `next build`) — fixed.
+  41898308215); run 2 (re-run, attempt 2 of each) **all green** → two consecutive green CI runs. First E2E CI attempt failed for a build-time reason (preview rewrite missing from `next build`) — fixed.
 
 ## Release A — Phase P2 — 2026-11-04
 - Extends #609 (one kernel/journal/run table): 18-state machine (`task_state_machine.js`), migration 043, unified registry
