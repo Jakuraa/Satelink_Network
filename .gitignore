@@ -214,3 +214,6 @@ docs/release/**/*.dump
 .env
 .env.*
 !.env.example
+
+# Release A E2E output (traces, failure screenshots); evidence screenshots live in artifacts/screenshots/
+artifacts/e2e/

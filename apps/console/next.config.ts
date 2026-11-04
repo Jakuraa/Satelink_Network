@@ -6,6 +6,11 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   transpilePackages: ["@satelink/web-ui"],
+  // Release A local preview only: production gets /api/identity from the Vercel rewrite (vercel.json).
+  async rewrites() {
+    if (process.env.SATELINK_PREVIEW !== "1") return [];
+    return [{ source: "/api/identity/:path*", destination: `${process.env.SATELINK_API_BASE || "http://127.0.0.1:4500"}/api/identity/:path*` }];
+  },
   async headers() {
     return [
       {

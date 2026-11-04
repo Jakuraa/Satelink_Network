@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity, BarChart3, Bell, BookOpen, Code2, CreditCard, KeyRound, LayoutDashboard, Menu, MoreHorizontal, Moon, PlayCircle, Search,
-  Server, Settings, Sun, Wallet, X, Zap, FlaskConical, Store, Workflow, Plug,
+  Server, Settings, Sun, Wallet, X, Zap, FlaskConical, Store, Workflow, Plug, MessageSquare, ListChecks, Compass, Receipt,
 } from "lucide-react";
 
 type NavItem = { href: string; label: string; key: string; icon: React.ComponentType<{ className?: string }>; group?: string };
@@ -56,6 +56,14 @@ const BETA_NAV: NavItem[] = [
   { href: "/api-mcp", label: "API & MCP", key: "i", icon: Plug },
 ];
 const withBeta = (items: NavItem[]) => [items[0], ...BETA_NAV, ...items.slice(1)];
+// Release A local preview (SATELINK_PREVIEW=1 only): the assistant journey on the shared task engine.
+const PREVIEW_NAV: NavItem[] = [
+  { href: "/assistant", label: "Assistant", key: "y", icon: MessageSquare, group: "Preview" },
+  { href: "/tasks", label: "My Tasks", key: "j", icon: ListChecks, group: "Preview" },
+  { href: "/explore", label: "Explore", key: "g", icon: Compass, group: "Preview" },
+  { href: "/wallet", label: "Wallet & Usage", key: "v", icon: Receipt, group: "Preview" },
+];
+const withPreview = (items: NavItem[]) => [items[0], ...PREVIEW_NAV, ...items.slice(1)];
 
 const TABS = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
@@ -71,12 +79,13 @@ type Props = {
   activeFp: string | null;
   theme: "dark" | "light";
   beta?: boolean;
+  preview?: boolean;
   children: React.ReactNode;
 };
 
-export function Shell({ mode = null, user, keys, activeFp, theme: initialTheme, beta = false, children }: Props) {
+export function Shell({ mode = null, user, keys, activeFp, theme: initialTheme, beta = false, preview = false, children }: Props) {
   const base = mode === "simple" ? SIMPLE_NAV : mode === "advanced" ? ADVANCED_NAV : NAV;
-  const nav = useMemo(() => (beta ? withBeta(base) : base), [beta, base]);
+  const nav = useMemo(() => { const n = beta ? withBeta(base) : base; return preview ? withPreview(n) : n; }, [beta, preview, base]);
   const pathname = usePathname();
   const router = useRouter();
   const [theme, setTheme] = useState(initialTheme);
@@ -136,7 +145,7 @@ export function Shell({ mode = null, user, keys, activeFp, theme: initialTheme, 
   }, [router, nav]);
 
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(href + "/"));
-  const groups = ["", "Products", "Account"];
+  const groups = ["", "Preview", "Products", "Account"];
 
   const sidebar = (
     <nav aria-label="Console" className="flex h-full flex-col gap-4 overflow-y-auto p-2">

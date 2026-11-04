@@ -117,6 +117,14 @@ async function sendEmailViaResend(to, subject, html) {
   await resend.emails.send({ from: process.env.AUTH_EMAIL_FROM || 'no-reply@satelink.network', to, subject, html });
 }
 
+/** Local preview E2E only: AUTH_PREVIEW_RATE_LIMIT=off disables Better Auth's per-IP limits (many test sign-ups
+ *  from one IP). Refused in production; production always uses RATE_LIMIT. */
+export function previewRateLimitOff() {
+  const off = process.env.AUTH_PREVIEW_RATE_LIMIT === 'off';
+  if (off && process.env.NODE_ENV === 'production') throw new Error('AUTH_PREVIEW_RATE_LIMIT is not allowed in production');
+  return off;
+}
+
 /** Local preview cookie mode (host-only, non-secure). Refused in production. */
 export function previewCookies() {
   const on = process.env.AUTH_COOKIE_DOMAIN === 'none' && process.env.AUTH_SECURE_COOKIES === 'false';
@@ -207,7 +215,7 @@ export async function getBetterAuth(pool) {
       // Only the header identityClientIp writes; never raw X-Forwarded-For.
       ipAddress: { ipAddressHeaders: [CLIENT_IP_HEADER] },
     },
-    rateLimit: RATE_LIMIT,
+    rateLimit: previewRateLimitOff() ? { enabled: false } : RATE_LIMIT,
   });
 
   return _authInstance;

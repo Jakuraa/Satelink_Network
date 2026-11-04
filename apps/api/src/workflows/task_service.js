@@ -171,6 +171,7 @@ export class TaskService {
   // ─────────────────────────────────────────────────── approve ────────────────────────────────────────────────
   async approve(principal, id, { quote_id, quote_version, idempotency_key } = {}) {
     let run = await this._own(principal, id);
+    if (run.state === 'EXPIRED') throw new TaskError(ERR.QUOTE_EXPIRED, 'The quote expired before approval. Ask for a new quote.', { status: 409, retryable: true });
     if (run.state !== 'AWAITING_APPROVAL') {
       // Double approve of the same quote is idempotent: report the current state, change nothing.
       if (run.approval?.quote_id && run.approval.quote_id === quote_id) return { task: await this.view(run), changed: false };
