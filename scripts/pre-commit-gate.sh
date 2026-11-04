@@ -39,6 +39,23 @@ if echo "$staged" | grep -i "token\.txt\|secret\.txt"; then
   exit 1
 fi
 
+# Block database dumps/backups by name and content (PGDMP magic, pg_dump header).
+if [ -n "$staged" ]; then
+  # shellcheck disable=SC2086
+  if ! echo "$staged" | tr '\n' '\0' | xargs -0 bash scripts/security/check-no-dumps.sh; then
+    echo "❌ BLOCKED: database dump or backup staged for commit"
+    exit 1
+  fi
+fi
+
+# gitleaks on the staged diff when installed (CI always runs it; see ci.yml).
+if command -v gitleaks >/dev/null 2>&1; then
+  if ! gitleaks git --pre-commit --staged --redact --no-banner --config .gitleaks.toml . >/dev/null 2>&1; then
+    echo "❌ BLOCKED: gitleaks found a secret in staged changes (run: gitleaks git --pre-commit --staged --redact -v)"
+    exit 1
+  fi
+fi
+
 echo "✅ No secrets detected"
 
 # ── REPO HYGIENE / BLOAT GATE ────────────────────────────────────
