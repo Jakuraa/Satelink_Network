@@ -29,6 +29,8 @@ categories only (R14); details in `docs/build/evidence/private/` on the build ma
   leaked); axe definition-list; auth rate limit vs E2E; "Satelink Trading AI" branding on preview sign-in.
 - Deviations: /wallet (not /usage — existing RPC page); Turnstile not wired (OB-11); stack runs `next dev` locally, `next start` in CI.
 - Draft PR #616 (stacked on #612); CI workflow `release-a-e2e.yml`.
+- CI on `de142340`: run 1 **all green** (S1 E2E job incl. restart drill: run 41898308212; CI 41898308300; architecture
+  41898308215). First E2E CI attempt failed for a build-time reason (preview rewrite missing from `next build`) — fixed.
 
 ## Release A — Phase P2 — 2026-11-04
 - Extends #609 (one kernel/journal/run table): 18-state machine (`task_state_machine.js`), migration 043, unified registry
