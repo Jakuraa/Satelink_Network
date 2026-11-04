@@ -2,7 +2,8 @@ name: CI
 
 on:
   pull_request:
-    branches: [main, develop]
+    # Release A stacked draft PRs target build/* branches; run the same gates on them.
+    branches: [main, develop, 'build/**']
   push:
     branches: [develop]
 
