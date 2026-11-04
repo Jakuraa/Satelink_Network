@@ -55,6 +55,9 @@ jobs:
         env:
           NODE_ENV: production
           NEXT_TELEMETRY_DISABLED: '1'
+          # next.config rewrites are computed at BUILD time: the preview-only /api/identity rewrite needs these here.
+          SATELINK_PREVIEW: '1'
+          SATELINK_API_BASE: http://127.0.0.1:4500
       - name: Start mock store, preview API and console
         run: |
           mkdir -p "$RUNNER_TEMP/preview"
