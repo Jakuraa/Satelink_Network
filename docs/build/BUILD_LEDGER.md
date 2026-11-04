@@ -10,7 +10,7 @@ categories only (R14); details in `docs/build/evidence/private/` on the build ma
 2. Worktree: `.claude/worktrees/release-a`; stack `build/p0-safety` (#610) → `build/integration-base` (#611) → `build/p2-foundation` → `build/s1-primary-journey`.
 3. Last phase done: **P1** (audit + integration base #611; #583 migration conflict fixed as 042). P0/PT done (#610, CI 13/13).
 4. Last SHA: see `git log -1 build/p0-safety`.
-5. Next sub-step: **P2.1** extend #609 workflow engine to the mandate state set (branch `build/p2-foundation`).
+5. P2 progress (`build/p2-foundation`, design `P2_DESIGN.md`): ✅ state machine (8/8) · ✅ migration 043 · ✅ sim_ledger + parity (13/13) · ✅ pricing (8/8). **Next: P2.2 registry** → model router → planner → task service/routes → reconcile → restart drill.
 6. Open risks: E1 JWT secret + webhooks public (OB-1/2); plaintext signer/treasury keys in local stash (OB-3); single-copy backup (OB-5).
 7. Rule: no work touching auth secrets, payment config or production (D-A2); local test credentials only.
 8. Backups: never touch `backups/protected/*.dump`, `docs/release/*.dump` (BACKUP_POSTURE.md).

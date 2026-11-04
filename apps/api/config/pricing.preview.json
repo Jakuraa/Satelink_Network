@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "status": "PROPOSED — NOT APPROVED",
+  "notice": "Preview fee configuration. These numbers are proposals awaiting founder approval (F8/F32). Nothing is charged: every quote is simulated and paid, if at all, from simulated credits.",
+  "currency": "USD",
+  "minor_decimals": 6,
+  "rounding": "ceil_to_minor_unit",
+  "tax": { "mode": "not_computed_in_preview", "rate_bps": 0, "notice": "Taxes are not computed in the preview. A live release needs a tax determination (founder/legal)." },
+  "policies": {
+    "inference_markup_20pct": {
+      "status": "PROPOSED — NOT APPROVED",
+      "kind": "percent_of_supplier_cost", "bps": 2000, "min_minor": 0,
+      "supplier_cost_paid_from": "satelink_credits",
+      "description": "Model inference: upstream model cost + 20%."
+    },
+    "procurement_10pct_min_2000": {
+      "status": "PROPOSED — NOT APPROVED",
+      "kind": "percent_of_supplier_cost", "bps": 1000, "min_minor": 2000,
+      "supplier_cost_paid_from": "merchant_checkout",
+      "description": "Procured services: 10% of the merchant amount, minimum $0.002. The merchant amount is paid by the user directly at the merchant's checkout."
+    },
+    "strategy_eval_flat_100000": {
+      "status": "PROPOSED — NOT APPROVED",
+      "kind": "flat", "flat_minor": 100000,
+      "supplier_cost_paid_from": "satelink_credits",
+      "description": "Strategy Lab evaluation: $0.10 per evaluation."
+    },
+    "paper_sim_flat_50000": {
+      "status": "PROPOSED — NOT APPROVED",
+      "kind": "flat", "flat_minor": 50000,
+      "supplier_cost_paid_from": "satelink_credits",
+      "description": "Paper trading simulation: $0.05 per simulated order."
+    }
+  }
+}
