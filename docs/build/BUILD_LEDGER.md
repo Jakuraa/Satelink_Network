@@ -8,14 +8,27 @@ categories only (R14); details in `docs/build/evidence/private/` on the build ma
 ## ▶ RESUME CAPSULE — Release State A (updated after each phase)
 1. Mandate: Release State A master prompt v2026-11-04b + founder conditions 1–6 (2026-11-04).
 2. Worktree: `.claude/worktrees/release-a`; stack `build/p0-safety` (#610) → `build/integration-base` (#611) → `build/p2-foundation` → `build/s1-primary-journey`.
-3. Last phase done: **P1** (audit + integration base #611; #583 migration conflict fixed as 042). P0/PT done (#610, CI 13/13).
+3. Last phase done: **P2** (foundation): engine + registry + router (FIXTURE) + planner + simulated money + API + restart drill PASS. P0/PT/P1 done.
 4. Last SHA: see `git log -1 build/p0-safety`.
-5. P2 progress (`build/p2-foundation`, design `P2_DESIGN.md`): ✅ state machine (8/8) · ✅ migration 043 · ✅ sim_ledger + parity (13/13) · ✅ pricing (8/8). **Next: P2.2 registry** → model router → planner → task service/routes → reconcile → restart drill.
+5. Next sub-step: **S1** primary journey UI (branch `build/s1-primary-journey` from `build/p2-foundation`): signup/onboarding/assistant/tasks/receipts/usage/explore + Playwright 390/768/1440 + axe.
 6. Open risks: E1 JWT secret + webhooks public (OB-1/2); plaintext signer/treasury keys in local stash (OB-3); single-copy backup (OB-5).
 7. Rule: no work touching auth secrets, payment config or production (D-A2); local test credentials only.
 8. Backups: never touch `backups/protected/*.dump`, `docs/release/*.dump` (BACKUP_POSTURE.md).
 9. Blockers: `OPEN_BLOCKERS.md` (7 open, all FOUNDER).
 10. Decisions: `DECISION_LOG.md` (D-A1…D-A5, ADR-1…4).
+
+## Release A — Phase P2 — 2026-11-04
+- Extends #609 (one kernel/journal/run table): 18-state machine (`task_state_machine.js`), migration 043, unified registry
+  (`capability_registry.js` + `capabilities.preview.json`), model router (`model_router.js`, **VERIFIED (FIXTURE)**), planner,
+  pricing (PROPOSED — NOT APPROVED), sim ledger (ADR-5, parity vs TS), task service/store/step adapter, `/v1` task API
+  (preview server only; `app_factory.mjs` untouched), Demo Digital Store (MOCK) as a separate local process.
+- Tests: P2 unit 40/40 (mocha); integration 246/246 incl. sim_ledger parity 13/13, task_engine 12/12, tasks_http 7/7
+  (one testcontainers port flake, passes on rerun); #609 workflows suites green; API baseline guard 980/973/4 known/3 known
+  skips (two earlier guard runs at load avg ~40 showed different timing flakes — each passes in isolation; clean at low load).
+- Restart drill `scripts/preview/restart-drill.sh`: kill -9 during EXECUTING → UNKNOWN_EXECUTION_OUTCOME → VERIFYING →
+  SUCCEEDED; 1 supplier order, 1 capture, receipt hold+capture, reconcile [] — **PASS ×2**.
+- Bugs found by tests and fixed: reconciliation could declare success without verification (state table); BigInt in quote
+  lines; task stuck in PLANNING on quote error; supplier error code lost through kernel; unlabelled usage receipt summaries.
 
 ## Release A — Phase P1 — 2026-11-04
 - Inspected #609 (`83763dab`), #582 (`c6e3556d`), #583 (`4bd3a740`): independent; file overlap only `migrations.integration.test.ts`. Local unpushed `50fe4e24` excluded (D-A6).

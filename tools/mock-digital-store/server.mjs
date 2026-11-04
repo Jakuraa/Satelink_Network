@@ -8,7 +8,7 @@
 //   GET  /orders/by-key/:idempotency_key                → order | 404   (verification lookup)
 //
 // Failure injection (tests/E2E): a product whose title contains "Unavailable" always fails at checkout
-// (HTTP 502), and MOCK_STORE_FAIL_ALL=1 fails every order. Orders persist to MOCK_STORE_STATE (JSON file)
+// (HTTP 502), and MOCK_STORE_FAIL_ALL=1 fails every order. MOCK_STORE_ORDER_DELAY_MS delays order completion. Orders persist to MOCK_STORE_STATE (JSON file)
 // so a restarted API can still verify them.
 import http from 'node:http';
 import fs from 'node:fs';
@@ -55,6 +55,8 @@ const server = http.createServer(async (req, res) => {
     if (typeof b.idempotency_key !== 'string' || b.idempotency_key.length < 8) return send(res, 400, { error: 'idempotency_key required' });
     const existing = orders.get(b.idempotency_key);
     if (existing) return send(res, 200, existing);
+    // Restart drill: hold the order open so the caller can be killed mid-request; the order still completes.
+    if (Number(process.env.MOCK_STORE_ORDER_DELAY_MS) > 0) await new Promise((r) => setTimeout(r, Number(process.env.MOCK_STORE_ORDER_DELAY_MS)));
     const p = PRODUCTS.find((x) => x.sku === b.sku);
     if (!p) return send(res, 404, { error: 'unknown_sku' });
     if (process.env.MOCK_STORE_FAIL_ALL === '1' || /Unavailable/.test(p.title)) return send(res, 502, { error: 'checkout_failed', detail: 'The mock store could not complete this order.' });
