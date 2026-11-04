@@ -7,15 +7,21 @@ categories only (R14); details in `docs/build/evidence/private/` on the build ma
 
 ## ▶ RESUME CAPSULE — Release State A (updated after each phase)
 1. Mandate: Release State A master prompt v2026-11-04b + founder conditions 1–6 (2026-11-04).
-2. Worktree: `.claude/worktrees/release-a`; branch stack `build/p0-safety` → `build/integration-base` → `build/p2-foundation` → `build/s1-primary-journey`.
-3. Last phase done: **PT** (toolchain, hooks 50/50) after P0 (verdict EXPOSED credentials; DB data not exposed).
+2. Worktree: `.claude/worktrees/release-a`; stack `build/p0-safety` (#610) → `build/integration-base` (#611) → `build/p2-foundation` → `build/s1-primary-journey`.
+3. Last phase done: **P1** (audit + integration base #611; #583 migration conflict fixed as 042). P0/PT done (#610, CI 13/13).
 4. Last SHA: see `git log -1 build/p0-safety`.
-5. Next sub-step: **P1.1** targeted audit, then P1.3 integration base (#609/#582/#583).
+5. Next sub-step: **P2.1** extend #609 workflow engine to the mandate state set (branch `build/p2-foundation`).
 6. Open risks: E1 JWT secret + webhooks public (OB-1/2); plaintext signer/treasury keys in local stash (OB-3); single-copy backup (OB-5).
 7. Rule: no work touching auth secrets, payment config or production (D-A2); local test credentials only.
 8. Backups: never touch `backups/protected/*.dump`, `docs/release/*.dump` (BACKUP_POSTURE.md).
 9. Blockers: `OPEN_BLOCKERS.md` (7 open, all FOUNDER).
 10. Decisions: `DECISION_LOG.md` (D-A1…D-A5, ADR-1…4).
+
+## Release A — Phase P1 — 2026-11-04
+- Inspected #609 (`83763dab`), #582 (`c6e3556d`), #583 (`4bd3a740`): independent; file overlap only `migrations.integration.test.ts`. Local unpushed `50fe4e24` excluded (D-A6).
+- Merged on `build/integration-base` (PR #611). **Semantic conflict**: #583 020 vs main 038 both replace the ledger kind CHECK → renumbered 042 with union (D-A7, `5bc1073a`); proven 1/3 → 3/3.
+- Tests (local PG16 + Docker 29.6.2): api baseline guard 940/933/4 known/3 known-pending; integration 214/214; libs 300/300; arch 9/9; depcruise 0; console tsc clean; mcp 8/8.
+- Docs: `CURRENT_STATE_AUDIT.md`, STATUS_MATRIX Release A section, ADR-5 (money bridge), OB-8..10. Runtime: `docker-compose.preview.yml`, `scripts/preview/local-db.sh`.
 
 ## Release A — Phase PT — 2026-11-04
 - Plugins: feature-dev + claude-md-management installed (project); others pre-existing; Superpowers pre-existing from official marketplace; context7 via claude.ai connector. `.mcp.json` not created (Postgres reference server deprecated).
