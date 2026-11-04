@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { worstCase } from './economics.mjs';
+import { validateCapabilities } from './capability_registry.mjs';
 
 const DEFAULT_PATH = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'config', 'plan_catalog.v2.json');
 
@@ -29,6 +30,7 @@ export function validateCatalog(c) {
     if (!(k.grant_uu > 0)) errs.push(`${k.id}: grant_uu`);
     if (k.bonus_uu !== undefined && !(Number.isInteger(k.bonus_uu) && k.bonus_uu >= 0)) errs.push(`${k.id}: bonus_uu must be a whole number >= 0`);
   }
+  errs.push(...validateCapabilities(c));
   return errs;
 }
 
