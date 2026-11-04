@@ -139,6 +139,7 @@ describe('M2 — ledger schema migrations', { timeout: 120_000 }, () => {
       '017_satelink_app_role.sql',
       '018_subscriptions.sql',
       '019_ledger_kind_refund.sql',
+      '020_ledger_kind_reservation.sql',
       '038_ledger_kind_payments.sql',
       '039_payments_core.sql',
       '040_trading_strategy_evaluations.sql',
@@ -149,7 +150,7 @@ describe('M2 — ledger schema migrations', { timeout: 120_000 }, () => {
 
   // The exact count is derived from the applied list above so adding a
   // migration only requires updating that one list.
-  const MIGRATION_COUNT = 23;
+  const MIGRATION_COUNT = 24;
 
   it('re-running applies nothing (idempotent)', async () => {
     const result = await migrate(connectionString, MIGRATIONS_DIR);

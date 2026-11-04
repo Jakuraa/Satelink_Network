@@ -8,9 +8,10 @@
  * misclassified downstream — there is deliberately NO default: every
  * construction site must state what kind of transaction it is building.
  *
- * The set mirrors the CHECK constraint exactly (009, widened by 019 and 038):
+ * The set mirrors the CHECK constraint exactly (009, widened by 019, 038 and the reservation migration):
  *   ledger_txns.kind IN ('draw','settlement','deposit','adjustment','reversal','refund',
- *                        'payment','subscription','commission','rebate','provider_fee')
+ *                        'payment','subscription','commission','rebate','provider_fee',
+ *                        'hold','capture','release')
  * 'refund' = money returned to a customer for a recognised revenue event
  * (Dodo refund / lost dispute); 'reversal' = mechanical undo of a transaction.
  * 038 (founder-approved 2026-10-12): 'payment' / 'subscription' are provider
@@ -30,6 +31,11 @@ export const LEDGER_KINDS = [
   'commission',
   'rebate',
   'provider_fee',
+  // Reservation postings (S-5, migration 020): hold = customer → holds; capture / release
+  // settle the hold (capture → revenue + remainder back; release → all back).
+  'hold',
+  'capture',
+  'release',
 ] as const;
 
 export type LedgerKind = (typeof LEDGER_KINDS)[number];
