@@ -9,6 +9,30 @@ Evidence keys: **P** = production probe 2026-10-20 (curl transcript in the ledge
 **R** = `evidence/REPO_MAP.md` · **RT/MP/DU** = private ROUTES / MONEY_PATHS / DUPLICATES sweeps ·
 **RW** = Railway variable *names* (values never read, except the flags listed in the ledger).
 
+## Release State A (2026-11-04) — one status per item, evidence required
+
+| Item | Status | Evidence |
+|---|---|---|
+| Production DB data exposure | VERIFIED (not exposed) | §P0 `SECURITY_AND_FINANCIAL_PATH_AUDIT.md` |
+| Credential exposure in public history | BLOCKED (FOUNDER) | `SECURITY_INCIDENT_2026-11-04.md`, OB-1..4 |
+| Dump/env publication guards | VERIFIED | `check-no-dumps.test.sh` 9/9; PR #610 CI 13/13 green |
+| Claude Code hooks | VERIFIED | `.claude/hooks/tests/run.sh` 50/50 |
+| Integration base (#609+#582+#583) | VERIFIED | PR #611; api baseline guard no new failures (933/940, 4 known); integration 214/214; libs 300/300 |
+| #583 migration conflict | VERIFIED (fixed on base) | `5bc1073a`; reservation-kind test 1/3 → 3/3 |
+| Local runtime (Postgres) | VERIFIED | `scripts/preview/local-db.sh` (Homebrew :5432 and Docker :55432) |
+| Workflow engine (mandate state set) | NOT STARTED | P2.1 (extends #609 `workflow_service.js`) |
+| Unified capability registry | NOT STARTED | P2.2 (two catalogs today) |
+| Model routing (OpenRouter) | NOT STARTED | no adapter on base; #579 draft |
+| Planner / quote / approval / simulated money / receipts | NOT STARTED | P2.4–P2.5 |
+| Postgres reservation store | NOT STARTED | in-memory only (#583) |
+| Slices S1–S6 | NOT STARTED | — |
+
+### Release A tech debt
+- `workflows/supplier_catalog.js:190` and `workload_adapters.js:80,92` convert money to JS numbers (fix on touched paths).
+- Workflow recovery runs lazily on first request, not at boot.
+- `libs/CLAUDE.md` 316 lines (over the 150 target; founder-owned).
+- `apps/api/migrations` runner UNKNOWN.
+
 ## M1 Identity, tenancy, access
 
 | Capability | Status | Evidence | Code / docs / prod disagreement → resolution |

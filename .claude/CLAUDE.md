@@ -11,11 +11,27 @@
 >
 > Where this file conflicts with the mandate or the ledger, the mandate and ledger win. The
 > sections below are older context; rows carry their own verification dates.
-Last verified: 2026-07-16 (consolidation session — git rescue + docs truth pass).
-Every agent reads this FIRST. Rows marked (2026-07-16) are curl/railway-verified live;
-older rows retain their original verification date.
+Rows below carry their own verification dates (last full pass 2026-07-16).
 
 ---
+
+## Release State A (2026-11-04) — current build
+Local preview only. Resume: `docs/build/BUILD_LEDGER.md` capsule → `PHASES.txt` → `OPEN_BLOCKERS.md` → `DECISION_LOG.md`.
+Forbidden list: `docs/build/MASTER_BUILD_PROMPT.md` §1 + Release A prompt §1 (enforced by `.claude/hooks/`, tests: `bash .claude/hooks/tests/run.sh`).
+Never touch `*.dump` backups (`docs/build/BACKUP_POSTURE.md`). Open security incident: `docs/build/SECURITY_INCIDENT_2026-11-04.md`.
+
+| Work | Skills / plugins |
+|---|---|
+| Engine / state machine | satelink-workflow-engine, engineering:system-design, engineering:testing-strategy |
+| Registry / marketplace | satelink-capability-registry, product-management:write-spec |
+| Model routing | satelink-model-routing, ai-integration-architect, Context7 (claude.ai connector) |
+| Money / receipts / revenue | satelink-financial-simulation, security-guidance, code-review |
+| Connectors / MCP / A2A / x402 | satelink-connectors-protocols, security-guidance |
+| Trading AI | satelink-trading-ai |
+| Console / websites UI | frontend-design, satelink-console-ui, design:accessibility-review |
+| E2E + evidence | playwright, satelink-e2e-evidence |
+| Before every PR | code-review (+ security-guidance for money/auth/connector/trading) |
+| Docs | engineering:documentation |
 
 ## Project Identity
 Machine-commerce RPC gateway on **Polygon PoS Mainnet (chainId 137)**: machines and AI
@@ -26,7 +42,7 @@ x402 bundle $0.10 = 1,000 calls. Revenue target: $500/hr collected on-chain.
 
 ## Repository
 `/Users/pradeepjakuraa/satelink` (monorepo)
-GitHub: https://github.com/Satelink-Protocol/Satelink_Network
+GitHub: https://github.com/Jakuraa/Satelink_Network (public; transferred 2026-10-14)
 > `CLAUDE.md` at repo root is a symlink → `.claude/CLAUDE.md` (this file is the real target).
 
 ## Stack
@@ -48,7 +64,6 @@ GitHub: https://github.com/Satelink-Protocol/Satelink_Network
 | Test baseline (2026-07-16) | `apps/api`: **128 passing / 9 failing** — the 9 are pre-existing: DepositListener cursor-resume, EpochScheduler close/split, freeTierGate anon-402, instant-key t1–t3, Withdrawal API ×3. Any NEW failure = regression. Run with `npx mocha --no-config --exit 'test/**/*.test.js'` (`.mocharc` file bug + hanging handles) |
 | Revenue | All pre-2026-07-11 “revenue” was founder test data (war room 2026-07-11); real paid conversion still ~zero — verify on-chain before quoting any number |
 | Settlement | `SETTLEMENT_DRY_RUN=1` — still not broadcasting; do not change (see guards below) |
-| Log noise (2026-07-16) | `[FreeTierGate] Subnet blocked` logs per blocked request (subnet 34.92.84 blocked 2.09M times) — fix requires touching forbidden `free_tier_gate.js`; founder decision |
 
 ## Key Addresses (Polygon 137 unless noted)
 - **RevenueVaultV2 (current)**: `0x577D3716d6Ad5b676d230f5409deF9838FABaCEF` — permissionless deposit; migrated in PR #234
@@ -99,40 +114,13 @@ Admin router mounts at `app_factory.mjs:413` → `app.use("/admin", requireAdmin
 - **`railway redeploy` / `railway up` do NOT ship local/uncommitted code** — they restart the
   *same image*. Use them only to restart, never to "test" local changes.
 - Local full-app boot is unsafe against prod DB (it starts the epoch scheduler + settlement
-  anchor, which WRITE to prod). To verify endpoints locally, load only the router against
-  prod Postgres read-only (see this branch's verification method).
+  anchor, which WRITE to prod). Release A: never connect to prod Postgres at all — local
+  Postgres only (`DATABASE_URL_LOCAL` / `DATABASE_URL_TEST`).
 
 ---
 
-## Admin API — Live Endpoints (10, verified 2026-06-26, `src/admin/admin_router.js`)
-`X-Admin-Token` auth on every one:
-`GET /admin/intel/developers`, `POST /admin/intel/classify`, `GET /admin/intel/abuse-overview`,
-`PATCH /admin/intel/developer/:ip/stage`, `GET /admin/outreach/campaigns`,
-`POST /admin/outreach/discord/post`, `GET /admin/settlement/status`,
-`POST /admin/settlement/dry-run`, `GET /admin/jobs/status`,
-`POST /admin/jobs/trigger/:jobId`, `GET /admin/live/feed` (SSE).
-
-## Observer Endpoints — Added on branch `satelink/admin-observer-wiring-2026-06` (Phase 9)
-18 read-only KPI endpoints, all `{ ok, data, ts }`, all SQL-validated against prod Postgres
-(tagged `// OBSERVER` in `admin_router.js`):
-`/admin/executive/summary`, `/admin/revenue/summary`, `/admin/revenue/events`,
-`/admin/revenue/funnel`, `/admin/demand/leads`, `/admin/demand/stats`,
-`/admin/network/health`, `/admin/nodes/list`, `/admin/billing/credits`,
-`/admin/treasury/status`, `/admin/customers/list`, `/admin/agents/status`,
-`/admin/security/threats`, `/admin/security/classifier-stats`,
-`/admin/observability/metrics`, `/admin/incidents`, `/admin/audit-log`, `/admin/config`.
-> Status: **DEPLOYED and live** (curl-verified 2026-07-16: `/admin/demand/stats` and
-> `/admin/observability/metrics` return live data). See `docs/ADMIN_DASHBOARD.md`.
-
-## Dead Files Removed (Phase 10)
-Deleted 20 dead route files (zero live imports): `src/gateway/routes.js`, `src/core/routes.js`,
-and 18 `src/gateway/routes/admin_*.js` (network, launch, workloads, genesis, distributors,
-partners, flywheel, growth, lifecycle, reputation, economics, sla, system, autonomous,
-forensics, control_api, revenue, control_room_api). **Kept** `admin_api_v2.js` (still imported
-by the orphan `unified_dashboard_api.js`). Backend `console.log` blanket-sweep deliberately
-NOT done (high-risk, unreviewable) — see `docs/SECURITY.md`.
-
----
+## Admin / observer endpoints
+Historical endpoint lists moved out of this file: see `docs/ADMIN_DASHBOARD.md` and `docs/API_REFERENCE.md`.
 
 ## Git State (canonical, set 2026-07-16 consolidation)
 - **`main` is the single source of truth**; deploy = merge to `main` (Railway + Vercel auto).
@@ -146,12 +134,8 @@ NOT done (high-risk, unreviewable) — see `docs/SECURITY.md`.
   local-only, founder to reconcile against Polygonscan verified source.
 - Open PRs stay open only with a stated reason (see PR comments on #257, #249–#251).
 
-## P0 Items (block Customer Zero)
-1. ~500k req/day at ~$0 billed — conversion from free tier is THE problem (war room 2026-07-11;
-   PRs #241/#243–#248/#254 shipped the funnel — measure before building more).
-2. Signer `0x988f…` — verify balance before any settlement change.
-3. x402 Bazaar discoverability: PR #257 (method-level description) awaits founder merge;
-   `docs/x402-bazaar-escalation.md` is drafted, ready to send.
+## Current priorities
+Live state, blockers and next action: `docs/build/BUILD_LEDGER.md` (July P0 list retired 2026-11-04).
 
 ## Canonical Docs (single source of truth, 2026-06-26)
 `CLAUDE.md` (this file), `AUDIT_REPORT_2026_06.md`, and `docs/`:
@@ -165,5 +149,4 @@ NOT done (high-risk, unreviewable) — see `docs/SECURITY.md`.
 - Vercel project: `satelinkinternet-collabs-projects/web`
 
 ## Economic Model
-50% node operators | 30% platform | 20% distribution pool. Settlement: USDT on Polygon,
-aggregated per epoch, paid via RevenueVault.
+50% node operators | 30% platform | 20% distribution pool (RPC network; settlement via RevenueVault).

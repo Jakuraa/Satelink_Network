@@ -54,6 +54,9 @@ async function freshPool(name: string): Promise<Pool> {
   u.pathname = `/${db}`;
   await applyMigrationsForTest(u.toString(), MIGRATIONS_DIR);
   const pool = new Pool({ connectionString: u.toString() });
+  // Teardown drops these databases WITH (FORCE); an idle client then receives 57P01. Without a listener,
+  // node raises it as an uncaught 'error' event and vitest fails the run even though every test passed.
+  pool.on('error', (e: Error & { code?: string }) => { if (e.code !== '57P01') throw e; });
   pools.push(pool);
   return pool;
 }

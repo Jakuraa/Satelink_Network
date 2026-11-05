@@ -46,6 +46,8 @@ async function freshPool(name: string): Promise<Pool> {
   u.pathname = `/${db}`;
   await applyMigrationsForTest(u.toString(), MIGRATIONS_DIR);
   const pool = new Pool({ connectionString: u.toString() });
+  // Teardown drops this database WITH (FORCE): an idle client then gets 57P01; ignore only that (see payments_ingest).
+  pool.on('error', (e) => { if ((e as Error & { code?: string }).code !== '57P01') throw e; });
   pools.push(pool);
   return pool;
 }
