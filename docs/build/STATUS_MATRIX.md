@@ -31,7 +31,11 @@ Evidence keys: **P** = production probe 2026-10-20 (curl transcript in the ledge
 | Swiggy production integration | BLOCKED (FOUNDER) | no relationship/access; preparation pack SWIGGY_PRODUCTION_APPLICATION.md |
 | S3 Trading AI (evaluate → risk → paper) | VERIFIED | trading_s3.integration 9/9; s3-trading E2E ×3 viewports; live-host refusal test; CI all green on c3cb8ef3; PR #618 |
 | Alpaca paper adapter (live) | BLOCKED (FOUNDER) | needs ALPACA_PAPER_* keys; host pinned to paper-api |
-| Slices S4–S6 | NOT STARTED | — |
+| S4 Developer procurement (keys + REST/OpenAPI) | VERIFIED | developer_s4.integration 10/10; s4-developer E2E ×3; procure.sh; CI all green on PR #619 |
+| S5 Agent commerce (MCP tools + A2A card/binding) | VERIFIED (local) | agent_s5.integration 6/6; mcp-server node tests 13/13; s5-agent E2E ×3 (official SDK client over stdio); CI on draft PR |
+| MCP protocol 2026-07-28 | BLOCKED (EXTERNAL) | official SDK latest 1.32.2 negotiates ≤ 2025-11-25; server negotiates 2025-11-25 (OB-13) |
+| A2A Agent Card JWS signature | NOT STARTED | needs a KeyProvider-held signing key; card ships unsigned (field omitted, not faked) |
+| Slice S6 | NOT STARTED | — |
 
 ### Release A tech debt
 - Docker Desktop testcontainers port-mapping failures on this machine after long uptime; new suites support LEDGER_TEST_DB.
@@ -48,6 +52,11 @@ Evidence keys: **P** = production probe 2026-10-20 (curl transcript in the ledge
 - Workflow recovery runs lazily on first request, not at boot.
 - `libs/CLAUDE.md` 316 lines (over the 150 target; founder-owned).
 - `apps/api/migrations` runner UNKNOWN.
+- Receipt `verification.method` is the generic `order_status_lookup` for every connector (S4).
+- A2A binding implements SendMessage/GetTask/CancelTask only; streaming, ListTasks, push notifications, extended card → -32004.
+- satelink-mcp task tools are stdio-only; the Streamable HTTP transport (`http.mjs`) does not expose them.
+- `satelink_discover` is read-only and creates no run (quote/request_approval create/advance runs; status/receipt read them).
+- Task-page quote countdown caused a hydration mismatch since S1 (fixed in S5; E2E now fails on hydration pageerrors).
 
 ## M1 Identity, tenancy, access
 

@@ -17,6 +17,7 @@ import { createRpcExecutor } from './src/rpc.mjs';
 import { createIntelligenceExecutor } from './src/intelligence.mjs';
 import { createSatelinkMcpServer } from './src/server-factory.mjs';
 import { createWorkflowExecutor } from './src/workflows.mjs';
+import { createTaskTools } from './src/task-tools.mjs';
 
 const RPC_URL = process.env.SATELINK_RPC_URL || 'https://rpc.satelink.network/rpc/polygon';
 
@@ -40,7 +41,13 @@ const executeWorkflowTool = createWorkflowExecutor({
   autoApproveMaxUsd: process.env.SATELINK_MCP_AUTO_APPROVE_MAX_USD || '0',
 });
 
-const server = createSatelinkMcpServer({ executeRpc, executeIntelligence, executeWorkflowTool, rpcUrl: RPC_URL, wallet, canPay });
+// Release A agent-commerce tools (S5, local preview only; opt-in via SATELINK_MCP_TASK_TOOLS=1). Generated from the
+// task API's capability registry; no approve tool exists (agent spend pre-authorization is $0).
+const taskTools = process.env.SATELINK_MCP_TASK_TOOLS === '1'
+  ? createTaskTools({ fetch: globalThis.fetch, apiBase: process.env.SATELINK_API_BASE || 'http://127.0.0.1:4500', apiKey: process.env.SATELINK_API_KEY, consoleUrl: process.env.SATELINK_CONSOLE_URL || 'http://localhost:3400' })
+  : null;
+
+const server = createSatelinkMcpServer({ executeRpc, executeIntelligence, executeWorkflowTool, taskTools, rpcUrl: RPC_URL, wallet, canPay });
 
 async function main() {
   const transport = new StdioServerTransport();

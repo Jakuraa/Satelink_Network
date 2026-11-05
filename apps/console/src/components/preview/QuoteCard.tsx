@@ -5,11 +5,19 @@ import { SimulationBadge } from "./SimulationBadge";
 
 const btn = "inline-flex h-9 items-center justify-center rounded-md px-3 text-[13px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sl-accent/45 disabled:opacity-60";
 
+// The clock is read only after mount: server and browser render the same deterministic text first (no hydration
+// mismatch), then the live countdown takes over.
 function useCountdown(iso: string) {
-  const [left, setLeft] = useState(() => Math.max(0, new Date(iso).getTime() - Date.now()));
-  useEffect(() => { const t = setInterval(() => setLeft(Math.max(0, new Date(iso).getTime() - Date.now())), 1000); return () => clearInterval(t); }, [iso]);
+  const [left, setLeft] = useState<number | null>(null);
+  useEffect(() => {
+    const tick = () => setLeft(Math.max(0, new Date(iso).getTime() - Date.now()));
+    tick();
+    const t = setInterval(tick, 1000);
+    return () => clearInterval(t);
+  }, [iso]);
+  if (left === null) return { expired: false, text: `at ${new Date(iso).toISOString().slice(11, 16)} UTC` };
   const m = Math.floor(left / 60000); const s = Math.floor((left % 60000) / 1000);
-  return { expired: left === 0, text: `${m}:${String(s).padStart(2, "0")}` };
+  return { expired: left === 0, text: `in ${m}:${String(s).padStart(2, "0")}` };
 }
 
 export function QuoteCard({ quote, onApprove, onCancel, busy }: { quote: Quote; onApprove?: () => void; onCancel?: () => void; busy?: boolean }) {
@@ -45,7 +53,7 @@ export function QuoteCard({ quote, onApprove, onCancel, busy }: { quote: Quote; 
           <div className="rounded border border-sl-border px-2 py-1.5"><dt className="text-[11px] uppercase tracking-wider text-sl-text-subtle">Total</dt><dd className="tnum font-semibold">{usd(quote.total_usd)} {quote.currency}</dd></div>
         </dl>
         <p className="text-[12px] text-sl-text-muted"><strong className="font-semibold text-sl-text">Fees {quote.fee_policy_status}.</strong> {quote.disclosure.replace(/ ?Fees are PROPOSED — NOT APPROVED\./, "")}</p>
-        {(onApprove || cd.expired) && <p className="text-[12px] text-sl-text-subtle" aria-live="polite">{cd.expired ? "This quote has expired." : `Quote expires in ${cd.text}.`}</p>}
+        {(onApprove || cd.expired) && <p className="text-[12px] text-sl-text-subtle" aria-live="polite">{cd.expired ? "This quote has expired." : `Quote expires ${cd.text}.`}</p>}
         {(onApprove || onCancel) && (
           <div className="flex flex-wrap gap-2">
             {onApprove && <ApproveButton quote={quote} disabled={busy || cd.expired} onConfirm={onApprove} />}

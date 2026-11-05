@@ -10,7 +10,8 @@ import { getTask, newKey, post, type ApiError } from "./taskClient";
 import { ConnectButton } from "./ConnectButton";
 import { TradingResult } from "./TradingResult";
 
-type Ev = { seq: number; from: string | null; to: string; at: string };
+type Ev = { seq: number; phase?: string; from: string | null; to: string | null; channel?: string; at: string };
+const CHANNEL: Record<string, string> = { mcp: "an agent (MCP)", a2a: "an agent (A2A)", api_key: "an API key" };
 
 export function TaskLive({ initial }: { initial: Task }) {
   const [task, setTask] = useState(initial);
@@ -81,6 +82,11 @@ export function TaskLive({ initial }: { initial: Task }) {
             </div>
           </form>
         )}
+        {task.state === "AWAITING_APPROVAL" && task.approval_request && (
+          <p role="status" data-testid="agent-approval-request" className="rounded-md border border-sl-accent/50 px-3 py-2 text-[13px]">
+            {CHANNEL[task.approval_request.channel] ? `${CHANNEL[task.approval_request.channel][0].toUpperCase()}${CHANNEL[task.approval_request.channel].slice(1)}` : "An API client"} asked you to approve this. Agents cannot approve spend themselves — review the quote below.
+          </p>
+        )}
         <PlanPanel task={task} />
         {task.quote && (
           <QuoteCard
@@ -112,7 +118,7 @@ export function TaskLive({ initial }: { initial: Task }) {
           <ol className="space-y-1.5 p-3 text-[13px]" data-testid="timeline" aria-live="polite">
             {events.map((e) => (
               <li key={e.seq} className="flex items-baseline justify-between gap-2">
-                <span className="text-sl-text">{STATE_LABEL[e.to] || e.to}</span>
+                <span className="text-sl-text">{e.phase === "APPROVAL_REQUESTED" ? `Approval requested by ${CHANNEL[e.channel || ""] || "an API client"}` : STATE_LABEL[e.to || ""] || e.to}</span>
                 <time className="tnum shrink-0 text-[11px] text-sl-text-subtle" dateTime={e.at}>{new Date(e.at).toLocaleTimeString()}</time>
               </li>
             ))}

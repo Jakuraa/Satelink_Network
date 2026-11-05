@@ -105,8 +105,20 @@ export function createTasksRouter(svc, { resolvePrincipal, connections = null, d
     const key = req.get('Idempotency-Key') || req.body?.idempotency_key;
     // Machine callers must make approval replay-safe explicitly.
     if (p.via === 'api_key' && (typeof key !== 'string' || !/^[A-Za-z0-9._:-]{8,128}$/.test(key))) throw new TaskError('IDEMPOTENCY_KEY_REQUIRED', 'Send an Idempotency-Key header (8–128 characters) to approve via the API.', { status: 400 });
+    if (p.via === 'api_key' && p.key_id) {
+      // Agent spend pre-authorization (S5): a task an agent created is approvable by its key only up to the key's
+      // pre-authorized amount — default $0, so every agent spend needs the human in the console.
+      const t = await svc.getTask(p, req.params.id);
+      const charge = BigInt(t.quote?.credit_charge_minor ?? 0);
+      if (t.actor_type === 'agent' && charge > (p.agent_spend_preauth_minor ?? 0n)) {
+        throw new TaskError('HUMAN_APPROVAL_REQUIRED', 'Agent spend is not pre-authorized: a person must approve this in the console.', { status: 403 });
+      }
+    }
     res.json({ ok: true, ...(await svc.approve(p, req.params.id, { ...(req.body || {}), idempotency_key: key })) });
   }, { mutating: true, scope: 'tasks:approve' }));
+  r.post('/tasks/:id/approval-request', authed(async (req, res, p) => {
+    res.json({ ok: true, ...(await svc.requestApproval(p, req.params.id, { channel: String(req.body?.channel || p.via), note: req.body?.note })) });
+  }, { mutating: true, scope: 'tasks:create' }));
   r.post('/tasks/:id/cancel', authed(async (req, res, p) => { res.json({ ok: true, ...(await svc.cancel(p, req.params.id)) }); }, { mutating: true, scope: 'tasks:create' }));
 
   r.get('/tasks/:id/events', authed(async (req, res, p) => {
@@ -201,6 +213,7 @@ export async function openApiDocument(svc) {
       '/tasks/{id}': { get: op('Task detail incl. plan, quote, reservation, output', 'tasks:read') },
       '/tasks/{id}/events': { get: op('Server-sent events: state timeline', 'tasks:read') },
       '/tasks/{id}/input': { post: op('Answer the pending question', 'tasks:create') },
+      '/tasks/{id}/approval-request': { post: op('Ask the human owner to approve in the console (agents: spend pre-authorization defaults to $0)', 'tasks:create') },
       '/tasks/{id}/approve': { post: op('Approve the exact quote (id + version). API keys must send Idempotency-Key.', 'tasks:approve', { parameters: [{ name: 'Idempotency-Key', in: 'header', required: false, schema: { type: 'string' } }] }) },
       '/tasks/{id}/cancel': { post: op('Cancel before execution', 'tasks:create') },
       '/receipts/{id}': { get: op('Immutable receipt (JSON, or ?format=csv)', 'receipts:read') },

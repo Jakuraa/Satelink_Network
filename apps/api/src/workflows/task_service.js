@@ -208,6 +208,15 @@ export class TaskService {
     return { task: await this.view(next), changed: true };
   }
 
+  /** An agent asks its human to approve (MCP/A2A). Changes no state: records who asked, returns where to approve. */
+  async requestApproval(principal, id, { channel = 'api', note = null } = {}) {
+    const run = await this._own(principal, id);
+    if (run.state !== 'AWAITING_APPROVAL') throw new TaskError(ERR.ILLEGAL_TRANSITION, `A ${run.state} task has nothing to approve.`, { status: 409 });
+    const prior = this.events(run.id).find((e) => e.phase === 'APPROVAL_REQUESTED' && e.quote_id === run.quote_id);
+    if (!prior) await this._event(run.id, 'APPROVAL_REQUESTED', { to: null, channel: String(channel).slice(0, 16), quote_id: run.quote_id, note: note ? String(note).slice(0, 200) : null });
+    return { task: await this.view(run), approval_path: `/tasks/${run.id}`, replayed: Boolean(prior) };
+  }
+
   async cancel(principal, id) {
     const run = await this._own(principal, id);
     if (!['CREATED', 'UNDERSTANDING', 'PLANNING', 'AWAITING_INPUT', 'QUOTED', 'AWAITING_APPROVAL', 'AUTHORIZED', 'RESERVED'].includes(run.state)) {
@@ -449,6 +458,7 @@ export class TaskService {
       quote: quote ? this._quoteOut(quote) : null,
       reservation: rsv ? { ...SIM, reservation_id: rsv.reservation_id, state: rsv.state, amount_usd: formatUsd(BigInt(rsv.amount_minor)), captured_usd: rsv.captured_minor == null ? null : formatUsd(BigInt(rsv.captured_minor)) } : null,
       receipt_id: run.receipt_id, error: run.error || null,
+      approval_request: (() => { const e = run.state === 'AWAITING_APPROVAL' ? this.events(run.id).findLast((x) => x.phase === 'APPROVAL_REQUESTED' && x.quote_id === run.quote_id) : null; return e ? { channel: e.channel, at: e.at } : null; })(),
       // First-party trading results only (external supplier output is never echoed into the view).
       trading: ['evaluation', 'paper_order'].includes(run.result?.steps?.[0]?.data?.kind) ? run.result.steps[0].data : null,
       // The step output the owner asked for (schema-checked by its connector; rendered as text; never used to decide anything).
