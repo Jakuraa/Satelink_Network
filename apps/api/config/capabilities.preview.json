@@ -382,6 +382,236 @@
       "internal_only": false,
       "last_verified_at": null,
       "last_verified_evidence": "tests/e2e/s2-food.spec.ts (local mock MCP)"
+    },
+    {
+      "id": "trading.strategy.evaluate",
+      "version": 1,
+      "name": "Evaluate a trading strategy (simulation)",
+      "description": "Turn a strategy description into a validated spec and run a walk-forward backtest with fees and slippage on a labelled synthetic dataset; a deterministic risk policy returns GO, WAIT or REJECT with its reasons.",
+      "category": "trading",
+      "tags": [
+        "trading",
+        "strategy",
+        "backtest",
+        "evaluate",
+        "sma",
+        "crossover",
+        "donchian",
+        "breakout",
+        "btc",
+        "eth",
+        "crypto",
+        "walk-forward",
+        "bitcoin",
+        "ethereum",
+        "moving",
+        "average",
+        "crosses",
+        "trend",
+        "channel"
+      ],
+      "intents": [
+        "backtest",
+        "evaluate"
+      ],
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "strategy_description"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "strategy_description": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 600,
+            "description": "The strategy in plain words"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "evaluation_id",
+          "risk"
+        ],
+        "properties": {
+          "evaluation_id": {
+            "type": "string"
+          },
+          "risk": {
+            "type": "object"
+          }
+        }
+      },
+      "providers": [
+        {
+          "id": "internal_paper_engine",
+          "name": "Satelink Trading Engine (simulation)",
+          "kind": "first_party",
+          "connector": "trading_engine",
+          "terms_url": null
+        }
+      ],
+      "connector_type": "native",
+      "interface_meta": {
+        "native": {
+          "adapter": "trading_engine",
+          "data": "synthetic recorded dataset (labelled)"
+        }
+      },
+      "skill_refs": [],
+      "credential_requirements": [],
+      "permission_scope": "tasks:procure",
+      "markets": [
+        "GLOBAL"
+      ],
+      "currencies": [
+        "USD"
+      ],
+      "price_model": {
+        "kind": "satelink_service"
+      },
+      "fee_policy_id": "strategy_eval_flat_100000",
+      "commercial_rights": {
+        "resale_allowed": null,
+        "terms_url": null,
+        "evidence": "First-party simulation on synthetic data; no market-data licence needed."
+      },
+      "security_class": "standard",
+      "timeout_ms": 60000,
+      "idempotency": {
+        "required": true
+      },
+      "retry": {
+        "max_attempts": 1,
+        "on": []
+      },
+      "verification": {
+        "method": "evaluation_record_check",
+        "evidence_fields": [
+          "evaluation_id",
+          "result_hash",
+          "decision"
+        ]
+      },
+      "refund_policy": "Preview: nothing is charged.",
+      "availability": "local",
+      "release_status": "SIMULATED",
+      "environment": "preview",
+      "internal_only": false,
+      "last_verified_at": null,
+      "last_verified_evidence": "database/__tests__/trading_s3.integration.test.ts",
+      "disclaimer": "Education and simulation only. Not investment advice. SIMULATED_PAPER_EXECUTION: NOT_ACTUAL_RETURNS."
+    },
+    {
+      "id": "trading.paper.order",
+      "version": 1,
+      "name": "Paper trade a GO strategy (simulation)",
+      "description": "Place a simulated paper order for a strategy whose evaluation is GO. Filled by the internal paper broker on synthetic data — no broker, no real order.",
+      "category": "trading",
+      "tags": [
+        "paper",
+        "trade",
+        "trading",
+        "simulated",
+        "order"
+      ],
+      "intents": [
+        "paper"
+      ],
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "evaluation_id",
+          "side"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "evaluation_id": {
+            "type": "string",
+            "pattern": "^eval_[0-9a-f]{32}$",
+            "description": "The GO evaluation to paper trade"
+          },
+          "side": {
+            "type": "string",
+            "enum": [
+              "buy",
+              "sell"
+            ],
+            "description": "Buy or sell"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "fill"
+        ],
+        "properties": {
+          "fill": {
+            "type": "object"
+          }
+        }
+      },
+      "providers": [
+        {
+          "id": "internal_paper_engine",
+          "name": "Satelink Trading Engine (simulation)",
+          "kind": "first_party",
+          "connector": "trading_engine",
+          "terms_url": null
+        }
+      ],
+      "connector_type": "native",
+      "interface_meta": {
+        "native": {
+          "adapter": "trading_engine",
+          "data": "synthetic recorded dataset (labelled)"
+        }
+      },
+      "skill_refs": [],
+      "credential_requirements": [],
+      "permission_scope": "tasks:procure",
+      "markets": [
+        "GLOBAL"
+      ],
+      "currencies": [
+        "USD"
+      ],
+      "price_model": {
+        "kind": "satelink_service"
+      },
+      "fee_policy_id": "paper_sim_flat_50000",
+      "commercial_rights": {
+        "resale_allowed": null,
+        "terms_url": null,
+        "evidence": "First-party simulation on synthetic data; no market-data licence needed."
+      },
+      "security_class": "standard",
+      "timeout_ms": 60000,
+      "idempotency": {
+        "required": true
+      },
+      "retry": {
+        "max_attempts": 1,
+        "on": []
+      },
+      "verification": {
+        "method": "deterministic_fill_recompute",
+        "evidence_fields": [
+          "order_id",
+          "status"
+        ]
+      },
+      "refund_policy": "Preview: nothing is charged.",
+      "availability": "local",
+      "release_status": "SIMULATED",
+      "environment": "preview",
+      "internal_only": false,
+      "last_verified_at": null,
+      "last_verified_evidence": "database/__tests__/trading_s3.integration.test.ts",
+      "disclaimer": "Education and simulation only. Not investment advice. SIMULATED_PAPER_EXECUTION: NOT_ACTUAL_RETURNS."
     }
   ]
 }

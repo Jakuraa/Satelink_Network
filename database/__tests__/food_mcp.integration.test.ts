@@ -3,14 +3,13 @@
  * "Food Delivery (MOCK — not connected to Swiggy)" MCP/OAuth server as a separate process).
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
+import { freshMigratedDb } from './fresh-db.js';
 import { Pool } from 'pg';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { randomBytes, createHash } from 'node:crypto';
-import { applyMigrationsForTest } from './apply-migrations.js';
 import { TaskService } from '../../apps/api/src/workflows/task_service.js';
 import { CapabilityRegistry } from '../../apps/api/src/workflows/capability_registry.js';
 import { createModelRouter } from '../../apps/api/src/workflows/model_router.js';
@@ -28,7 +27,7 @@ const ISSUER = `http://127.0.0.1:${PORT}`;
 const REDIRECT = 'http://127.0.0.1:65530/v1/connections/food_delivery_mock/callback';
 const KEY = randomBytes(32).toString('hex'); // fresh local test key (never a real secret)
 const A = { id: 'user:food-a' };
-let container: StartedPostgreSqlContainer; let pool: Pool; let food: ChildProcess; let svc: Any; let conns: Any;
+let db: Awaited<ReturnType<typeof freshMigratedDb>>; let pool: Pool; let food: ChildProcess; let svc: Any; let conns: Any;
 const b64url = (b: Buffer) => b.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
 /** Drive the real consent page like a browser: GET authorize → POST approve → read the redirect. */
@@ -40,9 +39,8 @@ async function consent(authorizeUrl: string, decision = 'approve') {
 }
 
 beforeAll(async () => {
-  container = await new PostgreSqlContainer('postgres:16-alpine').start();
-  const url = container.getConnectionUri();
-  expect((await applyMigrationsForTest(url, join(ROOT, 'database', 'migrations'))).errors).toEqual([]);
+  db = await freshMigratedDb('s2food', join(ROOT, 'database', 'migrations'));
+  const url = db.url;
   pool = new Pool({ connectionString: url, max: 8 });
   food = spawn(process.execPath, [join(ROOT, 'tools', 'mock-food-mcp', 'server.mjs')], {
     env: { ...process.env, MOCK_FOOD_PORT: String(PORT), MOCK_FOOD_STATE: join(mkdtempSync(join(tmpdir(), 'food-')), 'orders.json') }, stdio: 'ignore',
@@ -55,7 +53,7 @@ beforeAll(async () => {
     workflowOptions: { store: new PgDurableStore(pool, { prefix: 'wf_' }), runStore: new PgRunStore(pool), env: {} },
   });
 }, 180_000);
-afterAll(async () => { food?.kill(); await pool?.end(); await container?.stop(); });
+afterAll(async () => { food?.kill(); await pool?.end(); await db?.stop(); });
 
 describe('OAuth 2.1 + PKCE against the mock authorization server', () => {
   it('refuses plain PKCE and missing challenges at /authorize', async () => {

@@ -170,7 +170,9 @@ test.describe("S1 primary journey", () => {
     const ttl = Number(process.env.PREVIEW_QUOTE_TTL_MS || 25_000);
     await page.waitForTimeout(ttl + 1_500);
     await expect(page.getByText("This quote has expired.")).toBeVisible();
-    await expect(page.getByTestId("approve-open")).toBeDisabled();
+    // Cannot approve: the button is disabled (client timer) or gone (server sweep already expired the task).
+    const approve = page.getByTestId("approve-open");
+    if (await approve.count()) await expect(approve).toBeDisabled();
     // The server refuses too (the UI is not the control): approving the stale quote expires the task.
     const id = taskUrl!.split("/").pop()!;
     const t = await (await page.request.get(`/api/console/tasks/tasks/${id}`)).json();

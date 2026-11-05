@@ -26,10 +26,22 @@ export type Task = {
   reservation: { reservation_id: string; state: string; amount_usd: string; captured_usd: string | null; simulated: true; simulation_label: string } | null;
   receipt_id: string | null;
   error: { code: string; message: string; retryable: boolean } | null;
+  trading: TradingResult | null;
 };
+export type TradingResult = {
+  kind: "evaluation" | "paper_order"; label: string; notice: string;
+  evaluation_id?: string; dataset_label?: string;
+  scorecard?: { verdict: string; strategy: { family: string; market: string; params: Record<string, unknown> };
+    method: { windows: number; train_bars: number; test_bars: number; execution: string; costs_bps: { fee: number; half_spread: number; slippage: number }; leakage_check: string };
+    summary: { windows_beaten: number; candidate_total_return_pct: number; best_baseline_total_return_pct: number; candidate_worst_drawdown_pct: number; buy_and_hold_worst_drawdown_pct: number };
+    windows: { index: number; test_from: string; test_to: string; candidate_return_pct: number; candidate_drawdown_pct: number; trades: number; best_baseline: string; best_baseline_return_pct: number; beat_best_baseline: boolean }[] };
+  risk?: { decision: "GO" | "WAIT" | "REJECT"; trace: { rule: string; passed: boolean; blocking: boolean; detail: string }[]; policy_version: string };
+  fill?: { order_id: string; status: string; instrument_id: string; side: string; quantity: string; fill_price_minor: string; fill_at: string; venue: string };
+};
+export const TRADING_LABEL = "SIMULATED_PAPER_EXECUTION: NOT_ACTUAL_RETURNS";
 export type Receipt = {
   receipt_id: string; run_id: string; simulated: true; simulation_label: string; outcome: "succeeded" | "failed";
-  outcome_label?: string; intent: string; served_by?: string | null; model_fixture?: boolean; error_code?: string;
+  outcome_label?: string; intent: string; trading_label?: string; notice?: string; served_by?: string | null; model_fixture?: boolean; error_code?: string;
   plan?: { step_no: number; capability_id: string; provider: string }[];
   quote: Quote | null;
   charges: { currency: string; credits_charged_usd: string; merchant_paid_by_user_usd?: string; merchant_payment: string };

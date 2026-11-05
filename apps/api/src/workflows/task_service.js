@@ -125,6 +125,10 @@ export class TaskService {
       // Supplier/catalogue unreachable while pricing: fail cleanly — never leave a task stuck in PLANNING.
       const cur = await this.store.getInternal(r.id);
       if (cur?.state !== 'PLANNING') throw e;
+      // A connector's own 4xx (e.g. "strategy not supported") is a clear refusal, not an outage.
+      if (e instanceof TaskError && e.status < 500 && e.code !== 'CONNECTION_REQUIRED') {
+        return this._move(cur, 'REJECTED', { error: { code: e.code, message: e.message, retryable: false } });
+      }
       return this._move(cur, 'FAILED', { error: { code: e instanceof TaskError ? e.code : 'QUOTE_FAILED', message: 'Could not get a price right now. Nothing was charged.', retryable: true } });
     }
   }
@@ -288,7 +292,7 @@ export class TaskService {
     const txId = this._stepTx(run.id, step.step_no);
     const connector = this.connectors[this.providerConnector.get(step.provider_id)];
     let v;
-    try { v = await connector.verifyStep({ idempotencyKey: idemKey(txId, 'EXECUTE'), offer: step.offer, principal: run.principal }); } catch (e) {
+    try { v = await connector.verifyStep({ idempotencyKey: idemKey(txId, 'EXECUTE'), offer: step.offer, principal: run.principal, result: run.result?.steps?.[0]?.data ?? null }); } catch (e) {
       return run; // supplier unreachable: stay put; recovery/sweep retries verification (never guesses)
     }
     if (run.state === 'UNKNOWN_EXECUTION_OUTCOME') {
@@ -315,6 +319,7 @@ export class TaskService {
     const issuedAt = new Date(this.clock()).toISOString();
     const body = {
       receipt_id: receiptId, run_id: run.id, ...SIM, outcome: 'succeeded', intent: run.intent,
+      ...(String(step.capability_id).startsWith('trading.') ? { trading_label: 'SIMULATED_PAPER_EXECUTION: NOT_ACTUAL_RETURNS', notice: 'Education and simulation only. Not investment advice.' } : {}),
       plan: run.plan.steps.map((s) => ({ step_no: s.step_no, capability_id: s.capability_id, provider: s.provider_name })),
       served_by: run.plan.model?.served_by || null, model_fixture: Boolean(run.plan.model?.fixture),
       quote: this._quoteOut(quote),
@@ -444,6 +449,8 @@ export class TaskService {
       quote: quote ? this._quoteOut(quote) : null,
       reservation: rsv ? { ...SIM, reservation_id: rsv.reservation_id, state: rsv.state, amount_usd: formatUsd(BigInt(rsv.amount_minor)), captured_usd: rsv.captured_minor == null ? null : formatUsd(BigInt(rsv.captured_minor)) } : null,
       receipt_id: run.receipt_id, error: run.error || null,
+      // First-party trading results only (external supplier output is never echoed into the view).
+      trading: ['evaluation', 'paper_order'].includes(run.result?.steps?.[0]?.data?.kind) ? run.result.steps[0].data : null,
     };
   }
 

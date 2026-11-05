@@ -32,6 +32,7 @@ const send = (res, e) => {
 
 function csv(receipt) {
   const rows = [['field', 'value'], ['receipt_id', receipt.receipt_id], ['outcome', receipt.outcome], ['simulation_label', receipt.simulation_label],
+    ...(receipt.trading_label ? [['trading_label', receipt.trading_label], ['notice', receipt.notice]] : []),
     ['intent', receipt.intent], ['served_by', receipt.served_by || ''], ['currency', receipt.charges?.currency || 'USD'],
     ['credits_charged_usd', receipt.charges?.credits_charged_usd || '0.000000'], ['merchant_paid_by_user_usd', receipt.charges?.merchant_paid_by_user_usd || '0.000000'],
     ['ledger_hash', receipt.ledger?.ledger_hash || ''], ['issued_at', receipt.issued_at]];

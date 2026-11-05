@@ -20,6 +20,8 @@ import { PgRunStore } from '../src/workflows/run_store.js';
 import { createTasksRouter } from '../src/routes/tasks_route.js';
 import { ConnectionStore } from '../src/workflows/connectors/oauth_pkce.js';
 import { createMcpFoodConnector } from '../src/workflows/connectors/mcp_food_connector.js';
+import { createTradingConnector } from '../src/workflows/connectors/trading_connector.js';
+import { PgEvaluationStore } from '../src/trading/engine/index.js';
 import { getBetterAuth, mountBetterAuth } from '../src/auth/better_auth.mjs';
 import { getMigrations } from 'better-auth/db/migration';
 import { fromNodeHeaders } from 'better-auth/node';
@@ -68,6 +70,7 @@ const svc = await TaskService.create({
   connectors: {
     mock_store: createMockStoreConnector({ baseUrl: process.env.MOCK_STORE_URL || 'http://127.0.0.1:4410' }),
     mcp_food: createMcpFoodConnector({ url: `${FOOD_URL}/mcp`, connectorId: 'food_delivery_mock', connections }),
+    trading_engine: createTradingConnector({ evaluationStore: new PgEvaluationStore((t, p) => pool.query(t, p)) }),
   },
   workflowOptions: { store: new PgDurableStore(pool, { prefix: 'wf_' }), runStore: new PgRunStore(pool), env: {} },
 });

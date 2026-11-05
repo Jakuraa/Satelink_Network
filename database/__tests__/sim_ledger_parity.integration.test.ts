@@ -12,10 +12,9 @@
  *      release after capture refused; balances derived from the ledger; revenue_truth stays empty (R5).
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
+import { freshMigratedDb } from './fresh-db.js';
 import { Pool } from 'pg';
 import { resolve } from 'node:path';
-import { applyMigrationsForTest } from './apply-migrations.js';
 import { Money, USDC } from '@satelink/kernel';
 import type { Result } from '@satelink/kernel';
 import { Reservation } from '../../libs/financial-domain/src/reservation/reservation.js';
@@ -76,8 +75,7 @@ describe('sim_ledger ↔ TS reservation-postings parity (pure)', () => {
 });
 
 describe('sim_ledger on real Postgres', () => {
-  let container: StartedPostgreSqlContainer;
-  let pool: Pool;
+  let db: Awaited<ReturnType<typeof freshMigratedDb>>; let pool: Pool;
   let sim: InstanceType<typeof SimLedger>;
   let acc: { customer: string; holds: string; revenue: string };
 
@@ -100,10 +98,8 @@ describe('sim_ledger on real Postgres', () => {
   const count = async (sql: string, p: unknown[] = []) => Number((await pool.query(sql, p)).rows[0].n);
 
   beforeAll(async () => {
-    container = await new PostgreSqlContainer('postgres:16-alpine').start();
-    const connectionString = container.getConnectionUri();
-    const result = await applyMigrationsForTest(connectionString, MIGRATIONS_DIR);
-    expect(result.errors).toEqual([]);
+    db = await freshMigratedDb('p2simledger', MIGRATIONS_DIR);
+    const connectionString = db.url;
     pool = new Pool({ connectionString });
     await pool.query(`INSERT INTO workflow_definitions (template_id, version, definition) VALUES ('assistant.task.v1', 1, '{}') ON CONFLICT DO NOTHING`);
     sim = new SimLedger(pool);
@@ -112,7 +108,7 @@ describe('sim_ledger on real Postgres', () => {
     await sim.ensureCustomer('user:test-1', 'human'); // idempotent
   }, 180_000);
 
-  afterAll(async () => { await pool?.end(); await container?.stop(); });
+  afterAll(async () => { await pool?.end(); await db?.stop(); });
 
   it('grants the $1 promotional credit exactly once, tagged promotional/preview', async () => {
     expect(await sim.grantDemoCredit(acc)).toBe(true);

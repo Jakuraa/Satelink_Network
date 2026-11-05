@@ -14,6 +14,7 @@ function useCountdown(iso: string) {
 
 export function QuoteCard({ quote, onApprove, onCancel, busy }: { quote: Quote; onApprove?: () => void; onCancel?: () => void; busy?: boolean }) {
   const cd = useCountdown(quote.expires_at);
+  const hasMerchant = quote.lines.some((l) => l.supplier_cost_paid_from === "merchant_checkout");
   return (
     <section aria-label="Quote" data-testid="quote-card" className="rounded-md border border-sl-border bg-sl-surface">
       <header className="flex flex-wrap items-center justify-between gap-2 border-b border-sl-border px-3 py-2">
@@ -38,13 +39,13 @@ export function QuoteCard({ quote, onApprove, onCancel, busy }: { quote: Quote; 
             </tbody>
           </table>
         </div>
-        <dl className="grid grid-cols-1 gap-2 text-[13px] sm:grid-cols-3">
-          <div className="rounded border border-sl-border px-2 py-1.5"><dt className="text-[11px] uppercase tracking-wider text-sl-text-subtle">Merchant total (you pay the merchant)</dt><dd className="tnum font-semibold" data-testid="merchant-total">{usd(quote.merchant_paid_by_user_usd)}</dd></div>
+        <dl className={`grid grid-cols-1 gap-2 text-[13px] ${hasMerchant ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+          {hasMerchant && <div className="rounded border border-sl-border px-2 py-1.5"><dt className="text-[11px] uppercase tracking-wider text-sl-text-subtle">Merchant total (you pay the merchant)</dt><dd className="tnum font-semibold" data-testid="merchant-total">{usd(quote.merchant_paid_by_user_usd)}</dd></div>}
           <div className="rounded border border-sl-border px-2 py-1.5"><dt className="text-[11px] uppercase tracking-wider text-sl-text-subtle">From Satelink credits</dt><dd className="tnum font-semibold" data-testid="credit-charge">{usd(quote.credit_charge_usd)}</dd></div>
           <div className="rounded border border-sl-border px-2 py-1.5"><dt className="text-[11px] uppercase tracking-wider text-sl-text-subtle">Total</dt><dd className="tnum font-semibold">{usd(quote.total_usd)} {quote.currency}</dd></div>
         </dl>
         <p className="text-[12px] text-sl-text-muted"><strong className="font-semibold text-sl-text">Fees {quote.fee_policy_status}.</strong> {quote.disclosure.replace(/ ?Fees are PROPOSED — NOT APPROVED\./, "")}</p>
-        <p className="text-[12px] text-sl-text-subtle" aria-live="polite">{cd.expired ? "This quote has expired." : `Quote expires in ${cd.text}.`}</p>
+        {(onApprove || cd.expired) && <p className="text-[12px] text-sl-text-subtle" aria-live="polite">{cd.expired ? "This quote has expired." : `Quote expires in ${cd.text}.`}</p>}
         {(onApprove || onCancel) && (
           <div className="flex flex-wrap gap-2">
             {onApprove && <ApproveButton quote={quote} disabled={busy || cd.expired} onConfirm={onApprove} />}
