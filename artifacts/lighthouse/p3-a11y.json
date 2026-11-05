@@ -1,0 +1,73 @@
+{
+  "tool": "lighthouse@12.8.2",
+  "console": "http://localhost:3400",
+  "measured_at": "2026-11-05T13:35:48.793Z",
+  "results": [
+    {
+      "page": "/home",
+      "final_url": "http://localhost:3400/home",
+      "score": 100,
+      "failing_audits": []
+    },
+    {
+      "page": "/assistant",
+      "final_url": "http://localhost:3400/assistant",
+      "score": 100,
+      "failing_audits": []
+    },
+    {
+      "page": "/tasks",
+      "final_url": "http://localhost:3400/tasks",
+      "score": 100,
+      "failing_audits": []
+    },
+    {
+      "page": "/explore",
+      "final_url": "http://localhost:3400/explore",
+      "score": 100,
+      "failing_audits": []
+    },
+    {
+      "page": "/agent-marketplace",
+      "final_url": "http://localhost:3400/agent-marketplace",
+      "score": 100,
+      "failing_audits": []
+    },
+    {
+      "page": "/trading-ai",
+      "final_url": "http://localhost:3400/trading-ai",
+      "score": 100,
+      "failing_audits": []
+    },
+    {
+      "page": "/connections",
+      "final_url": "http://localhost:3400/connections",
+      "score": 100,
+      "failing_audits": []
+    },
+    {
+      "page": "/wallet",
+      "final_url": "http://localhost:3400/wallet",
+      "score": 100,
+      "failing_audits": []
+    },
+    {
+      "page": "/developer-hub",
+      "final_url": "http://localhost:3400/developer-hub",
+      "score": 100,
+      "failing_audits": []
+    },
+    {
+      "page": "/activity",
+      "final_url": "http://localhost:3400/activity",
+      "score": 100,
+      "failing_audits": []
+    },
+    {
+      "page": "/settings",
+      "final_url": "http://localhost:3400/settings",
+      "score": 100,
+      "failing_audits": []
+    }
+  ]
+}

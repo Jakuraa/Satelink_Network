@@ -48,8 +48,8 @@ export function DeveloperKeysPanel({ initial }: { initial: DevKey[] }) {
           <legend className="text-sl-text-muted">Scopes</legend>
           <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
             {SCOPES.map((s) => (
-              <label key={s} className="inline-flex items-center gap-1.5">
-                <input type="checkbox" checked={scopes.includes(s)} data-testid={`scope-${s}`}
+              <label key={s} className="inline-flex min-h-6 items-center gap-1.5 py-0.5">
+                <input type="checkbox" className="size-4" checked={scopes.includes(s)} data-testid={`scope-${s}`}
                   onChange={(e) => setScopes((cur) => (e.target.checked ? [...cur, s] : cur.filter((x) => x !== s)))} />
                 <code>{s}</code>
               </label>

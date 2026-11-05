@@ -88,3 +88,13 @@ export function usd(v: string | null | undefined): string {
   const frac = f.replace(/0+$/, "").padEnd(2, "0");
   return `$${w}.${frac}`;
 }
+
+/** Suggested tasks for the six Release A domains (S1–S6). Task prompts are ones the preview demonstrably handles. */
+export const SUGGESTED_TASKS: { domain: string; text: string; href?: string }[] = [
+  { domain: "Shopping", text: "Buy a sci-fi e-book gift code under $12" },
+  { domain: "Food", text: "Order 2 masala dosa and a filter coffee under $6" },
+  { domain: "Trading AI", text: "Backtest an ETH breakout strategy, 20 day channel" },
+  { domain: "Developer APIs", text: "Extract the contacts from: invoice due 2026-12-01, reply to billing@example.com" },
+  { domain: "AI agents", text: "Let my AI agent request purchases (MCP / A2A)", href: "/developer-hub#agents" },
+  { domain: "Machines", text: "Pay per call from a machine (x402 preview)", href: "/developer-hub#machines" },
+];

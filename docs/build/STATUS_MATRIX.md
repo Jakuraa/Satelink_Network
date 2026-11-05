@@ -35,7 +35,8 @@ Evidence keys: **P** = production probe 2026-10-20 (curl transcript in the ledge
 | S5 Agent commerce (MCP tools + A2A card/binding) | VERIFIED | agent_s5.integration 6/6; mcp-server node tests 13/13; s5-agent E2E ×3 (official SDK client over stdio); CI all green on PR #620 |
 | MCP protocol 2026-07-28 | BLOCKED (EXTERNAL) | official SDK latest 1.32.2 negotiates ≤ 2025-11-25; server negotiates 2025-11-25 (OB-13) |
 | A2A Agent Card JWS signature | NOT STARTED | needs a KeyProvider-held signing key; card ships unsigned (field omitted, not faked) |
-| S6 Machine commerce (x402 V2 preview) | VERIFIED (local) | machine_s6.integration 8/8 (incl. import-graph proof: no live x402/vault module reachable); s6-machine E2E ×3; mock facilitator saw only /verify; CI on draft PR |
+| S6 Machine commerce (x402 V2 preview) | VERIFIED | machine_s6.integration 8/8 (incl. import-graph proof: no live x402/vault module reachable); s6-machine E2E ×3; mock facilitator saw only /verify; CI all green on PR #621 |
+| P3 Product quality (preview console) | VERIFIED (local) | approved 10-item nav; Home pending approvals + six-domain suggestions; Trading AI + Activity & Security real pages; Agent Marketplace honest Coming soon; p3-quality E2E ×3 (axe, overflow, hydration, headings); Lighthouse a11y 100 on 11 pages (artifacts/lighthouse/p3-a11y.json, local); CI on draft PR |
 | x402 live rail for task capabilities | NOT STARTED | preview uses a LOCAL mock facilitator, testnet id, placeholder payTo; live = Release B founder decision |
 
 ### Release A tech debt
@@ -61,6 +62,9 @@ Evidence keys: **P** = production probe 2026-10-20 (curl transcript in the ledge
 - x402 preview: if a paid task then FAILS, the simulated x402 deposit stays as customer credit (a real rail needs a refund path).
 - x402 preview keyless machines are scoped by their Idempotency-Key (it doubles as the bearer for that task's result).
 - Receipt `payment.payer` is a mock address from the scripted client; no signature verification beyond the mock scheme.
+- Lighthouse runs locally only (`scripts/preview/lighthouse-a11y.mjs`, pinned npx lighthouse@12.8.2); not wired into CI.
+- The Shell renders only a fixed list of nav groups; live-console groups "Activity & Logs", "Developer Tools", "Protocols" are therefore hidden in production (pre-existing; not changed by Release A).
+- Preview nav omits the live RPC product pages (they need production endpoints the preview API does not serve).
 
 ## M1 Identity, tenancy, access
 

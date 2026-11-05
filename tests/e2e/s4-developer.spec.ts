@@ -37,7 +37,7 @@ test("S4: create a scoped key in the UI → curl procure script → receipt + ke
   page.on("pageerror", (e) => { if (/hydrat/i.test(e.message)) hydration.push(`${page.url()}: ${e.message.slice(0, 160)}`); });
   await signUpAndOnboard(page);
   await page.goto("/developer-hub");
-  await expect(page.getByRole("heading", { name: "Developer Hub" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Developer & Agent Hub" })).toBeVisible();
   await expect(page.getByTestId("keys-empty")).toBeVisible();
   await axe(page, "developer hub (empty)");
 
