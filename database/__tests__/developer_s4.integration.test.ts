@@ -45,7 +45,7 @@ beforeAll(async () => {
   keys = new DeveloperKeys({ pool, clock: () => now });
   const resolvePrincipal = async (req: Any) => {
     const bearer = /^Bearer\s+(\S+)$/i.exec(req.get('Authorization') || '')?.[1] || '';
-    if (bearer) { const k = await keys.authenticate(bearer); return k ? { id: k.principal, via: 'api_key', actor_type: 'developer', scopes: k.scopes } : null; }
+    if (bearer) { const k = await keys.authenticate(bearer); return k ? { id: k.principal, via: 'api_key', actor_type: 'developer', scopes: k.scopes, key_id: k.key_id, agent_spend_preauth_minor: k.agent_spend_preauth_minor } : null; }
     return req.get('X-Test-Session') === U.id ? U : null; // stands in for the Better Auth session
   };
   const app = express(); app.use('/v1', createTasksRouter(svc, { resolvePrincipal, developerKeys: keys }));

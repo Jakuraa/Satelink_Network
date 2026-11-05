@@ -34,6 +34,7 @@ test("S4: create a scoped key in the UI → curl procure script → receipt + ke
   const P = info.project.name;
   const hydration: string[] = [];
   page.on("console", (m) => { if (m.type() === "error" && /hydrat/i.test(m.text())) hydration.push(m.text().slice(0, 200)); });
+  page.on("pageerror", (e) => { if (/hydrat/i.test(e.message)) hydration.push(`${page.url()}: ${e.message.slice(0, 160)}`); });
   await signUpAndOnboard(page);
   await page.goto("/developer-hub");
   await expect(page.getByRole("heading", { name: "Developer Hub" })).toBeVisible();
@@ -87,4 +88,5 @@ test("S4: create a scoped key in the UI → curl procure script → receipt + ke
   const after = await fetch(`${API}/v1/tasks`, { headers: { authorization: `Bearer ${secret}` } });
   expect(after.status).toBe(401);
   await shot(page, P, "04-key-revoked");
+  expect(hydration, "hydration errors anywhere in the S4 journey").toEqual([]);
 });

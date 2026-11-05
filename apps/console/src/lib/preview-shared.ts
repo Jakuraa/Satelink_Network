@@ -29,6 +29,9 @@ export type Task = {
   trading: TradingResult | null;
   /** Owner-only step output from a supplier (schema-checked by its connector, untrusted — rendered as text only). */
   output?: Record<string, unknown> | null;
+  /** Set when an agent (MCP/A2A) asked the owner to approve the current quote. */
+  approval_request?: { channel: string; at: string } | null;
+  actor_type?: string;
 };
 export type TradingResult = {
   kind: "evaluation" | "paper_order"; label: string; notice: string;

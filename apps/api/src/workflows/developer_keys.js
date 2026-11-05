@@ -28,7 +28,7 @@ export class DeveloperKeys {
 
   async list(principal) {
     const { rows } = await this.pool.query(
-      `SELECT k.key_id, k.name, k.prefix, k.scopes, k.rate_limit_per_min, k.created_at, k.last_used_at, k.revoked_at,
+      `SELECT k.key_id, k.name, k.prefix, k.scopes, k.rate_limit_per_min, k.agent_spend_preauth_minor::text AS agent_spend_preauth_minor, k.created_at, k.last_used_at, k.revoked_at,
               COALESCE((SELECT SUM(u.requests) FROM developer_api_key_usage u WHERE u.key_id = k.key_id), 0)::text AS requests_total,
               COALESCE((SELECT u.requests FROM developer_api_key_usage u WHERE u.key_id = k.key_id AND u.day = CURRENT_DATE), 0)::text AS requests_today
          FROM developer_api_keys k WHERE k.principal = $1 ORDER BY k.created_at DESC`,
@@ -59,6 +59,6 @@ export class DeveloperKeys {
        ON CONFLICT (key_id, day) DO UPDATE SET requests = developer_api_key_usage.requests + 1`,
       [k.key_id],
     );
-    return { principal: k.principal, scopes: k.scopes, key_id: k.key_id };
+    return { principal: k.principal, scopes: k.scopes, key_id: k.key_id, agent_spend_preauth_minor: BigInt(k.agent_spend_preauth_minor ?? 0) };
   }
 }

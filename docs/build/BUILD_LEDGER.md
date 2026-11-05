@@ -7,15 +7,32 @@ categories only (R14); details in `docs/build/evidence/private/` on the build ma
 
 ## ▶ RESUME CAPSULE — Release State A (updated after each phase)
 1. Mandate: Release State A master prompt v2026-11-04b + founder conditions 1–6 (2026-11-04).
-2. Worktree: `.claude/worktrees/release-a`; stack `build/p0-safety` (#610) → `build/integration-base` (#611) → `build/p2-foundation` (#612) → `build/s1-primary-journey` (#616) → `build/s2-food-mcp` (#617) → `build/s3-trading` (#618) → `build/s4-developer`.
-3. Last phase done: **S4** (developer procurement) — VERIFIED locally (unit, integration, E2E ×3, drill); CI on the draft PR. S1–S3 VERIFIED.
+2. Worktree: `.claude/worktrees/release-a`; stack `build/p0-safety` (#610) → `build/integration-base` (#611) → `build/p2-foundation` (#612) → `build/s1-primary-journey` (#616) → `build/s2-food-mcp` (#617) → `build/s3-trading` (#618) → `build/s4-developer` (#619) → `build/s5-mcp-server`.
+3. Last phase done: **S5** (agent commerce: MCP tools + A2A) — VERIFIED locally; CI on the draft PR. S1–S4 VERIFIED (S4 CI all green on #619).
 4. Last SHA: see `git log -1 build/p0-safety`.
-5. Next sub-step: **S5** MCP server generated from the registry + A2A card (branch `build/s5-mcp-server` from `build/s4-developer`).
+5. Next sub-step: **S6** x402 preview (branch `build/s6-machine` from `build/s5-mcp-server`). Remaining spec verbatim: `RELEASE_A_REMAINING_SPEC.md`.
 6. Open risks: E1 JWT secret + webhooks public (OB-1/2); plaintext signer/treasury keys in local stash (OB-3); single-copy backup (OB-5).
 7. Rule: no work touching auth secrets, payment config or production (D-A2); local test credentials only.
 8. Backups: never touch `backups/protected/*.dump`, `docs/release/*.dump` (BACKUP_POSTURE.md).
-9. Blockers: `OPEN_BLOCKERS.md` (7 open, all FOUNDER).
-10. Decisions: `DECISION_LOG.md` (D-A1…D-A8, ADR-1…8).
+9. Blockers: `OPEN_BLOCKERS.md` (OB-1…OB-13; OB-13 EXTERNAL = MCP 2026-07-28 not in the official SDK).
+10. Decisions: `DECISION_LOG.md` (D-A1…D-A8, ADR-1…9).
+
+## Release A — Slice S5 — 2026-11-05
+- New piece: Satelink MCP task tools generated from the registry (`apps/mcp-server/src/task-tools.mjs`, satelink-mcp
+  2.2.0, `npm pack` only) + A2A v1.0 Agent Card / JSON-RPC binding (`apps/api/src/routes/a2a_route.js`) +
+  `/.well-known/satelink-capabilities.json`. Both drive the ONE task engine (actor_type `agent`).
+- Agent spend pre-authorization $0 (migration 046, per key): agent tasks are approvable by a key only up to it →
+  HUMAN_APPROVAL_REQUIRED; `POST /v1/tasks/:id/approval-request` records `APPROVAL_REQUESTED` (console banner + timeline).
+- Protocol facts checked against the official A2A spec (a2a.proto `lf.a2a.v1`, docs/specification.md) and the installed
+  MCP SDK: official SDK 1.32.2 negotiates ≤ 2025-11-25 → OB-13 (EXTERNAL); card unsigned (no KeyProvider key).
+- Found + fixed a real defect present since S1: the quote countdown read the clock during SSR → hydration mismatch on
+  every task page. The S4 guard had listened to console errors only; React reports it as a pageerror. S4/S5 E2E now fail
+  on any hydration pageerror (negative control: reverting the fix fails S5).
+- Evidence: agent_s5.integration 6/6; mcp-server node tests 13/13; apps/api unit 93; all non-Docker integration suites
+  green (Docker daemon returns 500 locally; CI covers testcontainers); s5-agent E2E ×3 viewports (official SDK client,
+  stdio `index.js`, approval in the browser, receipt fetched by the agent); S1+S2+S3+S4 E2E re-run green with CI env.
+- Local gotcha: the preview API must run with CI env (`AUTH_PREVIEW_RATE_LIMIT=off`, `PREVIEW_QUOTE_TTL_MS=25000`) or S1
+  expiry/S2 sign-up fail spuriously.
 
 ## Release A — Slice S4 — 2026-11-05
 - New piece: REST/OpenAPI driver — loads the provider's OpenAPI 3.x, calls only declared operationIds, validates request

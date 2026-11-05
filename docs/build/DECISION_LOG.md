@@ -83,3 +83,20 @@ Task-API developer keys live in `developer_api_keys` (migration 045), bound to t
 (`user:<id>`), so there is one identity with a second credential type — not a second identity system (R1).
 Only SHA-256 hashes + a display prefix are stored; scopes are explicit; revocation is immediate; per-key rate limits
 are in-process (fixed window), usage counters are durable (per key per day).
+
+## ADR-9 — 2026-11-05 — Agent commerce surfaces (S5)
+- **MCP tools generated from the registry**: `satelink_discover|quote|request_approval|task_status|receipt` in
+  `apps/mcp-server/src/task-tools.mjs`, built at `tools/list` from `GET /v1/capabilities` (capability enum, categories,
+  catalogue text). Opt-in `SATELINK_MCP_TASK_TOOLS=1`; loopback API only. No approve tool exists.
+- **Agent spend pre-authorization = $0** (migration 046, per key). A task with `actor_type = agent` can be approved by a
+  key only up to that amount → by default only a person in the console approves (`HUMAN_APPROVAL_REQUIRED`, 403). Agent
+  keys from the Developer Hub should omit `tasks:approve` as a second layer.
+- **"Every call creates/advances a run"**: quote creates the run; request_approval advances it (journal event
+  `APPROVAL_REQUESTED`, no state change); status/receipt read it. Discovery is a registry read and creates no run.
+- **MCP revision**: the official TypeScript SDK (latest 1.32.2) negotiates at most 2025-11-25, so the server negotiates
+  2025-11-25 — the fallback revision the mandate names. 2026-07-28 is not hand-rolled (OB-13).
+- **A2A v1.0**: Agent Card per `lf.a2a.v1` (ProtoJSON camelCase, enums by name), one JSONRPC 1.0 interface; methods
+  SendMessage/GetTask/CancelTask on the same task engine; `A2A-Version: 1.0` required (empty = 0.3 → -32009). Satelink
+  AWAITING_APPROVAL ↦ TASK_STATE_AUTH_REQUIRED with the console link. `messageId` is the idempotency key. The card is
+  unsigned in the preview (no KeyProvider key); `signatures` is omitted, never faked.
+- satelink-mcp bumped to 2.2.0 (pack only; publishing is founder action F12).
