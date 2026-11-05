@@ -26,7 +26,10 @@ Evidence keys: **P** = production probe 2026-10-20 (curl transcript in the ledge
 | Planner / quote / approval / simulated money / receipts | VERIFIED | planner 8/8, pricing 8/8, sim_ledger 13/13, task_engine 12/12, tasks_http 7/7 |
 | Postgres reservation store | VERIFIED (preview, JS writer — ADR-5) | sim_ledger parity 13/13; mutation killed |
 | S1 primary journey (browser) | VERIFIED | s1 E2E 15/15 @390/768/1440; axe clean; browser restart drill PASS; CI green ×2 consecutive on de142340 (runs 41898308212/300/215 attempts 1+2); PR #616 |
-| Slices S2–S6 | NOT STARTED | — |
+| S2 food procurement via MCP | VERIFIED (local) — CI pending | food_mcp.integration 8/8; s2-food E2E ×3 viewports; injection + PKCE negative tests; PR #617 |
+| Zomato connector | BLOCKED (EXTERNAL) | terms for automated ordering unverified |
+| Swiggy production integration | BLOCKED (FOUNDER) | no relationship/access; preparation pack SWIGGY_PRODUCTION_APPLICATION.md |
+| Slices S3–S6 | NOT STARTED | — |
 
 ### Release A tech debt
 - Console preview uses `/wallet`; mandate path `/usage` is the existing RPC analytics page (rename decision for P3).
