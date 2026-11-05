@@ -50,6 +50,8 @@ beforeAll(async () => {
   expect(r.errors).toEqual([]);
   expect(r.applied).toContain('040_trading_strategy_evaluations.sql');
   pool = new Pool({ connectionString: dbUrl });
+  // Teardown drops this database WITH (FORCE): an idle client then gets 57P01; ignore only that (see payments_ingest).
+  pool.on('error', (e) => { if ((e as Error & { code?: string }).code !== '57P01') throw e; });
 });
 
 afterAll(async () => {
