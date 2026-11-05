@@ -14,3 +14,4 @@ Status values: BLOCKED (FOUNDER) · BLOCKED (EXTERNAL). Each item lists the defa
 | OB-8 | Review ADR-5 (JS reservation writer + origin/environment columns on the frozen ledger) before any production apply | BLOCKED (FOUNDER) | local/CI only; parity test guards drift | production use of Release A money simulation |
 | OB-9 | #583 alone is unsafe (migration 020 vs 038); merge `build/integration-base` or renumber on #583 | BLOCKED (FOUNDER) | fixed on integration base (042) | Financial OS reservations |
 | OB-10 | OpenRouter: live key optional; PR #579 adapter is draft/unverified | BLOCKED (FOUNDER) | FixtureModelProvider; AC2 = VERIFIED (FIXTURE) | live model routing |
+| OB-11 | Turnstile on sign-up (needs Cloudflare site/secret keys; test keys still call challenges.cloudflare.com) | BLOCKED (FOUNDER) | preview sign-up without CAPTCHA; Better Auth per-IP limits on in production | bot protection on public sign-up |

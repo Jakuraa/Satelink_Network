@@ -1,6 +1,6 @@
 # apps/console — customer console (Next.js, port 3400, console.satelink.network)
 Purpose: signed-in customer product: assistant, tasks, receipts, usage, explore, developer hub.
-Design system: "Signal" tokens (see `packages/ui` / console theme). Every page needs loading, empty and error states and must be keyboard-navigable.
+Design system: "Signal" tokens (`packages/web-ui/src/styles/tokens.css`). Every page needs loading, empty and error states and must be keyboard-navigable.
 
 ## Commands
 `npm run dev` · `npm run build` · `npm run lint` · `npx tsc --noEmit` · Playwright specs under `e2e/` / `tests/e2e/`.
