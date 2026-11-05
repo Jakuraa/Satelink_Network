@@ -35,7 +35,7 @@ export function plain(v) {
   return v;
 }
 
-const INSTRUMENTS = { 'BINANCE:BTCUSDT': PAPER_INSTRUMENTS.BTC_USDT, 'BINANCE:ETHUSDT': PAPER_INSTRUMENTS.ETH_USDT };
+export const INSTRUMENTS = { 'BINANCE:BTCUSDT': PAPER_INSTRUMENTS.BTC_USDT, 'BINANCE:ETHUSDT': PAPER_INSTRUMENTS.ETH_USDT };
 
 /**
  * Closed daily candles with a small in-process cache (1h TTL). Not a dataset
@@ -67,7 +67,7 @@ export function createCandleSource({ provider = new BinanceSpotDataProvider(), c
   };
 }
 
-function familyFor(spec) {
+export function familyFor(spec) {
   if (spec.family === 'sma-crossover') {
     return { id: 'sma-crossover', version: '1.0.0', grid: [spec.params], build: (p) => new SMAcrossoverStrategy({ ...p, horizon: StrategyHorizon.SWING }) };
   }

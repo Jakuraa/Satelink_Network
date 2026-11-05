@@ -8,6 +8,7 @@ import { PlanPanel, QuoteCard } from "./QuoteCard";
 import { SimulationBadge } from "./SimulationBadge";
 import { getTask, newKey, post, type ApiError } from "./taskClient";
 import { ConnectButton } from "./ConnectButton";
+import { TradingResult } from "./TradingResult";
 
 type Ev = { seq: number; from: string | null; to: string; at: string };
 
@@ -89,6 +90,7 @@ export function TaskLive({ initial }: { initial: Task }) {
             onCancel={["AWAITING_APPROVAL", "AWAITING_INPUT", "QUOTED"].includes(task.state) ? () => act("cancel", {}) : undefined}
           />
         )}
+        {task.trading && <TradingResult t={task.trading} />}
         {task.reservation && (
           <section aria-label="Simulated credit" className="flex flex-wrap items-center gap-2 rounded-md border border-sl-border bg-sl-surface px-3 py-2 text-[13px]">
             <span className="text-sl-text-muted">Simulated credit hold:</span>

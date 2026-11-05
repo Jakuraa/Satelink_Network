@@ -4,7 +4,7 @@
  * recursive label-contract walk over every response (R10).
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
+import { freshMigratedDb } from './fresh-db.js';
 import { Pool } from 'pg';
 import express from 'express';
 import request from 'supertest';
@@ -12,7 +12,6 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { applyMigrationsForTest } from './apply-migrations.js';
 import { TaskService } from '../../apps/api/src/workflows/task_service.js';
 import { CapabilityRegistry } from '../../apps/api/src/workflows/capability_registry.js';
 import { createModelRouter } from '../../apps/api/src/workflows/model_router.js';
@@ -25,7 +24,7 @@ import { createTasksRouter } from '../../apps/api/src/routes/tasks_route.js';
 type Any = any; // eslint-disable-line @typescript-eslint/no-explicit-any
 const ROOT = resolve(import.meta.dirname ?? new URL('.', import.meta.url).pathname, '..', '..');
 const PORT = 4800 + Math.floor(Math.random() * 300);
-let container: StartedPostgreSqlContainer; let pool: Pool; let store: ChildProcess; let svc: Any; let app: express.Express;
+let db: Awaited<ReturnType<typeof freshMigratedDb>>; let pool: Pool; let store: ChildProcess; let svc: Any; let app: express.Express;
 
 // Test auth: X-Test-User=<id> with X-Test-Via=session|api_key (the preview server resolves real sessions).
 const resolvePrincipal = async (req: Any) => (req.get('X-Test-User') ? { id: `user:${req.get('X-Test-User')}`, via: req.get('X-Test-Via') || 'api_key' } : null);
@@ -43,9 +42,8 @@ function assertLabelled(node: Any, path = '$'): void {
 }
 
 beforeAll(async () => {
-  container = await new PostgreSqlContainer('postgres:16-alpine').start();
-  const url = container.getConnectionUri();
-  expect((await applyMigrationsForTest(url, join(ROOT, 'database', 'migrations'))).errors).toEqual([]);
+  db = await freshMigratedDb('p2http', join(ROOT, 'database', 'migrations'));
+  const url = db.url;
   pool = new Pool({ connectionString: url, max: 8 });
   store = spawn(process.execPath, [join(ROOT, 'tools', 'mock-digital-store', 'server.mjs')], {
     env: { ...process.env, MOCK_STORE_PORT: String(PORT), MOCK_STORE_STATE: join(mkdtempSync(join(tmpdir(), 'mstore-')), 'o.json') }, stdio: 'ignore',
@@ -59,7 +57,7 @@ beforeAll(async () => {
   app = express();
   app.use('/v1', createTasksRouter(svc, { resolvePrincipal }));
 }, 180_000);
-afterAll(async () => { store?.kill(); await pool?.end(); await container?.stop(); });
+afterAll(async () => { store?.kill(); await pool?.end(); await db?.stop(); });
 
 describe('/v1 task API (P2)', () => {
   it('typed errors: 401 without auth, 400 validation, 404 unknown — each with code/message/retryable/correlation_id', async () => {

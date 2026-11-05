@@ -29,6 +29,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
           {ok ? "Completed" : "Failed — no charge"} <SimulationBadge label={rc.simulation_label} />
         </p>
         <p className="rounded-md border border-sl-warn/60 bg-sl-warn/10 px-3 py-2 text-[13px] font-semibold" data-testid="receipt-label">{rc.simulation_label}</p>
+        {rc.trading_label && <p className="rounded-md border border-sl-market/60 bg-sl-market/10 px-3 py-2 text-[13px] font-semibold" data-testid="receipt-trading-label">{rc.trading_label} · {rc.notice}</p>}
         <div className="grid gap-4 md:grid-cols-2">
           <Panel title="Charges (simulated)">
             <dl className="tnum space-y-1 text-[13px]">

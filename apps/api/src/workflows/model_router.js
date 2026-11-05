@@ -62,7 +62,10 @@ function fixturePlan(text, candidates) {
   for (const [k, s] of Object.entries(c.input_schema?.properties || {})) {
     if (s.type === 'string' && /email/.test(k)) { const e = /[^\s@]+@[^\s@]+\.[^\s@]+/.exec(text); if (e) inputs[k] = e[0].replace(/[.,;]$/, ''); }
     else if (s.type === 'integer' && /usd_minor$/.test(k)) { const d = /\$\s?(\d{1,6})(?:\.(\d{1,2}))?/.exec(text); if (d) inputs[k] = Number(d[1]) * 1_000_000 + Number((d[2] || '').padEnd(2, '0').slice(0, 2)) * 10_000; }
-    else if (s.type === 'string' && /query|description|text|prompt/.test(k)) {
+    else if (s.type === 'string' && Array.isArray(s.enum)) { const hit = s.enum.find((v) => new RegExp(`\\b${v}\\b`, 'i').test(text)); if (hit) inputs[k] = hit; }
+    else if (s.type === 'string' && s.pattern && !/query|description/.test(k)) { const m = new RegExp(s.pattern.replace(/^\^|\$$/g, '')).exec(text); if (m) inputs[k] = m[0]; }
+    else if (s.type === 'string' && /description/.test(k)) { const t = text.trim(); if (t.length >= (s.minLength || 1)) inputs[k] = t.slice(0, s.maxLength || 300); }
+    else if (s.type === 'string' && /query|text|prompt/.test(k)) {
       const q = text.replace(/[^\s@]+@[^\s@]+\.[^\s@]+/g, '').replace(/\$\s?\d+(?:\.\d+)?/g, '')
         .replace(/\b(please|can you|could you|i want to|i'd like to|buy|purchase|order|get me|find me|for me|under|below|max(imum)?|up to|to|and send it|send it|me|a|an)\b/gi, ' ')
         .replace(/\s+/g, ' ').trim();

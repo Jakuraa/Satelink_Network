@@ -8,14 +8,24 @@ categories only (R14); details in `docs/build/evidence/private/` on the build ma
 ## ▶ RESUME CAPSULE — Release State A (updated after each phase)
 1. Mandate: Release State A master prompt v2026-11-04b + founder conditions 1–6 (2026-11-04).
 2. Worktree: `.claude/worktrees/release-a`; stack `build/p0-safety` (#610) → `build/integration-base` (#611) → `build/p2-foundation` → `build/s1-primary-journey`.
-3. Last phase done: **S2** (food over MCP) — VERIFIED, CI all green on `3e7ca49e`. S1 fully verified (2 consecutive green CI runs).
+3. Last phase done: **S3** (Trading AI) — VERIFIED, CI all green on `c3cb8ef3`. S1, S2 VERIFIED.
 4. Last SHA: see `git log -1 build/p0-safety`.
-5. Next sub-step: **S3** Trading AI (branch `build/s3-trading` from `build/s2-food-mcp`; reuse #609 Strategy Lab/PaperBroker).
+5. Next sub-step: **S4** developer procurement (API keys + REST/OpenAPI driver; branch `build/s4-developer` from `build/s3-trading`).
 6. Open risks: E1 JWT secret + webhooks public (OB-1/2); plaintext signer/treasury keys in local stash (OB-3); single-copy backup (OB-5).
 7. Rule: no work touching auth secrets, payment config or production (D-A2); local test credentials only.
 8. Backups: never touch `backups/protected/*.dump`, `docs/release/*.dump` (BACKUP_POSTURE.md).
 9. Blockers: `OPEN_BLOCKERS.md` (7 open, all FOUNDER).
 10. Decisions: `DECISION_LOG.md` (D-A1…D-A5, ADR-1…4).
+
+## Release A — Slice S3 — 2026-11-05
+- New piece: recorded/synthetic market adapter. Evaluate (walk-forward, costs, look-ahead) → deterministic GO/WAIT/REJECT
+  with rule trace → paper order (GO only) → InternalPaperBroker deterministic fill → receipt; all labelled
+  `SIMULATED_PAPER_EXECUTION: NOT_ACTUAL_RETURNS`; Alpaca live host refused; no Indian broker orders.
+- Bug found in E2E: fill verification compared JSONB-round-tripped JSON with `JSON.stringify` → reconciliation;
+  fixed (canonical JSON) and the integration test now covers GO → paper (it previously only reached WAIT).
+- Docker Desktop testcontainers port mapping broke mid-session ("No host port found"); restart did not recover in time →
+  added `fresh-db.ts` (local-server path via LEDGER_TEST_DB; CI keeps testcontainers). New suites 49/49 locally.
+- E2E S1+S2+S3 green ×3 viewports. Draft PR #618 (stacked on #617). Skill `satelink-trading-ai` created.
 
 ## Release A — Slice S2 — 2026-11-05
 - One new infrastructure piece: MCP client driver (official SDK client; lazy, ADR-7 — apps/api lockfile untouched, OB-12).

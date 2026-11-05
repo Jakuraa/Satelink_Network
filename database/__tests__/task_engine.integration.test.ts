@@ -4,13 +4,12 @@
  * Each scenario that spends uses its own user: every user has exactly the $1 promotional credit.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
+import { freshMigratedDb } from './fresh-db.js';
 import { Pool } from 'pg';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { applyMigrationsForTest } from './apply-migrations.js';
 import { TaskService } from '../../apps/api/src/workflows/task_service.js';
 import { CapabilityRegistry, loadSeedEntries } from '../../apps/api/src/workflows/capability_registry.js';
 import { createModelRouter } from '../../apps/api/src/workflows/model_router.js';
@@ -27,7 +26,7 @@ const B = { id: 'user:bob-0002' };
 const C = { id: 'user:carol-0003' };
 const D = { id: 'user:dave-0004' };
 
-let container: StartedPostgreSqlContainer; let pool: Pool; let store: ChildProcess; let now = Date.parse('2026-11-04T10:00:00Z');
+let db: Awaited<ReturnType<typeof freshMigratedDb>>; let pool: Pool; let store: ChildProcess; let now = Date.parse('2026-11-04T10:00:00Z');
 const clock = () => now;
 const connector = createMockStoreConnector({ baseUrl: `http://127.0.0.1:${PORT}` });
 
@@ -45,9 +44,8 @@ describe('task engine (P2) on Postgres + mock store', () => {
   let svc: Any;
 
   beforeAll(async () => {
-    container = await new PostgreSqlContainer('postgres:16-alpine').start();
-    const url = container.getConnectionUri();
-    expect((await applyMigrationsForTest(url, MIGRATIONS_DIR)).errors).toEqual([]);
+    db = await freshMigratedDb('p2engine', MIGRATIONS_DIR);
+    const url = db.url;
     pool = new Pool({ connectionString: url, max: 8 });
     store = spawn(process.execPath, [join(ROOT, 'tools', 'mock-digital-store', 'server.mjs')], {
       env: { ...process.env, MOCK_STORE_PORT: String(PORT), MOCK_STORE_STATE: join(mkdtempSync(join(tmpdir(), 'mstore-')), 'orders.json') }, stdio: 'ignore',
@@ -56,7 +54,7 @@ describe('task engine (P2) on Postgres + mock store', () => {
     svc = await boot();
   }, 180_000);
 
-  afterAll(async () => { store?.kill(); await pool?.end(); await container?.stop(); });
+  afterAll(async () => { store?.kill(); await pool?.end(); await db?.stop(); });
 
   async function quoted(principal: { id: string }, text: string, key: string) {
     const { task } = await svc.createTask(principal, { text, idempotency_key: key });
