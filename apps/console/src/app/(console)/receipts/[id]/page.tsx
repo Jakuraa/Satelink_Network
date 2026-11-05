@@ -37,6 +37,14 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
               <div className="flex justify-between"><dt>Merchant (paid by you at checkout)</dt><dd>{usd(rc.charges.merchant_paid_by_user_usd || "0.000000")}</dd></div>
               <div className="flex justify-between text-sl-text-muted"><dt>Currency</dt><dd>{rc.charges.currency}</dd></div>
             </dl>
+            {rc.payment && (
+              <dl data-testid="receipt-payment" className="tnum mt-2 space-y-1 border-t border-sl-border pt-2 text-[13px]">
+                <div className="flex justify-between"><dt>Paid via</dt><dd>{rc.payment.rail} preview · {rc.payment.network}</dd></div>
+                <div className="flex justify-between gap-2"><dt className="text-sl-text-muted">Payer</dt><dd className="truncate font-mono">{rc.payment.payer}</dd></div>
+                <div className="flex justify-between gap-2"><dt className="text-sl-text-muted">Verified by</dt><dd className="text-right">{rc.payment.verified_by}</dd></div>
+                <div className="flex justify-between gap-2"><dt className="text-sl-text-muted">Settlement</dt><dd className="text-right">{rc.payment.settlement}</dd></div>
+              </dl>
+            )}
           </Panel>
           <Panel title="Verification">
             {rc.verification ? (

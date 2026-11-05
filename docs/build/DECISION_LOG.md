@@ -100,3 +100,18 @@ are in-process (fixed window), usage counters are durable (per key per day).
   AWAITING_APPROVAL ↦ TASK_STATE_AUTH_REQUIRED with the console link. `messageId` is the idempotency key. The card is
   unsigned in the preview (no KeyProvider key); `signatures` is omitted, never faked.
 - satelink-mcp bumped to 2.2.0 (pack only; publishing is founder action F12).
+
+## ADR-10 — 2026-11-05 — x402 V2 preview for machine commerce (S6)
+- `GET /v1/x402/preview/:capability_id?q=…` (preview server only) answers 402 with `PAYMENT-REQUIRED` built with the
+  official `@x402/core` 2.18.0 codecs (already an apps/api dependency — no lockfile change): scheme `exact`, network
+  `eip155:84532` (Base Sepolia testnet), Base Sepolia USDC, zero-address placeholder `payTo`, `extra.simulated = true`.
+- **Amount = the quote's Satelink credit charge only** (the PROPOSED fee). Supplier amounts are never collected by
+  Satelink (forbidden: holding customer money to pay third parties).
+- The verified payment for the exact quote IS the approval (`TaskService.approveWithPayment`, internal only). It is
+  booked as a simulated deposit (`acct_preview_x402_sim` → customer credit, origin `simulated`), then the normal
+  reserve → execute → verify → capture runs. x402-paid tasks get no promotional credit. Revenue truth stays $0.
+- Verification uses a LOCAL mock facilitator (`tools/mock-x402-facilitator`, `/verify` only — `/settle` does not exist)
+  with a documented mock signature scheme; the router refuses a non-loopback facilitator. `PAYMENT-RESPONSE` reports
+  `transaction: ""`, `extra.settled: false`.
+- A test walks the preview server's import graph and fails if any live x402 middleware, vault/deposit listener, RPC
+  credit path or `app_factory.mjs` is reachable, or if reachable code names a vault address / a real facilitator.

@@ -20,6 +20,8 @@ export const SIM_CURRENCY = 'USDC';
 export const SIM_DECIMALS = 6;
 export const PREVIEW_REVENUE_ACCOUNT = 'acct_preview_sim_revenue';
 export const PREVIEW_PROMO_ACCOUNT = 'acct_preview_promo';
+// S6: the simulated counter-account for x402 preview payments (no chain, no facilitator settlement; origin 'simulated').
+export const PREVIEW_X402_CLEARING_ACCOUNT = 'acct_preview_x402_sim';
 export const PROMO_DEMO_CREDIT_MINOR = 1_000_000n; // $1.00 simulated promotional credit
 const PROVENANCE = new Set(['external', 'founder', 'test', 'demo', 'simulated', 'promotional']);
 const ENVIRONMENTS = new Set(['preview', 'beta', 'live']);
@@ -114,9 +116,10 @@ export class SimLedger {
     await this.pool.query(
       `INSERT INTO accounts (id, principal_id, kind, normality, currency, decimals, state) VALUES
          ($1, 'prn_platform', 'revenue', 'credit', $3, $4, 'open'),
-         ($2, 'prn_platform', 'promotional', 'debit', $3, $4, 'open')
+         ($2, 'prn_platform', 'promotional', 'debit', $3, $4, 'open'),
+         ($5, 'prn_platform', 'x402_clearing_sim', 'debit', $3, $4, 'open')
        ON CONFLICT (id) DO NOTHING`,
-      [PREVIEW_REVENUE_ACCOUNT, PREVIEW_PROMO_ACCOUNT, SIM_CURRENCY, SIM_DECIMALS],
+      [PREVIEW_REVENUE_ACCOUNT, PREVIEW_PROMO_ACCOUNT, SIM_CURRENCY, SIM_DECIMALS, PREVIEW_X402_CLEARING_ACCOUNT],
     );
   }
 
@@ -150,6 +153,19 @@ export class SimLedger {
         { account: accounts.customer, direction: 'credit', amount: PROMO_DEMO_CREDIT_MINOR, state: 'posted', refType: 'promotion', refId },
       ],
     }, { origin: 'promotional', environment: 'preview' }));
+  }
+
+  /** S6: credit a verified (MOCK-facilitator) x402 preview payment to the customer. Idempotent on the payment nonce. */
+  async recordX402Payment(accounts, { nonce, amount }) {
+    minor(amount, 'amount');
+    const refId = `x402:${String(nonce).slice(0, 80)}`;
+    return tx(this.pool, (c) => postTxn(c, {
+      txnId: `x402pay:${hash(refId)}`, kind: 'deposit', refType: 'x402_payment', refId, currency: SIM_CURRENCY,
+      entries: [
+        { account: PREVIEW_X402_CLEARING_ACCOUNT, direction: 'debit', amount, state: 'posted', refType: 'x402_payment', refId },
+        { account: accounts.customer, direction: 'credit', amount, state: 'posted', refType: 'x402_payment', refId },
+      ],
+    }, { origin: 'simulated', environment: 'preview' }));
   }
 
   async available(accountId, client = this.pool) {

@@ -32,10 +32,11 @@ Evidence keys: **P** = production probe 2026-10-20 (curl transcript in the ledge
 | S3 Trading AI (evaluate → risk → paper) | VERIFIED | trading_s3.integration 9/9; s3-trading E2E ×3 viewports; live-host refusal test; CI all green on c3cb8ef3; PR #618 |
 | Alpaca paper adapter (live) | BLOCKED (FOUNDER) | needs ALPACA_PAPER_* keys; host pinned to paper-api |
 | S4 Developer procurement (keys + REST/OpenAPI) | VERIFIED | developer_s4.integration 10/10; s4-developer E2E ×3; procure.sh; CI all green on PR #619 |
-| S5 Agent commerce (MCP tools + A2A card/binding) | VERIFIED (local) | agent_s5.integration 6/6; mcp-server node tests 13/13; s5-agent E2E ×3 (official SDK client over stdio); CI on draft PR |
+| S5 Agent commerce (MCP tools + A2A card/binding) | VERIFIED | agent_s5.integration 6/6; mcp-server node tests 13/13; s5-agent E2E ×3 (official SDK client over stdio); CI all green on PR #620 |
 | MCP protocol 2026-07-28 | BLOCKED (EXTERNAL) | official SDK latest 1.32.2 negotiates ≤ 2025-11-25; server negotiates 2025-11-25 (OB-13) |
 | A2A Agent Card JWS signature | NOT STARTED | needs a KeyProvider-held signing key; card ships unsigned (field omitted, not faked) |
-| Slice S6 | NOT STARTED | — |
+| S6 Machine commerce (x402 V2 preview) | VERIFIED (local) | machine_s6.integration 8/8 (incl. import-graph proof: no live x402/vault module reachable); s6-machine E2E ×3; mock facilitator saw only /verify; CI on draft PR |
+| x402 live rail for task capabilities | NOT STARTED | preview uses a LOCAL mock facilitator, testnet id, placeholder payTo; live = Release B founder decision |
 
 ### Release A tech debt
 - Docker Desktop testcontainers port-mapping failures on this machine after long uptime; new suites support LEDGER_TEST_DB.
@@ -57,6 +58,9 @@ Evidence keys: **P** = production probe 2026-10-20 (curl transcript in the ledge
 - satelink-mcp task tools are stdio-only; the Streamable HTTP transport (`http.mjs`) does not expose them.
 - `satelink_discover` is read-only and creates no run (quote/request_approval create/advance runs; status/receipt read them).
 - Task-page quote countdown caused a hydration mismatch since S1 (fixed in S5; E2E now fails on hydration pageerrors).
+- x402 preview: if a paid task then FAILS, the simulated x402 deposit stays as customer credit (a real rail needs a refund path).
+- x402 preview keyless machines are scoped by their Idempotency-Key (it doubles as the bearer for that task's result).
+- Receipt `payment.payer` is a mock address from the scripted client; no signature verification beyond the mock scheme.
 
 ## M1 Identity, tenancy, access
 

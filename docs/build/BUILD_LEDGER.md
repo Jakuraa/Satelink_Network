@@ -7,15 +7,28 @@ categories only (R14); details in `docs/build/evidence/private/` on the build ma
 
 ## ▶ RESUME CAPSULE — Release State A (updated after each phase)
 1. Mandate: Release State A master prompt v2026-11-04b + founder conditions 1–6 (2026-11-04).
-2. Worktree: `.claude/worktrees/release-a`; stack `build/p0-safety` (#610) → `build/integration-base` (#611) → `build/p2-foundation` (#612) → `build/s1-primary-journey` (#616) → `build/s2-food-mcp` (#617) → `build/s3-trading` (#618) → `build/s4-developer` (#619) → `build/s5-mcp-server`.
-3. Last phase done: **S5** (agent commerce: MCP tools + A2A) — VERIFIED locally; CI on the draft PR. S1–S4 VERIFIED (S4 CI all green on #619).
+2. Worktree: `.claude/worktrees/release-a`; stack `build/p0-safety` (#610) → `build/integration-base` (#611) → `build/p2-foundation` (#612) → `build/s1-primary-journey` (#616) → `build/s2-food-mcp` (#617) → `build/s3-trading` (#618) → `build/s4-developer` (#619) → `build/s5-mcp-server` (#620) → `build/s6-machine`.
+3. Last phase done: **S6** (x402 V2 preview) — VERIFIED locally; CI on the draft PR. 🏁 Slices layer finished: S1–S5 VERIFIED with green CI (#616–#620).
 4. Last SHA: see `git log -1 build/p0-safety`.
-5. Next sub-step: **S6** x402 preview (branch `build/s6-machine` from `build/s5-mcp-server`). Remaining spec verbatim: `RELEASE_A_REMAINING_SPEC.md`.
+5. Next sub-step: **P3** product quality pass (branch `build/p3-quality` from `build/s6-machine`). Remaining spec verbatim: `RELEASE_A_REMAINING_SPEC.md`.
 6. Open risks: E1 JWT secret + webhooks public (OB-1/2); plaintext signer/treasury keys in local stash (OB-3); single-copy backup (OB-5).
 7. Rule: no work touching auth secrets, payment config or production (D-A2); local test credentials only.
 8. Backups: never touch `backups/protected/*.dump`, `docs/release/*.dump` (BACKUP_POSTURE.md).
 9. Blockers: `OPEN_BLOCKERS.md` (OB-1…OB-13; OB-13 EXTERNAL = MCP 2026-07-28 not in the official SDK).
-10. Decisions: `DECISION_LOG.md` (D-A1…D-A8, ADR-1…9).
+10. Decisions: `DECISION_LOG.md` (D-A1…D-A8, ADR-1…10).
+
+## Release A — Slice S6 — 2026-11-05
+- New piece: x402 V2 preview (`apps/api/src/routes/x402_preview_route.js`, `apps/api/config/x402.preview.json`), LOCAL
+  mock facilitator (`tools/mock-x402-facilitator`, /verify only), scripted machine client
+  (`scripts/preview/x402-machine-client.mjs`). Official `@x402/core` 2.18.0 header codecs; no dependency change.
+- Payment = approval of the exact quote; amount = Satelink credit charge only; booked as a simulated deposit
+  (origin `simulated`); no promo credit for paid tasks; receipt carries `payment` (rail, network, payer, mock verifier,
+  "no /settle"). Console receipt page shows it.
+- Evidence: machine_s6.integration 8/8 (402 shape, happy path + replay with one capture, tamper/expiry/wrong amount/
+  reused nonce → new 402 and no reservation, facilitator down → 503, key path → owner usage, import-graph proof of no
+  live x402/vault module); s6-machine E2E ×3 viewports (key from the hub, client script, receipt in usage, keyless run,
+  facilitator log = only POST /verify); all Release A E2E S1–S6 green locally; restart drill PASS; sim-ledger parity 13/13.
+- PR #620 (S5) CI all green → S5 VERIFIED.
 
 ## Release A — Slice S5 — 2026-11-05
 - New piece: Satelink MCP task tools generated from the registry (`apps/mcp-server/src/task-tools.mjs`, satelink-mcp
