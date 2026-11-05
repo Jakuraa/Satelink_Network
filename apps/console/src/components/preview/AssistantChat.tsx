@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { STATE_LABEL, usd, type Task } from "@/lib/preview-shared";
+import { STATE_LABEL, SUGGESTED_TASKS, usd, type Task } from "@/lib/preview-shared";
 import { PlanPanel, QuoteCard } from "./QuoteCard";
 import { SimulationBadge } from "./SimulationBadge";
 import { formatMicros, newKey, post, type ApiError } from "./taskClient";
@@ -15,12 +15,11 @@ type Turn =
   | { role: "task"; task: Task }
   | { role: "error"; error: ApiError };
 
-const SUGGESTIONS = ["Buy a sci-fi e-book gift code under $12", "Buy a cookbook e-book gift code", "What can you do?"];
 
-export function AssistantChat({ badge }: { badge: string | null }) {
+export function AssistantChat({ badge, initialPrompt = "" }: { badge: string | null; initialPrompt?: string }) {
   const router = useRouter();
   const [turns, setTurns] = useState<Turn[]>([]);
-  const [text, setText] = useState("");
+  const [text, setText] = useState(initialPrompt);
   const [busy, setBusy] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [ready, setReady] = useState(false); // no native form submit before hydration
@@ -52,7 +51,10 @@ export function AssistantChat({ badge }: { badge: string | null }) {
             <p className="font-medium text-sl-text">Describe the outcome you want.</p>
             <p className="mt-1">Satelink picks a model, finds a capability, plans, quotes, and only acts after you approve. Everything here is simulated — nothing is charged.</p>
             <div className="mt-3 flex flex-wrap gap-2">
-              {SUGGESTIONS.map((s) => <button key={s} type="button" onClick={() => send(s)} className="rounded-full border border-sl-border px-3 py-1 text-[12px] text-sl-text hover:border-sl-accent">{s}</button>)}
+              {SUGGESTED_TASKS.map((s) => s.href
+                ? <Link key={s.domain} href={s.href} className="rounded-full border border-sl-border px-3 py-1 text-[12px] text-sl-text hover:border-sl-accent"><span className="text-sl-text-subtle">{s.domain}: </span>{s.text}</Link>
+                : <button key={s.domain} type="button" disabled={!ready || busy} onClick={() => send(s.text)} data-testid={`suggest-${s.domain}`} className="rounded-full border border-sl-border px-3 py-1 text-left text-[12px] text-sl-text hover:border-sl-accent disabled:opacity-60"><span className="text-sl-text-subtle">{s.domain}: </span>{s.text}</button>)}
+              <button type="button" disabled={!ready || busy} onClick={() => send("What can you do?")} className="rounded-full border border-sl-border px-3 py-1 text-[12px] text-sl-text hover:border-sl-accent disabled:opacity-60">What can you do?</button>
             </div>
           </li>
         )}

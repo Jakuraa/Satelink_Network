@@ -7,15 +7,30 @@ categories only (R14); details in `docs/build/evidence/private/` on the build ma
 
 ## ▶ RESUME CAPSULE — Release State A (updated after each phase)
 1. Mandate: Release State A master prompt v2026-11-04b + founder conditions 1–6 (2026-11-04).
-2. Worktree: `.claude/worktrees/release-a`; stack `build/p0-safety` (#610) → `build/integration-base` (#611) → `build/p2-foundation` (#612) → `build/s1-primary-journey` (#616) → `build/s2-food-mcp` (#617) → `build/s3-trading` (#618) → `build/s4-developer` (#619) → `build/s5-mcp-server` (#620) → `build/s6-machine`.
-3. Last phase done: **S6** (x402 V2 preview) — VERIFIED locally; CI on the draft PR. 🏁 Slices layer finished: S1–S5 VERIFIED with green CI (#616–#620).
+2. Worktree: `.claude/worktrees/release-a`; stack `build/p0-safety` (#610) → `build/integration-base` (#611) → `build/p2-foundation` (#612) → `build/s1-primary-journey` (#616) → `build/s2-food-mcp` (#617) → `build/s3-trading` (#618) → `build/s4-developer` (#619) → `build/s5-mcp-server` (#620) → `build/s6-machine` (#621) → `build/p3-quality`.
+3. Last phase done: **P3** (product quality) — VERIFIED locally; CI on the draft PR. 🏁 Slices S1–S6 all VERIFIED with green CI (#616–#621).
 4. Last SHA: see `git log -1 build/p0-safety`.
-5. Next sub-step: **P3** product quality pass (branch `build/p3-quality` from `build/s6-machine`). Remaining spec verbatim: `RELEASE_A_REMAINING_SPEC.md`.
+5. Next sub-step: **P4** assurance suites (branch `build/p4-assurance` from `build/p3-quality`). Remaining spec verbatim: `RELEASE_A_REMAINING_SPEC.md`.
 6. Open risks: E1 JWT secret + webhooks public (OB-1/2); plaintext signer/treasury keys in local stash (OB-3); single-copy backup (OB-5).
 7. Rule: no work touching auth secrets, payment config or production (D-A2); local test credentials only.
 8. Backups: never touch `backups/protected/*.dump`, `docs/release/*.dump` (BACKUP_POSTURE.md).
 9. Blockers: `OPEN_BLOCKERS.md` (OB-1…OB-13; OB-13 EXTERNAL = MCP 2026-07-28 not in the official SDK).
 10. Decisions: `DECISION_LOG.md` (D-A1…D-A8, ADR-1…10).
+
+## Release A — P3 product quality — 2026-11-05
+- Preview navigation = exactly the approved list (Home · Assistant · My Tasks · Explore · Agent Marketplace · Trading AI ·
+  Connections · Wallet & Usage · Developer & Agent Hub · Activity & Security · Settings); #609 beta pages and live RPC
+  pages are not listed in preview mode. Mobile tabs: Home/Assistant/Tasks/Wallet.
+- New pages: Home (pending approvals widget, six-domain suggestions, recent tasks), Trading AI (labels, strategy
+  prompts, the user's trading tasks), Activity & Security (task activity, active keys, connections), Agent Marketplace
+  (honest "Coming soon", nothing listed). Assistant: six-domain suggestion chips + `?prompt=` prefill (never auto-sent).
+  Hub: Agents (MCP config, A2A card) and Machines (x402 client) sections.
+- Found by the sweep: scrollable code blocks not keyboard-focusable (axe scrollable-region-focusable) → fixed; scope
+  checkboxes below target size (Lighthouse target-size) → fixed.
+- Evidence: p3-quality E2E ×3 viewports (11 pages: 200, h1, axe serious/critical = 0, no horizontal overflow, no
+  hydration error; nav order; pending widget with a real task); Lighthouse accessibility 100 on all 11 pages (local,
+  pinned 12.8.2); console unit 37/37; all E2E S1–S6 + P3 green locally (desktop); lint 0 errors.
+- PR #621 (S6) CI all green → S6 VERIFIED. 🏁 Slices layer finished.
 
 ## Release A — Slice S6 — 2026-11-05
 - New piece: x402 V2 preview (`apps/api/src/routes/x402_preview_route.js`, `apps/api/config/x402.preview.json`), LOCAL

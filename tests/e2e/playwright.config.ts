@@ -4,7 +4,7 @@ import { defineConfig, devices } from "@playwright/test";
 // PREVIEW_QUOTE_TTL_MS=25000). Three viewports per the mandate: 390 / 768 / 1440 px.
 export default defineConfig({
   testDir: ".",
-  testMatch: /s\d-.*\.spec\.ts$/,
+  testMatch: /[sp]\d-.*\.spec\.ts$/,
   fullyParallel: false,
   workers: 1,
   timeout: 120_000,
