@@ -29,9 +29,13 @@ Evidence keys: **P** = production probe 2026-10-20 (curl transcript in the ledge
 | S2 food procurement via MCP | VERIFIED | food_mcp.integration 8/8; s2-food E2E ×3 viewports; injection + PKCE negative tests; CI all green on 3e7ca49e; PR #617 |
 | Zomato connector | BLOCKED (EXTERNAL) | terms for automated ordering unverified |
 | Swiggy production integration | BLOCKED (FOUNDER) | no relationship/access; preparation pack SWIGGY_PRODUCTION_APPLICATION.md |
-| Slices S3–S6 | NOT STARTED | — |
+| S3 Trading AI (evaluate → risk → paper) | VERIFIED (local) — CI pending | trading_s3.integration 9/9; s3-trading E2E ×3 viewports; live-host refusal test; PR #618 |
+| Alpaca paper adapter (live) | BLOCKED (FOUNDER) | needs ALPACA_PAPER_* keys; host pinned to paper-api |
+| Slices S4–S6 | NOT STARTED | — |
 
 ### Release A tech debt
+- Docker Desktop testcontainers port-mapping failures on this machine after long uptime; new suites support LEDGER_TEST_DB.
+- Trading data is synthetic only; a licensed recorded dataset is a founder decision (F32).
 - Console preview uses `/wallet`; mandate path `/usage` is the existing RPC analytics page (rename decision for P3).
 - Turnstile (Cloudflare test keys) not wired on preview sign-up (OB-11).
 - `apps/console/CLAUDE.md` names `packages/ui` for tokens; actual Signal tokens are `packages/web-ui/src/styles/tokens.css`.
