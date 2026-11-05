@@ -184,7 +184,30 @@ export class TaskService {
   }
 
   // ─────────────────────────────────────────────────── approve ────────────────────────────────────────────────
-  async approve(principal, id, { quote_id, quote_version, idempotency_key } = {}) {
+  /**
+   * S6 machine commerce: an x402 preview payment for the exact quote IS the approval. Internal only — the payment
+   * object is never accepted from a request body. The payment was verified by the (local MOCK) facilitator; it is
+   * credited to the customer as a simulated deposit, then the normal reserve → execute → verify → capture runs.
+   */
+  async approveWithPayment(principal, id, { quote_id, quote_version, payment }) {
+    const run = await this._own(principal, id);
+    if (run.approval?.payment) {
+      if (run.approval.payment.nonce === payment.nonce) return { task: await this.view(run), changed: false }; // replay of the same payment
+      throw new TaskError(ERR.ILLEGAL_TRANSITION, 'This task was already paid with a different payment.', { status: 409 });
+    }
+    const quote = typeof quote_id === 'string' ? await this.store.getQuote(quote_id) : null;
+    if (!quote || quote.run_id !== run.id || BigInt(payment.amount_minor) !== BigInt(quote.credit_charge_minor)) {
+      throw new TaskError(ERR.QUOTE_MISMATCH, 'The payment does not match the current quote.', { status: 409 });
+    }
+    if (run.state === 'AWAITING_APPROVAL') {
+      await this.sim.ensurePlatformAccounts();
+      const accounts = await this.sim.ensureCustomer(run.principal, run.actor_type || 'machine');
+      await this.sim.recordX402Payment(accounts, { nonce: payment.nonce, amount: BigInt(payment.amount_minor) });
+    }
+    return this.approve(principal, id, { quote_id, quote_version, idempotency_key: `x402:${String(payment.nonce).slice(0, 100)}` }, { payment });
+  }
+
+  async approve(principal, id, { quote_id, quote_version, idempotency_key } = {}, { payment = null } = {}) {
     let run = await this._own(principal, id);
     if (run.state === 'EXPIRED') throw new TaskError(ERR.QUOTE_EXPIRED, 'The quote expired before approval. Ask for a new quote.', { status: 409, retryable: true });
     if (run.state !== 'AWAITING_APPROVAL') {
@@ -202,7 +225,7 @@ export class TaskService {
     }
     const next = await this._move(run, 'AUTHORIZED', { approval: {
       approved_at: new Date(this.clock()).toISOString(), approved_by: principal.id, quote_id: quote.quote_id, quote_version: quote.version,
-      idempotency_key: typeof idempotency_key === 'string' ? idempotency_key.slice(0, 128) : null } });
+      idempotency_key: typeof idempotency_key === 'string' ? idempotency_key.slice(0, 128) : null, ...(payment ? { payment } : {}) } });
     if (!next) { run = await this._own(principal, id); return { task: await this.view(run), changed: false }; } // a concurrent approve won
     this.dispatch(next.id);
     return { task: await this.view(next), changed: true };
@@ -262,7 +285,7 @@ export class TaskService {
     const quote = await this.store.getQuote(run.approval.quote_id);
     const amount = BigInt(quote.credit_charge_minor);
     const accounts = await this.sim.ensureCustomer(run.principal, run.actor_type || 'human');
-    await this.sim.grantDemoCredit(accounts); // idempotent; the preview's $1 promotional credit
+    if (!run.approval?.payment) await this.sim.grantDemoCredit(accounts); // idempotent; the preview's $1 promotional credit (not for x402-paid tasks)
     try {
       await this.sim.reserve({ reservationId: this._rsvId(run.id), runId: run.id, quoteId: quote.quote_id, accounts, amount, idempotencyKey: `${run.id}:reserve` });
     } catch (e) {
@@ -337,6 +360,7 @@ export class TaskService {
         merchant_payment: 'paid by you directly at the merchant\'s checkout (simulated)' },
       verification: { method: 'order_status_lookup', verified: true, evidence: { order_id: evidence.order_id, status: evidence.status, sku: evidence.sku, price_usd_minor: evidence.price_usd_minor } },
       ledger: { transactions: txns.map((t) => ({ txn_id: t.txnId, kind: t.kind })), ledger_hash: ledgerHash(txns) },
+      ...(run.approval?.payment ? { payment: { ...run.approval.payment, ...SIM } } : {}),
       origin: 'simulated', environment: 'preview', issued_at: issuedAt,
     };
     await this.store.insertReceipt({ receipt_id: receiptId, run_id: run.id, principal: run.principal, body, issued_at: issuedAt });
@@ -467,6 +491,8 @@ export class TaskService {
   }
 
   async getTask(principal, id) { return this.view(await this._own(principal, id)); }
+  /** The x402 preview payment that approved this task (S6), or null. Owner-only. */
+  async paymentFor(principal, id) { return (await this._own(principal, id)).approval?.payment || null; }
   async listTasks(principal, opts) { return Promise.all((await this.store.list(principal.id, opts)).map((r) => this.view(r))); }
   async getReceipt(principal, receiptId) {
     const r = principal?.id && /^rcpt_[0-9a-f]{8,64}$/.test(String(receiptId)) ? await this.store.getReceipt(principal.id, receiptId) : null;

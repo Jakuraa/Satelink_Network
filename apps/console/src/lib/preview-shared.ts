@@ -52,6 +52,8 @@ export type Receipt = {
   charges: { currency: string; credits_charged_usd: string; merchant_paid_by_user_usd?: string; merchant_payment: string };
   verification?: { method: string; verified: boolean; evidence: Record<string, unknown> };
   ledger: { transactions: { txn_id: string; kind: string }[]; ledger_hash: string };
+  /** S6: the x402 preview payment that approved the task (mock facilitator; never settled). */
+  payment?: { rail: string; network: string; payer: string; amount_minor: string; verified_by: string; settlement: string };
   issued_at: string; receipt_sha256: string;
 };
 export type Capability = {

@@ -1,0 +1,14 @@
+{
+  "note": "Release A x402 PREVIEW (Slice S6). Testnet network id only, a placeholder payTo, a LOCAL mock facilitator. Never the live rail: the live x402 middleware (apps/api/src/payments/x402) and the USDT/Polygon vault are not imported by the preview.",
+  "x402Version": 2,
+  "scheme": "exact",
+  "network": "eip155:84532",
+  "network_name": "Base Sepolia (testnet)",
+  "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+  "asset_name": "USDC",
+  "asset_eip712": { "name": "USDC", "version": "2" },
+  "asset_decimals": 6,
+  "pay_to_placeholder": "0x0000000000000000000000000000000000000000",
+  "max_timeout_seconds": 120,
+  "facilitator": "local mock (tools/mock-x402-facilitator) — /verify only; no /settle exists"
+}

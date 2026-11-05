@@ -19,6 +19,7 @@ import { PgDurableStore } from '../src/vnext/reliability/pg_durable_store.js';
 import { PgRunStore } from '../src/workflows/run_store.js';
 import { createTasksRouter } from '../src/routes/tasks_route.js';
 import { createA2aRouter } from '../src/routes/a2a_route.js';
+import { createX402PreviewRouter } from '../src/routes/x402_preview_route.js';
 import { ConnectionStore } from '../src/workflows/connectors/oauth_pkce.js';
 import { createMcpFoodConnector } from '../src/workflows/connectors/mcp_food_connector.js';
 import { createTradingConnector } from '../src/workflows/connectors/trading_connector.js';
@@ -111,6 +112,7 @@ app.get('/preview/mailbox', (req, res) => {
   res.json({ ok: true, preview: true, mail });
 });
 app.use(createA2aRouter(svc, { resolvePrincipal, publicBaseUrl: API_ORIGIN, consoleOrigin: CONSOLE_ORIGIN }));
+app.use('/v1', createX402PreviewRouter(svc, { resolvePrincipal, facilitatorUrl: process.env.MOCK_FACILITATOR_URL || 'http://127.0.0.1:4440', publicBaseUrl: API_ORIGIN }));
 app.use('/v1', createTasksRouter(svc, { resolvePrincipal, connections, developerKeys, consoleOrigin: CONSOLE_ORIGIN }));
 // Local operator check (preview only): ledger ↔ steps ↔ receipts.
 app.post('/preview/reconcile', async (_req, res) => { res.json({ ok: true, ...(await svc.reconcile()) }); });
