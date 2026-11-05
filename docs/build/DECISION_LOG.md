@@ -60,3 +60,12 @@ writer and requires identical ledger postings, so drift fails CI. Simulated rese
 nullable columns; NULL = historical/unclassified, excluded from revenue). Production apply of any migration
 stays founder-only. Because libs/CLAUDE.md declares the Financial OS architecture frozen, this is recorded as a
 founder review item (OB-8) before any production use.
+
+## D-A8 — 2026-11-04 — Preview currency: USD quotes, USDC/6 simulated ledger, no FX
+The kernel `Money` knows only USDC/USDT (adding a currency = new Financial OS primitive, frozen). Quotes are
+USD integer micro-units; the simulated ledger records them as USDC/6 (1 minor unit = 1 micro-USD), labelled
+simulated. INR users see "priced in USD (INR display not available in preview)". No exchange rate is invented.
+
+## ADR-6 — 2026-11-04 — One outbox/worker for tasks
+#609's DurableKernel (`wf_journal` + `wf_idempotency` + `wf_dlq`) is the outbox for task steps. Recovery runs
+at boot and one in-process sweep expires quotes, approvals and reservations. No BullMQ path and no second queue.

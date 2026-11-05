@@ -52,9 +52,12 @@ async function insertKind(url: string, kind: string): Promise<'ok' | string> {
   const c = new Client({ connectionString: url });
   await c.connect();
   try {
+    // From 043 on, reservation postings must carry origin + environment (R5); tag them when the columns exist.
+    const { rows } = await c.query(`SELECT 1 FROM information_schema.columns WHERE table_name = 'ledger_txns' AND column_name = 'origin'`);
+    const tagged = rows.length > 0;
     await c.query(
-      `INSERT INTO ledger_txns (txn_id, kind, ref_type, ref_id, currency, state, posted_at)
-       VALUES ($1, $2, 'reservation', $1, 'USDT', 'posted', now())`,
+      `INSERT INTO ledger_txns (txn_id, kind, ref_type, ref_id, currency, state, posted_at${tagged ? ', origin, environment' : ''})
+       VALUES ($1, $2, 'reservation', $1, 'USDT', 'posted', now()${tagged ? ", 'test', 'preview'" : ''})`,
       [`rsv:test:${kind}:${Math.random()}`, kind],
     );
     return 'ok';

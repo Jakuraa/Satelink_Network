@@ -119,7 +119,7 @@ export class WorkflowService {
     this.runs = runStore || new MemoryRunStore();
   }
 
-  async _boot({ store, connectors, candleSource, evaluationStore = null, env = process.env, fetchImpl } = {}) {
+  async _boot({ store, connectors, candleSource, evaluationStore = null, env = process.env, fetchImpl, extraAdapters = [], registerExtraSuppliers = null } = {}) {
     await this.runs.ensureDefinitions(Object.values(TEMPLATES));
     this.connectors = connectors || {
       jsonrpc_balance: createJsonRpcBalanceConnector({ env, fetchImpl }),
@@ -145,6 +145,9 @@ export class WorkflowService {
       if (c.id === 'market_data.candles') continue;
       registry.register(new CapabilityProcurementAdapter({ catalog: this.catalog, connectors: this.connectors, capability: c.id }));
     }
+    // Release A: generic task-step adapters register on the SAME kernel (one engine, R1).
+    for (const a of extraAdapters) registry.register(a);
+    if (registerExtraSuppliers) registerExtraSuppliers(this.supplierRegistry);
     this.registry = registry;
     this.dk = await DurableKernel.boot({
       store: store || new MemoryDurableStore(),
@@ -433,6 +436,8 @@ export class WorkflowService {
   async recover() {
     const out = { finalized: [], resubmitted: [] };
     for (const run of await this.runs.listOpenRuns()) {
+      // Release A task runs are recovered by TaskService (verify-then-decide), never re-driven here.
+      if (!TEMPLATES[run.template]) continue;
       const phases = this.dk.journal.read(run.id).map((e) => e.phase);
       let tx;
       if (phases.includes('CLOSED')) tx = await this.dk.kernel.execute(run._request, { txId: run.id });

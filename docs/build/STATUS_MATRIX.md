@@ -20,14 +20,19 @@ Evidence keys: **P** = production probe 2026-10-20 (curl transcript in the ledge
 | Integration base (#609+#582+#583) | VERIFIED | PR #611; api baseline guard no new failures (933/940, 4 known); integration 214/214; libs 300/300 |
 | #583 migration conflict | VERIFIED (fixed on base) | `5bc1073a`; reservation-kind test 1/3 → 3/3 |
 | Local runtime (Postgres) | VERIFIED | `scripts/preview/local-db.sh` (Homebrew :5432 and Docker :55432) |
-| Workflow engine (mandate state set) | NOT STARTED | P2.1 (extends #609 `workflow_service.js`) |
-| Unified capability registry | NOT STARTED | P2.2 (two catalogs today) |
-| Model routing (OpenRouter) | NOT STARTED | no adapter on base; #579 draft |
-| Planner / quote / approval / simulated money / receipts | NOT STARTED | P2.4–P2.5 |
-| Postgres reservation store | NOT STARTED | in-memory only (#583) |
+| Workflow engine (mandate state set) | VERIFIED | task_state_machine 8/8; task_engine 12/12; restart drill PASS ×2 |
+| Unified capability registry | VERIFIED | capability_registry_unified 9/9; R9 on Postgres (task_engine) |
+| Model routing (OpenRouter) | VERIFIED (FIXTURE) | model_router 7/7 (fake fetch); no live key (OB-10) |
+| Planner / quote / approval / simulated money / receipts | VERIFIED | planner 8/8, pricing 8/8, sim_ledger 13/13, task_engine 12/12, tasks_http 7/7 |
+| Postgres reservation store | VERIFIED (preview, JS writer — ADR-5) | sim_ledger parity 13/13; mutation killed |
 | Slices S1–S6 | NOT STARTED | — |
 
 ### Release A tech debt
+- Timing-sensitive apps/api tests flake under high machine load (api_keys limiter, identity rate limits, SEC-5, x402 r7); testcontainers port-mapping flake under parallel load.
+- Two OpenRouter adapters once #579 lands (workflows/model_router.js vs trading_agent/providers/openrouter.mjs) → consolidate.
+- Task engine executes single-step plans (multi-step quoting supported; execution uses step 1) → extend before multi-step slices.
+- TS integration tests import JS modules without .d.ts (editor-only warnings; CI does not typecheck database/__tests__).
+- `/v1` task API mounted only by the preview server; production mount is a Release B decision.
 - `workflows/supplier_catalog.js:190` and `workload_adapters.js:80,92` convert money to JS numbers (fix on touched paths).
 - Workflow recovery runs lazily on first request, not at boot.
 - `libs/CLAUDE.md` 316 lines (over the 150 target; founder-owned).

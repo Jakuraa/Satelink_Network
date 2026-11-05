@@ -1,0 +1,92 @@
+{
+  "version": 1,
+  "note": "Release A preview capability registry. Mock suppliers are named '(MOCK)'. release_status SIMULATED = executes against a local mock; nothing is purchased, no money moves. Supplier-catalog offers (config/supplier_catalog.v1.json) are merged in as additional providers by the registry module.",
+  "capabilities": [
+    {
+      "id": "shop.digital_goods.purchase",
+      "version": 1,
+      "name": "Buy a digital product",
+      "description": "Find and buy a digital product (gift code, e-book, software licence) from a store, with a quote and your approval before anything is ordered.",
+      "category": "shopping",
+      "tags": ["shopping", "digital goods", "gift card", "ebook", "software", "licence", "voucher", "buy", "purchase"],
+      "intents": ["buy", "purchase", "order", "gift"],
+      "input_schema": {
+        "type": "object",
+        "required": ["product_query", "max_price_usd_minor"],
+        "additionalProperties": false,
+        "properties": {
+          "product_query": { "type": "string", "minLength": 2, "maxLength": 120, "description": "What to buy" },
+          "max_price_usd_minor": { "type": "integer", "minimum": 1, "maximum": 500000000, "description": "Highest product price you accept, in micro-USD" },
+          "recipient_email": { "type": "string", "maxLength": 200, "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$" }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "required": ["order_id", "sku", "price_usd_minor", "delivery"],
+        "properties": {
+          "order_id": { "type": "string" }, "sku": { "type": "string" },
+          "price_usd_minor": { "type": "integer" }, "delivery": { "type": "string" }
+        }
+      },
+      "providers": [
+        { "id": "demo_digital_store_mock", "name": "Demo Digital Store (MOCK)", "kind": "mock", "connector": "mock_store", "terms_url": null }
+      ],
+      "connector_type": "native",
+      "interface_meta": { "native": { "adapter": "mock_store" } },
+      "skill_refs": [],
+      "credential_requirements": [],
+      "permission_scope": "tasks:purchase",
+      "markets": ["GLOBAL"],
+      "currencies": ["USD"],
+      "price_model": { "kind": "merchant_price", "merchant_price_from": "provider_catalog" },
+      "fee_policy_id": "procurement_10pct_min_2000",
+      "commercial_rights": { "resale_allowed": false, "terms_url": null, "evidence": "Mock supplier for the preview; no commercial relationship exists." },
+      "security_class": "standard",
+      "timeout_ms": 10000,
+      "idempotency": { "required": true, "scope": "order" },
+      "retry": { "max_attempts": 2, "on": ["UPSTREAM_TIMEOUT"] },
+      "verification": { "method": "order_status_lookup", "evidence_fields": ["order_id", "status", "sku", "price_usd_minor"] },
+      "refund_policy": "Preview: nothing is charged; a failed order releases the simulated hold.",
+      "availability": "local_mock",
+      "release_status": "SIMULATED",
+      "environment": "preview",
+      "internal_only": false,
+      "last_verified_at": null,
+      "last_verified_evidence": "tests/e2e/s1-primary-journey.spec.ts (local mock)"
+    },
+    {
+      "id": "ai.model.inference",
+      "version": 1,
+      "name": "AI model routing",
+      "description": "Satelink selects an allowlisted model through OpenRouter for each assistant turn (fixture model when no live key is configured).",
+      "category": "ai",
+      "tags": ["ai", "model", "inference", "assistant", "chat"],
+      "intents": ["chat", "explain", "plan"],
+      "input_schema": { "type": "object", "required": ["messages"], "properties": { "messages": { "type": "array", "maxItems": 50 } } },
+      "output_schema": { "type": "object", "required": ["text", "served_by"], "properties": { "text": { "type": "string" }, "served_by": { "type": "string" } } },
+      "providers": [ { "id": "openrouter", "name": "OpenRouter", "kind": "model_router", "connector": "openrouter", "terms_url": "https://openrouter.ai/terms" } ],
+      "connector_type": "rest",
+      "interface_meta": { "rest": { "base": "https://openrouter.ai/api/v1", "auth": "OPENROUTER_API_KEY (optional; fixture without it)" } },
+      "skill_refs": [],
+      "credential_requirements": ["OPENROUTER_API_KEY (optional)"],
+      "permission_scope": "assistant:chat",
+      "markets": ["GLOBAL"],
+      "currencies": ["USD"],
+      "price_model": { "kind": "metered_tokens", "source": "upstream usage.cost" },
+      "fee_policy_id": "inference_markup_20pct",
+      "commercial_rights": { "resale_allowed": null, "terms_url": "https://openrouter.ai/terms", "evidence": "Not reviewed — founder action before live use." },
+      "security_class": "untrusted_output",
+      "timeout_ms": 30000,
+      "idempotency": { "required": false },
+      "retry": { "max_attempts": 1, "on": [] },
+      "verification": { "method": "response_contract", "evidence_fields": ["served_by", "generation_id"] },
+      "refund_policy": "Preview: inference cost is simulated and never charged.",
+      "availability": "fixture_without_key",
+      "release_status": "PREVIEW",
+      "environment": "preview",
+      "internal_only": true,
+      "last_verified_at": null,
+      "last_verified_evidence": "apps/api/test/model_router.test.js (fixture)"
+    }
+  ]
+}
