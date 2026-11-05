@@ -6,7 +6,7 @@
 import { validate, assertSupportedSchema } from '../schema_lite.js';
 import { TaskError } from '../errors.js';
 
-const LOOPBACK = new Set(['127.0.0.1', 'localhost', '::1', '[::1]']);
+import { assertEgressUrl, egressFetch } from './egress_guard.js';
 const METHODS = ['get', 'post', 'put', 'patch', 'delete'];
 
 function strip(schema) {
@@ -19,8 +19,8 @@ function strip(schema) {
 }
 
 export async function loadOpenApi({ baseUrl, fetchImpl = globalThis.fetch, timeoutMs = 10_000 }) {
-  const u = new URL(baseUrl);
-  if (!LOOPBACK.has(u.hostname)) throw new Error('OpenAPI provider must be a loopback URL in the preview');
+  const u = assertEgressUrl(baseUrl, { what: 'OpenAPI provider' });
+  fetchImpl = egressFetch(fetchImpl, { what: 'OpenAPI provider' });
   const res = await fetchImpl(`${u.origin}/openapi.json`, { signal: AbortSignal.timeout(timeoutMs) });
   const doc = await res.json();
   if (!res.ok || !/^3\./.test(String(doc?.openapi || ''))) throw new Error('not an OpenAPI 3.x document');
@@ -93,7 +93,8 @@ export function createOpenApiDataConnector({ baseUrl, fetchImpl }) {
       const job = await (await client()).call('getExtraction', { params: { idempotency_key: idempotencyKey } });
       if (!job) return { verified: false, found: false, reason: 'no_job_for_key' };
       const ok = job.status === 'completed' && job.price_usd_minor === offer.price_usd_minor;
-      return { verified: ok, found: true, reason: ok ? null : 'job_mismatch', evidence: { order_id: job.job_id, status: job.status, sku: offer.sku, price_usd_minor: job.price_usd_minor } };
+      return { verified: ok, found: true, reason: ok ? null : 'job_mismatch', evidence: { order_id: job.job_id, status: job.status, sku: offer.sku, price_usd_minor: job.price_usd_minor },
+        ...(ok ? { result: { job_id: job.job_id, status: job.status, result: job.result, price_usd_minor: job.price_usd_minor } } : {}) };
     },
   };
 }

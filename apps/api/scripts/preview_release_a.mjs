@@ -20,6 +20,7 @@ import { PgRunStore } from '../src/workflows/run_store.js';
 import { createTasksRouter } from '../src/routes/tasks_route.js';
 import { createA2aRouter } from '../src/routes/a2a_route.js';
 import { createX402PreviewRouter } from '../src/routes/x402_preview_route.js';
+import { securityHeaders } from '../src/routes/security_headers.js';
 import { ConnectionStore } from '../src/workflows/connectors/oauth_pkce.js';
 import { createMcpFoodConnector } from '../src/workflows/connectors/mcp_food_connector.js';
 import { createTradingConnector } from '../src/workflows/connectors/trading_connector.js';
@@ -98,6 +99,7 @@ const resolvePrincipal = async (req) => {
 
 const app = express();
 app.disable('x-powered-by');
+app.use(securityHeaders());
 app.get('/health', async (_req, res) => {
   const { rows } = await pool.query('SELECT 1 AS ok');
   res.json({ ok: rows[0].ok === 1, preview: true, simulated: true, model: svc.router.fixture ? 'fixture' : 'openrouter', model_badge: svc.router.badge });

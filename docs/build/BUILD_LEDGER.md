@@ -7,15 +7,28 @@ categories only (R14); details in `docs/build/evidence/private/` on the build ma
 
 ## ▶ RESUME CAPSULE — Release State A (updated after each phase)
 1. Mandate: Release State A master prompt v2026-11-04b + founder conditions 1–6 (2026-11-04).
-2. Worktree: `.claude/worktrees/release-a`; stack `build/p0-safety` (#610) → `build/integration-base` (#611) → `build/p2-foundation` (#612) → `build/s1-primary-journey` (#616) → `build/s2-food-mcp` (#617) → `build/s3-trading` (#618) → `build/s4-developer` (#619) → `build/s5-mcp-server` (#620) → `build/s6-machine` (#621) → `build/p3-quality`.
-3. Last phase done: **P3** (product quality) — VERIFIED locally; CI on the draft PR. 🏁 Slices S1–S6 all VERIFIED with green CI (#616–#621).
+2. Worktree: `.claude/worktrees/release-a`; stack `build/p0-safety` (#610) → `build/integration-base` (#611) → `build/p2-foundation` (#612) → `build/s1-primary-journey` (#616) → `build/s2-food-mcp` (#617) → `build/s3-trading` (#618) → `build/s4-developer` (#619) → `build/s5-mcp-server` (#620) → `build/s6-machine` (#621) → `build/p3-quality` (#622) → `build/p4-assurance`.
+3. Last phase done: **P4** (assurance suites) — VERIFIED locally; CI on the draft PR. P3 VERIFIED (CI green #622). Slices S1–S6 VERIFIED (#616–#621).
 4. Last SHA: see `git log -1 build/p0-safety`.
-5. Next sub-step: **P4** assurance suites (branch `build/p4-assurance` from `build/p3-quality`). Remaining spec verbatim: `RELEASE_A_REMAINING_SPEC.md`.
+5. Next sub-step: **P5** websites match the preview — PR only, no deploy (branch `build/p5-websites` from `build/p4-assurance`). Remaining spec verbatim: `RELEASE_A_REMAINING_SPEC.md`.
 6. Open risks: E1 JWT secret + webhooks public (OB-1/2); plaintext signer/treasury keys in local stash (OB-3); single-copy backup (OB-5).
 7. Rule: no work touching auth secrets, payment config or production (D-A2); local test credentials only.
 8. Backups: never touch `backups/protected/*.dump`, `docs/release/*.dump` (BACKUP_POSTURE.md).
-9. Blockers: `OPEN_BLOCKERS.md` (OB-1…OB-13; OB-13 EXTERNAL = MCP 2026-07-28 not in the official SDK).
-10. Decisions: `DECISION_LOG.md` (D-A1…D-A8, ADR-1…10).
+9. Blockers: `OPEN_BLOCKERS.md` (OB-1…OB-14; OB-14 = 4 CRITICAL production dependency advisories incl. next RCE + better-auth takeover — founder priority).
+10. Decisions: `DECISION_LOG.md` (D-A1…D-A8, ADR-1…11).
+
+## Release A — P4 assurance — 2026-11-05
+- Traceability: `docs/build/ASSURANCE_P4.md` (every requirement → test → CI job).
+- New: `assurance_p4.integration` 17/17 (authz matrix 30 cases, rate limit, CSRF, SSRF redirect, oversize, headers,
+  prompt injection ×3 channels, concurrent approvals, racing x402 payments, ledger-wide Σdebits=Σcredits + origin tags +
+  no leaked holds + receipt hashes + reconcile, trading determinism, crash-after-supplier durability for S1/S2/S3/S4–S6);
+  `p4-adversarial` E2E (XSS/CSRF); `egress_guard` unit; `no-float-money` arch rule (tripwire); npm audit gate in CI.
+- Defects found and fixed: IPv4-mapped IPv6 SSRF bypass; redirects followed by all connectors; racing x402 double
+  deposit; trading crash recovery → reconciliation; deliverable lost after recovery; chat could not start extract tasks
+  (S4 gap; P3 suggestion was dead — sweep now proves every suggestion); preview API without security headers.
+- Surfaced, founder-only: 4 critical production advisories (next RCE, better-auth takeover, proxy-addr, dompurify) → OB-14.
+- Evidence: unit 96; mcp-server 13/13; all non-Docker integration suites green (assurance 17/17); all 13 E2E green
+  (desktop) locally; restart drill PASS; arch 11/11.
 
 ## Release A — P3 product quality — 2026-11-05
 - Preview navigation = exactly the approved list (Home · Assistant · My Tasks · Explore · Agent Marketplace · Trading AI ·

@@ -15,10 +15,10 @@ import { fileURLToPath } from 'node:url';
 import express from 'express';
 import { encodePaymentRequiredHeader, decodePaymentSignatureHeader, encodePaymentResponseHeader } from '@x402/core/http';
 import { TaskError } from '../workflows/errors.js';
+import { assertEgressUrl, egressFetch } from '../workflows/connectors/egress_guard.js';
 
 const CFG_FILE = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'config', 'x402.preview.json');
 const SIM_LABEL = 'SIMULATED — NO MONEY MOVED';
-const LOOPBACK = new Set(['127.0.0.1', 'localhost', '::1', '[::1]']);
 const IDEM = /^[A-Za-z0-9._:-]{8,100}$/;
 const TRANSITIONAL = ['CREATED', 'UNDERSTANDING', 'PLANNING', 'QUOTED', 'AUTHORIZED', 'RESERVED', 'EXECUTING', 'UNKNOWN_EXECUTION_OUTCOME', 'VERIFYING'];
 
@@ -42,8 +42,9 @@ export function requirementsFor(cfg, task, capabilityId) {
 }
 
 export function createX402PreviewRouter(svc, { resolvePrincipal, facilitatorUrl, publicBaseUrl, cfg = loadX402PreviewConfig(), pollMs = 100, maxWaitMs = 30_000 }) {
-  const fac = new URL(facilitatorUrl);
-  if (!LOOPBACK.has(fac.hostname)) throw new Error('x402 preview: the facilitator must be the LOCAL mock (loopback URL)');
+  let fac;
+  try { fac = assertEgressUrl(facilitatorUrl, { what: 'x402 facilitator' }); } catch { throw new Error('x402 preview: the facilitator must be the LOCAL mock (loopback URL)'); }
+  const facFetch = egressFetch(globalThis.fetch, { what: 'x402 facilitator' });
   const r = express.Router();
   const wait = async (p, id, until) => {
     let t = await svc.getTask(p, id);
@@ -101,7 +102,7 @@ export function createX402PreviewRouter(svc, { resolvePrincipal, facilitatorUrl,
         try { payload = decodePaymentSignatureHeader(header); } catch { return send402('invalid_payment_signature_header'); }
         let verdict;
         try {
-          const vr = await fetch(`${fac.origin}/verify`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ x402Version: 2, paymentPayload: payload, paymentRequirements: requirements }), signal: AbortSignal.timeout(10_000) });
+          const vr = await facFetch(`${fac.origin}/verify`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ x402Version: 2, paymentPayload: payload, paymentRequirements: requirements }), signal: AbortSignal.timeout(10_000) });
           verdict = await vr.json();
         } catch {
           return err(res, 503, 'FACILITATOR_UNAVAILABLE', 'The (mock) facilitator did not answer. Nothing was charged.');

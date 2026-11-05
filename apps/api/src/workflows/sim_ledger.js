@@ -155,12 +155,13 @@ export class SimLedger {
     }, { origin: 'promotional', environment: 'preview' }));
   }
 
-  /** S6: credit a verified (MOCK-facilitator) x402 preview payment to the customer. Idempotent on the payment nonce. */
-  async recordX402Payment(accounts, { nonce, amount }) {
+  /** S6: credit a verified (MOCK-facilitator) x402 preview payment to the customer. At most one per task (txn id
+   *  keyed by the run), so a second payment can never double-credit. */
+  async recordX402Payment(accounts, { runId, nonce, amount }) {
     minor(amount, 'amount');
     const refId = `x402:${String(nonce).slice(0, 80)}`;
     return tx(this.pool, (c) => postTxn(c, {
-      txnId: `x402pay:${hash(refId)}`, kind: 'deposit', refType: 'x402_payment', refId, currency: SIM_CURRENCY,
+      txnId: `x402pay:${hash(String(runId))}`, kind: 'deposit', refType: 'x402_payment', refId, currency: SIM_CURRENCY,
       entries: [
         { account: PREVIEW_X402_CLEARING_ACCOUNT, direction: 'debit', amount, state: 'posted', refType: 'x402_payment', refId },
         { account: accounts.customer, direction: 'credit', amount, state: 'posted', refType: 'x402_payment', refId },

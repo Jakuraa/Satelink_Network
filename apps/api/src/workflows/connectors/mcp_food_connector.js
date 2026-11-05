@@ -56,7 +56,7 @@ export function createMcpFoodConnector({ url, connectorId, connections }) {
         if (!items.length) return null;
         const cart = await s.call('build_cart', { restaurant_id: r.id, items: items.map(({ item_id, qty }) => ({ item_id, qty })) });
         if (typeof cart?.cart_id !== 'string' || !isMinor(cart.total_usd_minor) || !Array.isArray(cart.lines)) throw new TaskError('SUPPLIER_FAILED', 'The restaurant returned an invalid cart.', { status: 502 });
-        if (cart.total_usd_minor > Number(inputs.max_total_usd_minor)) return null;
+        if (BigInt(cart.total_usd_minor) > BigInt(inputs.max_total_usd_minor)) return null;
         const summary = cart.lines.map((l) => `${Number(l.qty)} × ${String(l.name).slice(0, 60)}`).join(', ');
         return {
           supplier_cost_minor: BigInt(cart.total_usd_minor),
@@ -83,7 +83,8 @@ export function createMcpFoodConnector({ url, connectorId, connections }) {
         if (!o) return { verified: false, found: false, reason: 'no_order_for_key' };
         const ok = o.status === 'confirmed' && o.total_usd_minor === offer.price_usd_minor && o.restaurant_id === offer.restaurant_id;
         return { verified: ok, found: true, reason: ok ? null : 'order_mismatch',
-          evidence: { order_id: String(o.order_id), status: String(o.status), sku: offer.cart_id, price_usd_minor: o.total_usd_minor } };
+          evidence: { order_id: String(o.order_id), status: String(o.status), sku: offer.cart_id, price_usd_minor: o.total_usd_minor },
+          ...(ok ? { result: { order_id: String(o.order_id), status: String(o.status), total_usd_minor: o.total_usd_minor } } : {}) };
       } finally { await s.close(); }
     },
   };
