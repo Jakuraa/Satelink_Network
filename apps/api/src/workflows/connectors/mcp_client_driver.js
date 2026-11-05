@@ -5,7 +5,7 @@
 // Every tool result is UNTRUSTED DATA (R7): it is returned as parsed JSON for the caller to shape-check; nothing in it
 // can approve, pay, change permissions or alter a plan.
 
-const LOOPBACK = new Set(['127.0.0.1', 'localhost', '::1', '[::1]']);
+import { assertEgressUrl, egressFetch } from './egress_guard.js';
 
 export class McpToolError extends Error {
   constructor(tool, message) { super(`${tool}: ${message}`); this.name = 'McpToolError'; this.tool = tool; this.toolMessage = message; }
@@ -15,14 +15,13 @@ export class McpToolError extends Error {
  * @param {object} o — url (MCP endpoint; loopback in the preview), token (bearer), timeoutMs
  */
 export async function openMcpSession({ url, token, timeoutMs = 10_000 }) {
-  const u = new URL(url);
-  if (!LOOPBACK.has(u.hostname)) throw new Error('MCP server must be a loopback URL in the preview');
+  const u = assertEgressUrl(url, { what: 'MCP server' });
   const [{ Client }, { StreamableHTTPClientTransport }] = await Promise.all([
     import('@modelcontextprotocol/sdk/client/index.js'),
     import('@modelcontextprotocol/sdk/client/streamableHttp.js'),
   ]);
   const client = new Client({ name: 'satelink-connector-gateway', version: '0.1.0' });
-  const transport = new StreamableHTTPClientTransport(u, { requestInit: { headers: { authorization: `Bearer ${token}` } } });
+  const transport = new StreamableHTTPClientTransport(u, { fetch: egressFetch(globalThis.fetch, { what: 'MCP server' }), requestInit: { headers: { authorization: `Bearer ${token}` } } });
   await client.connect(transport, { timeout: timeoutMs });
   let tools = null;
   return {

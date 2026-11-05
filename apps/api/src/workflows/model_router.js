@@ -24,8 +24,12 @@ export function loadRouting(file = CONFIG) { return JSON.parse(fs.readFileSync(f
 
 const PLAN_WORDS = /\b(buy|purchase|order|book|get me|find me|procure|backtest|evaluate|simulate|paper[- ]trade|send|pay for|subscribe|download|gift)\b/i;
 /** Rule-based route classification (also the fixture intent classifier). */
-export function classify(text) {
-  return PLAN_WORDS.test(String(text || '')) ? 'plan' : 'conversation';
+/** intents: extra action words declared by the capability registry (R9), so new capabilities need no code change here. */
+export function classify(text, intents = []) {
+  const t = String(text || '');
+  if (PLAN_WORDS.test(t)) return 'plan';
+  const words = intents.filter((w) => /^[a-z][a-z -]{1,30}$/i.test(w)).map((w) => w.replace(/[-\s]+/g, '[- ]'));
+  return words.length && new RegExp(`\\b(${words.join('|')})\\b`, 'i').test(t) ? 'plan' : 'conversation';
 }
 
 /** Exact decimal (number or string, incl. exponent) USD → BigInt micro-USD, rounded up. Upstream cost only. */

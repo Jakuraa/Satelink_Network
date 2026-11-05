@@ -90,6 +90,17 @@ function evaluate(spec, candles, clock) {
  * @param {object} o — evaluationStore (PgEvaluationStore — append-only, #609 migration 040), candleSource, clock
  */
 export function createTradingConnector({ evaluationStore, candleSource = createRecordedCandleSource(), clock = () => Date.now() }) {
+  /** Deterministic evaluation for an evaluation offer (clock anchored to offer.as_of when present). */
+  async function evaluationResult(offer) {
+    const problems = validateSpec(offer.spec);
+    if (problems.length) throw new TaskError('VALIDATION_FAILED', problems.join('; '), { status: 400 });
+    const candles = await candleSource.load(offer.spec.market.instrument_id);
+    const ev = evaluate(offer.spec, candles, offer.as_of ? () => Date.parse(offer.as_of) : clock);
+    const scorecard = toScorecard(offer.spec, ev, DATA_SOURCE);
+    return { ev, result: { kind: 'evaluation', evaluation_id: scorecard.evaluation_id, result_hash: scorecard.result_hash, dataset_hash: datasetHash(candles),
+      dataset_label: DATASET_LABEL, scorecard, risk: decide(scorecard), label: TRADING_LABEL, notice: ADVICE_NOTICE } };
+  }
+
   async function goEvaluation(evaluationId) {
     const e = evaluationId ? await evaluationStore.get(String(evaluationId)) : null;
     if (!e) throw new TaskError('VALIDATION_FAILED', 'Unknown strategy evaluation.', { status: 400 });
@@ -109,7 +120,9 @@ export function createTradingConnector({ evaluationStore, candleSource = createR
           throw new TaskError('STRATEGY_NOT_SUPPORTED', `I can't evaluate that strategy yet: ${why}`.slice(0, 400), { status: 400 });
         }
         return { supplier_cost_minor: 0n, description: `Walk-forward evaluation of ${c.spec.family} on ${c.spec.market.instrument_id} (synthetic data)`,
-          offer: { kind: 'evaluation', sku: specId(c.spec), title: `${c.spec.family} ${JSON.stringify(c.spec.params)} on ${c.spec.market.instrument_id}`, price_usd_minor: 0, spec: c.spec } };
+          // as_of anchors the evaluation clock to the quote: the same quote always yields the same evaluation id, so a
+          // re-execution after a crash is a replay (DuplicateEvaluationError) and recovery can verify without a result.
+          offer: { kind: 'evaluation', sku: specId(c.spec), title: `${c.spec.family} ${JSON.stringify(c.spec.params)} on ${c.spec.market.instrument_id}`, price_usd_minor: 0, spec: c.spec, as_of: new Date(clock()).toISOString() } };
       }
       if (inputs.evaluation_id) {
         const { e, risk } = await goEvaluation(inputs.evaluation_id);
@@ -127,12 +140,9 @@ export function createTradingConnector({ evaluationStore, candleSource = createR
       if (offer.kind === 'evaluation') {
         const problems = validateSpec(offer.spec);
         if (problems.length) throw new TaskError('VALIDATION_FAILED', problems.join('; '), { status: 400 });
-        const candles = await candleSource.load(offer.spec.market.instrument_id);
-        const ev = evaluate(offer.spec, candles, clock);
-        try { await evaluationStore.append(ev); } catch (e) { if (e?.name !== 'DuplicateEvaluationError') throw e; }
-        const scorecard = toScorecard(offer.spec, ev, DATA_SOURCE);
-        return { kind: 'evaluation', evaluation_id: scorecard.evaluation_id, result_hash: scorecard.result_hash, dataset_hash: datasetHash(candles),
-          dataset_label: DATASET_LABEL, scorecard, risk: decide(scorecard), label: TRADING_LABEL, notice: ADVICE_NOTICE };
+        const out = await evaluationResult(offer);
+        try { await evaluationStore.append(out.ev); } catch (e) { if (e?.name !== 'DuplicateEvaluationError') throw e; }
+        return out.result;
       }
       if (offer.kind === 'paper_order') {
         const { risk } = await goEvaluation(offer.evaluation_id); // re-checked at execution, not only at quote
@@ -145,6 +155,15 @@ export function createTradingConnector({ evaluationStore, candleSource = createR
 
     /** Independent checks: the evaluation exists in the append-only store with the same hash and decision; a fill re-computes. */
     async verifyStep({ idempotencyKey, offer, result }) {
+      if (!result && offer.kind === 'evaluation' && offer.as_of) {
+        // Recovery after a crash (no recorded result): recompute the deterministic evaluation and look for it.
+        const { ev, result: expected } = await evaluationResult(offer);
+        const e = await evaluationStore.get(ev.evaluationId);
+        if (!e) return { verified: false, found: false, reason: 'evaluation_not_recorded' };
+        const ok = e.resultHash === ev.resultHash;
+        return { verified: ok, found: true, reason: ok ? null : 'evaluation_mismatch', result: ok ? expected : undefined,
+          evidence: { order_id: e.evaluationId, status: `evaluated:${expected.risk.decision}`, sku: offer.sku, price_usd_minor: 0 } };
+      }
       if (!result) return { verified: false, found: false, reason: 'no_result' };
       if (offer.kind === 'evaluation') {
         const e = await evaluationStore.get(String(result.evaluation_id || ''));

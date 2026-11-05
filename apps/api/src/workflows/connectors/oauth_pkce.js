@@ -5,8 +5,8 @@
 
 import crypto from 'node:crypto';
 import { TaskError, ERR } from '../errors.js';
+import { assertEgressUrl, egressFetch } from './egress_guard.js';
 
-const LOOPBACK = new Set(['127.0.0.1', 'localhost', '::1', '[::1]']);
 const b64url = (buf) => buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
 export function pkcePair() {
@@ -31,10 +31,7 @@ export function openToken({ ciphertext, iv, tag }, keyHex) {
   return Buffer.concat([d.update(Buffer.from(ciphertext, 'base64')), d.final()]).toString('utf8');
 }
 
-function assertLoopback(u, what) {
-  const x = new URL(u);
-  if (!LOOPBACK.has(x.hostname) || !['http:', 'https:'].includes(x.protocol)) throw new Error(`${what} must be a loopback URL in the preview`);
-}
+const assertLoopback = (u, what) => assertEgressUrl(u, { what });
 
 /**
  * @param {object} o — pool, keyHex, connectors: { [connectorId]: { issuer, clientId, scopes, redirectUri } }, fetchImpl, clock
@@ -43,7 +40,7 @@ export class ConnectionStore {
   constructor({ pool, keyHex, connectors, fetchImpl = globalThis.fetch, clock = () => Date.now() }) {
     keyFrom(keyHex);
     for (const [id, c] of Object.entries(connectors)) { assertLoopback(c.issuer, `${id} issuer`); assertLoopback(c.redirectUri, `${id} redirectUri`); }
-    Object.assign(this, { pool, keyHex, connectors, fetch: fetchImpl, clock });
+    Object.assign(this, { pool, keyHex, connectors, fetch: egressFetch(fetchImpl, { what: 'OAuth token endpoint' }), clock });
   }
 
   _cfg(id) {
