@@ -8,9 +8,9 @@ categories only (R14); details in `docs/build/evidence/private/` on the build ma
 ## ▶ RESUME CAPSULE — Release State A (updated after each phase)
 1. Mandate: Release State A master prompt v2026-11-04b + founder conditions 1–6 (2026-11-04).
 2. Worktree: `.claude/worktrees/release-a`; stack `build/p0-safety` (#610) → `build/integration-base` (#611) → `build/p2-foundation` → `build/s1-primary-journey`.
-3. Last phase done: **S2** (food over MCP) — local gates met; CI on #617 pending. S1 fully verified (2 consecutive green CI runs).
+3. Last phase done: **S2** (food over MCP) — VERIFIED, CI all green on `3e7ca49e`. S1 fully verified (2 consecutive green CI runs).
 4. Last SHA: see `git log -1 build/p0-safety`.
-5. Next sub-step: confirm #617 CI green → **S3** Trading AI (branch `build/s3-trading` from `build/s2-food-mcp`; reuse #609 Strategy Lab/PaperBroker).
+5. Next sub-step: **S3** Trading AI (branch `build/s3-trading` from `build/s2-food-mcp`; reuse #609 Strategy Lab/PaperBroker).
 6. Open risks: E1 JWT secret + webhooks public (OB-1/2); plaintext signer/treasury keys in local stash (OB-3); single-copy backup (OB-5).
 7. Rule: no work touching auth secrets, payment config or production (D-A2); local test credentials only.
 8. Backups: never touch `backups/protected/*.dump`, `docs/release/*.dump` (BACKUP_POSTURE.md).
