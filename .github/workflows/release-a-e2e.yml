@@ -35,6 +35,7 @@ jobs:
       AUTH_PREVIEW_RATE_LIMIT: 'off'
       MOCK_STORE_URL: http://127.0.0.1:4410
       MOCK_FOOD_URL: http://127.0.0.1:4420
+      MOCK_DATA_URL: http://127.0.0.1:4430
       NODE_ENV: development
     steps:
       - uses: actions/checkout@v7
@@ -64,6 +65,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/preview"
           MOCK_STORE_PORT=4410 MOCK_STORE_STATE="$RUNNER_TEMP/preview/orders.json" nohup node tools/mock-digital-store/server.mjs > "$RUNNER_TEMP/preview/store.log" 2>&1 &
           MOCK_FOOD_PORT=4420 MOCK_FOOD_STATE="$RUNNER_TEMP/preview/food.json" nohup node tools/mock-food-mcp/server.mjs > "$RUNNER_TEMP/preview/food.log" 2>&1 &
+          MOCK_DATA_PORT=4430 MOCK_DATA_STATE="$RUNNER_TEMP/preview/data.json" nohup node tools/mock-data-api/server.mjs > "$RUNNER_TEMP/preview/data.log" 2>&1 &
           DATABASE_URL_LOCAL="$PG_BASE/satelink_e2e" PREVIEW_STATE_DIR="$RUNNER_TEMP/preview" nohup node apps/api/scripts/preview_release_a.mjs > "$RUNNER_TEMP/preview/api.log" 2>&1 &
           (cd apps/console && SATELINK_PREVIEW=1 SATELINK_API_BASE=http://127.0.0.1:4500 CONSOLE_ORIGINS=http://localhost:3400 NODE_ENV=production nohup npx next start -p 3400 > "$RUNNER_TEMP/preview/console.log" 2>&1 &)
           for i in $(seq 1 90); do curl -sf http://127.0.0.1:4500/health >/dev/null && curl -sf -o /dev/null http://localhost:3400/sign-in && break; sleep 2; done

@@ -91,6 +91,7 @@ export function TaskLive({ initial }: { initial: Task }) {
           />
         )}
         {task.trading && <TradingResult t={task.trading} />}
+        {task.output && <StepOutput output={task.output} />}
         {task.reservation && (
           <section aria-label="Simulated credit" className="flex flex-wrap items-center gap-2 rounded-md border border-sl-border bg-sl-surface px-3 py-2 text-[13px]">
             <span className="text-sl-text-muted">Simulated credit hold:</span>
@@ -119,5 +120,21 @@ export function TaskLive({ initial }: { initial: Task }) {
         )}
       </aside>
     </div>
+  );
+}
+
+// Supplier output: plain text only (never HTML, never links) — it is untrusted (R7).
+function StepOutput({ output }: { output: Record<string, unknown> }) {
+  const body = (output.result && typeof output.result === "object" ? output.result : output) as Record<string, unknown>;
+  const show = (v: unknown) => (Array.isArray(v) ? (v.length ? v.map(String).join(", ") : "none") : typeof v === "object" && v !== null ? JSON.stringify(v) : String(v));
+  return (
+    <section aria-label="Result" data-testid="task-output" className="rounded-md border border-sl-border bg-sl-surface px-3 py-2 text-[13px]">
+      <h2 className="mb-1 font-medium text-sl-text">Result <span className="text-[12px] font-normal text-sl-text-muted">(from the supplier — simulated)</span></h2>
+      <dl className="grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1">
+        {Object.entries(body).slice(0, 12).map(([k, v]) => (
+          <div key={k} className="contents"><dt className="text-sl-text-muted">{k.replace(/_/g, " ")}</dt><dd className="break-all" data-testid={`output-${k}`}>{show(v)}</dd></div>
+        ))}
+      </dl>
+    </section>
   );
 }

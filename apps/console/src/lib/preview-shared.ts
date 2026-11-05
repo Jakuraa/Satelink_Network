@@ -27,6 +27,8 @@ export type Task = {
   receipt_id: string | null;
   error: { code: string; message: string; retryable: boolean } | null;
   trading: TradingResult | null;
+  /** Owner-only step output from a supplier (schema-checked by its connector, untrusted — rendered as text only). */
+  output?: Record<string, unknown> | null;
 };
 export type TradingResult = {
   kind: "evaluation" | "paper_order"; label: string; notice: string;

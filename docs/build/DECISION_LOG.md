@@ -76,3 +76,10 @@ invalid edge: `@coinbase/cdp-sdk` wants `@x402/evm ^2.25.0`, lock has 2.18.0) �
 dependency in the production deploy lockfile. Decision: the S2 MCP client driver loads `@modelcontextprotocol/sdk@1.29.0`
 lazily from the workspace install (already present via `apps/mcp-server`) and is constructed only by the local preview
 server; production never imports it. Declare the dependency once OB-12 is resolved. (Attempted and reverted, nothing committed.)
+
+## ADR-8 — 2026-11-05 — Developer API keys for the task API (S4)
+The existing `/api/keys` keys belong to the live RPC credit money path (`api_credits`) — off-limits in Release A.
+Task-API developer keys live in `developer_api_keys` (migration 045), bound to the SAME Better Auth principal
+(`user:<id>`), so there is one identity with a second credential type — not a second identity system (R1).
+Only SHA-256 hashes + a display prefix are stored; scopes are explicit; revocation is immediate; per-key rate limits
+are in-process (fixed window), usage counters are durable (per key per day).

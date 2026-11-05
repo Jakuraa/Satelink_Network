@@ -141,7 +141,9 @@ describe('/v1 task API (P2)', () => {
     const H = as('csvuser');
     const c = await request(app).post('/v1/tasks').set(H).send({ text: '=HYPERLINK("x") buy a cookbook e-book gift code under $8', idempotency_key: 'csv-0000001' });
     const t = c.body.task;
-    await request(app).post(`/v1/tasks/${t.id}/approve`).set(H).send({ quote_id: t.quote.quote_id, quote_version: t.quote.version });
+    // API-key approvals must be replay-safe (S4): no Idempotency-Key → 400 IDEMPOTENCY_KEY_REQUIRED.
+    expect((await request(app).post(`/v1/tasks/${t.id}/approve`).set(H).send({ quote_id: t.quote.quote_id, quote_version: t.quote.version })).body.error.code).toBe('IDEMPOTENCY_KEY_REQUIRED');
+    await request(app).post(`/v1/tasks/${t.id}/approve`).set({ ...H, 'Idempotency-Key': 'csv-approve-0001' }).send({ quote_id: t.quote.quote_id, quote_version: t.quote.version });
     await svc.drain();
     const d = (await request(app).get(`/v1/tasks/${t.id}`).set(H)).body.task;
     const csv = (await request(app).get(`/v1/receipts/${d.receipt_id}?format=csv`).set(H)).text;
