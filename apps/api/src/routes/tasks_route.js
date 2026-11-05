@@ -44,15 +44,18 @@ function csv(receipt) {
  * @param {import('../workflows/task_service.js').TaskService} svc
  * @param {{ resolvePrincipal(req): Promise<{id:string, via:'session'|'api_key', actor_type?:string}|null> }} opts
  */
-export function createTasksRouter(svc, { resolvePrincipal, connections = null, consoleOrigin = 'http://localhost:3400' }) {
+export function createTasksRouter(svc, { resolvePrincipal, connections = null, developerKeys = null, consoleOrigin = 'http://localhost:3400' }) {
   const r = express.Router();
   r.use(express.json({ limit: '32kb' }));
 
-  const authed = (fn, { mutating = false } = {}) => async (req, res) => {
+  // scope: required scope for API-key callers ('session' = console session only). Session users hold every scope.
+  const authed = (fn, { mutating = false, scope = null } = {}) => async (req, res) => {
     try {
       const p = await resolvePrincipal(req);
       if (!p?.id) throw new TaskError('UNAUTHENTICATED', 'Sign in first.', { status: 401 });
       if (mutating && p.via === 'session' && req.get('X-Satelink-Console') !== '1') throw new TaskError('CSRF', 'Missing console request header.', { status: 403 });
+      if (p.via === 'api_key' && scope === 'session') throw new TaskError('FORBIDDEN_SCOPE', 'This action needs a signed-in console session.', { status: 403 });
+      if (p.via === 'api_key' && scope && p.scopes && !p.scopes.includes(scope)) throw new TaskError('FORBIDDEN_SCOPE', `This key lacks the "${scope}" scope.`, { status: 403 });
       await fn(req, res, p);
     } catch (e) { send(res, e); }
   };
@@ -75,7 +78,7 @@ export function createTasksRouter(svc, { resolvePrincipal, connections = null, c
   r.post('/onboarding', authed(async (req, res, p) => {
     const actor = ['human', 'developer', 'agent', 'machine'].includes(req.body?.actor_type) ? req.body.actor_type : 'human';
     res.json({ ok: true, onboarding: await svc.onboard(p, { actor_type: actor }) });
-  }, { mutating: true }));
+  }, { mutating: true, scope: 'session' }));
 
   r.post('/assistant/messages', authed(async (req, res, p) => {
     const text = typeof req.body?.text === 'string' ? req.body.text : '';
@@ -87,19 +90,24 @@ export function createTasksRouter(svc, { resolvePrincipal, connections = null, c
     const candidates = await svc.registry.search({ q: text });
     const out = await svc.router.complete({ policy: 'conversation', messages: [{ role: 'user', content: text }], context: { candidates } });
     res.json({ ok: true, kind: 'reply', reply: out.text, served_by: out.served_by, cost_usd: formatUsd(out.cost_minor), fixture: out.fixture, model_badge: svc.router.badge });
-  }, { mutating: true }));
+  }, { mutating: true, scope: 'tasks:create' }));
 
   r.post('/tasks', authed(async (req, res, p) => {
     const { task, replayed } = await svc.createTask(p, { text: req.body?.text, idempotency_key: req.body?.idempotency_key, actor_type: req.body?.actor_type || p.actor_type || 'human' });
     res.status(replayed ? 200 : 201).json({ ok: true, task, replayed });
-  }, { mutating: true }));
+  }, { mutating: true, scope: 'tasks:create' }));
   r.get('/tasks', authed(async (req, res, p) => {
     res.json({ ok: true, ...SIM, tasks: await svc.listTasks(p, { limit: Number(req.query.limit) || 50 }) });
-  }));
-  r.get('/tasks/:id', authed(async (req, res, p) => { res.json({ ok: true, task: await svc.getTask(p, req.params.id) }); }));
-  r.post('/tasks/:id/input', authed(async (req, res, p) => { res.json({ ok: true, ...(await svc.provideInput(p, req.params.id, req.body || {})) }); }, { mutating: true }));
-  r.post('/tasks/:id/approve', authed(async (req, res, p) => { res.json({ ok: true, ...(await svc.approve(p, req.params.id, req.body || {})) }); }, { mutating: true }));
-  r.post('/tasks/:id/cancel', authed(async (req, res, p) => { res.json({ ok: true, ...(await svc.cancel(p, req.params.id)) }); }, { mutating: true }));
+  }, { scope: 'tasks:read' }));
+  r.get('/tasks/:id', authed(async (req, res, p) => { res.json({ ok: true, task: await svc.getTask(p, req.params.id) }); }, { scope: 'tasks:read' }));
+  r.post('/tasks/:id/input', authed(async (req, res, p) => { res.json({ ok: true, ...(await svc.provideInput(p, req.params.id, req.body || {})) }); }, { mutating: true, scope: 'tasks:create' }));
+  r.post('/tasks/:id/approve', authed(async (req, res, p) => {
+    const key = req.get('Idempotency-Key') || req.body?.idempotency_key;
+    // Machine callers must make approval replay-safe explicitly.
+    if (p.via === 'api_key' && (typeof key !== 'string' || !/^[A-Za-z0-9._:-]{8,128}$/.test(key))) throw new TaskError('IDEMPOTENCY_KEY_REQUIRED', 'Send an Idempotency-Key header (8–128 characters) to approve via the API.', { status: 400 });
+    res.json({ ok: true, ...(await svc.approve(p, req.params.id, { ...(req.body || {}), idempotency_key: key })) });
+  }, { mutating: true, scope: 'tasks:approve' }));
+  r.post('/tasks/:id/cancel', authed(async (req, res, p) => { res.json({ ok: true, ...(await svc.cancel(p, req.params.id)) }); }, { mutating: true, scope: 'tasks:create' }));
 
   r.get('/tasks/:id/events', authed(async (req, res, p) => {
     await svc.getTask(p, req.params.id); // owner check (404 otherwise) before streaming anything
@@ -117,7 +125,7 @@ export function createTasksRouter(svc, { resolvePrincipal, connections = null, c
     const timer = setInterval(() => { push().catch(() => {}); }, 500);
     req.on('close', () => { closed = true; clearInterval(timer); });
     await push();
-  }));
+  }, { scope: 'tasks:read' }));
 
   r.get('/receipts/:id', authed(async (req, res, p) => {
     const receipt = await svc.getReceipt(p, req.params.id);
@@ -126,16 +134,16 @@ export function createTasksRouter(svc, { resolvePrincipal, connections = null, c
       return res.send(csv(receipt));
     }
     res.json({ ok: true, receipt });
-  }));
-  r.get('/usage', authed(async (_req, res, p) => { res.json({ ok: true, usage: await svc.usage(p) }); }));
+  }, { scope: 'receipts:read' }));
+  r.get('/usage', authed(async (_req, res, p) => { res.json({ ok: true, usage: await svc.usage(p) }); }, { scope: 'usage:read' }));
 
   // ── Connector connections (OAuth 2.1 + PKCE; S2). The callback is bound to its single-use state, not a session.
   if (connections) {
-    r.get('/connections', authed(async (_req, res, p) => { res.json({ ok: true, connections: await connections.list(p.id) }); }));
+    r.get('/connections', authed(async (_req, res, p) => { res.json({ ok: true, connections: await connections.list(p.id) }); }, { scope: 'session' }));
     r.post('/connections/:id/start', authed(async (req, res, p) => {
       res.json({ ok: true, ...(await connections.start(p.id, req.params.id, { returnTo: req.body?.return_to || '/connections' })) });
-    }, { mutating: true }));
-    r.post('/connections/:id/revoke', authed(async (req, res, p) => { res.json({ ok: true, ...(await connections.revoke(p.id, req.params.id)) }); }, { mutating: true }));
+    }, { mutating: true, scope: 'session' }));
+    r.post('/connections/:id/revoke', authed(async (req, res, p) => { res.json({ ok: true, ...(await connections.revoke(p.id, req.params.id)) }); }, { mutating: true, scope: 'session' }));
     r.get('/connections/:id/callback', async (req, res) => {
       try {
         const done = await connections.finish({ state: req.query.state, code: req.query.code, error: req.query.error });
@@ -150,5 +158,53 @@ export function createTasksRouter(svc, { resolvePrincipal, connections = null, c
     });
   }
 
+  // ── Developer keys (S4) — managed from a console session only; a key can never mint or list keys.
+  if (developerKeys) {
+    r.get('/developer/keys', authed(async (_req, res, p) => { res.json({ ok: true, keys: await developerKeys.list(p.id) }); }, { scope: 'session' }));
+    r.post('/developer/keys', authed(async (req, res, p) => { res.status(201).json({ ok: true, key: await developerKeys.create(p.id, req.body || {}) }); }, { mutating: true, scope: 'session' }));
+    r.post('/developer/keys/:id/revoke', authed(async (req, res, p) => { res.json({ ok: true, ...(await developerKeys.revoke(p.id, req.params.id)) }); }, { mutating: true, scope: 'session' }));
+  }
+
+  // ── Generated OpenAPI (routes + registry capabilities). Public.
+  r.get('/openapi.json', async (_req, res) => {
+    try { res.json(await openApiDocument(svc)); } catch (e) { send(res, e); }
+  });
+
   return r;
+}
+
+const ERROR = { type: 'object', required: ['code', 'message', 'retryable', 'correlation_id'], properties: { code: { type: 'string' }, message: { type: 'string' }, retryable: { type: 'boolean' }, correlation_id: { type: 'string' } } };
+const SIMULATED = { simulated: { type: 'boolean', const: true }, simulation_label: { type: 'string', const: 'SIMULATED — NO MONEY MOVED' } };
+
+/** OpenAPI 3.1 for the preview task API, generated from the route table above and the live registry. */
+export async function openApiDocument(svc) {
+  const caps = await svc.registry.search({ q: '' });
+  const op = (summary, scope, extra = {}) => ({ summary, security: [{ apiKey: [] }, { session: [] }], 'x-required-scope': scope,
+    responses: { 200: { description: 'OK' }, 401: { description: 'Unauthenticated', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } }, 403: { description: 'Missing scope' } }, ...extra });
+  return {
+    openapi: '3.1.0',
+    info: { title: 'Satelink task API (preview)', version: '0.1.0-preview',
+      description: 'Release A local preview. Everything is simulated: no money moves, nothing is purchased. Fees are PROPOSED — NOT APPROVED.' },
+    servers: [{ url: '/v1' }],
+    components: {
+      securitySchemes: { apiKey: { type: 'http', scheme: 'bearer', description: 'Developer key (slk_preview_…), scoped' }, session: { type: 'apiKey', in: 'cookie', name: 'satelink.session_token' } },
+      schemas: { Error: ERROR, Simulated: { type: 'object', properties: SIMULATED } },
+    },
+    'x-capabilities': caps.map((c) => ({ id: c.id, name: c.name, release_status: c.release_status, fee_policy_id: c.fee_policy_id, input_schema: c.input_schema })),
+    paths: {
+      '/capabilities': { get: { summary: 'Search the capability registry', parameters: ['q', 'intent', 'market', 'status'].map((n) => ({ name: n, in: 'query', schema: { type: 'string' } })), responses: { 200: { description: 'Capabilities' } } } },
+      '/capabilities/{id}': { get: { summary: 'One capability', parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }], responses: { 200: { description: 'Capability' }, 404: { description: 'Not found' } } } },
+      '/tasks': {
+        post: op('Create a task from an intent (plan + quote; nothing executes before approval)', 'tasks:create', { requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['text', 'idempotency_key'], properties: { text: { type: 'string' }, idempotency_key: { type: 'string' }, actor_type: { type: 'string', enum: ['human', 'developer', 'agent', 'machine'] } } } } } } }),
+        get: op('List your tasks', 'tasks:read'),
+      },
+      '/tasks/{id}': { get: op('Task detail incl. plan, quote, reservation, output', 'tasks:read') },
+      '/tasks/{id}/events': { get: op('Server-sent events: state timeline', 'tasks:read') },
+      '/tasks/{id}/input': { post: op('Answer the pending question', 'tasks:create') },
+      '/tasks/{id}/approve': { post: op('Approve the exact quote (id + version). API keys must send Idempotency-Key.', 'tasks:approve', { parameters: [{ name: 'Idempotency-Key', in: 'header', required: false, schema: { type: 'string' } }] }) },
+      '/tasks/{id}/cancel': { post: op('Cancel before execution', 'tasks:create') },
+      '/receipts/{id}': { get: op('Immutable receipt (JSON, or ?format=csv)', 'receipts:read') },
+      '/usage': { get: op('Usage, simulated spend, promotional credit, external revenue ($0.00)', 'usage:read') },
+    },
+  };
 }

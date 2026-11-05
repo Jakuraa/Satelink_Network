@@ -451,6 +451,8 @@ export class TaskService {
       receipt_id: run.receipt_id, error: run.error || null,
       // First-party trading results only (external supplier output is never echoed into the view).
       trading: ['evaluation', 'paper_order'].includes(run.result?.steps?.[0]?.data?.kind) ? run.result.steps[0].data : null,
+      // The step output the owner asked for (schema-checked by its connector; rendered as text; never used to decide anything).
+      output: run.result?.steps?.[0]?.data && !['evaluation', 'paper_order'].includes(run.result.steps[0].data.kind) ? run.result.steps[0].data : null,
     };
   }
 

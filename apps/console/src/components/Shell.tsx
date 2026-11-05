@@ -63,6 +63,7 @@ const PREVIEW_NAV: NavItem[] = [
   { href: "/explore", label: "Explore", key: "g", icon: Compass, group: "Preview" },
   { href: "/wallet", label: "Wallet & Usage", key: "v", icon: Receipt, group: "Preview" },
   { href: "/connections", label: "Connections", key: "n", icon: Plug, group: "Preview" },
+  { href: "/developer-hub", label: "Developer Hub", key: "h", icon: KeyRound, group: "Preview" },
 ];
 const withPreview = (items: NavItem[]) => [items[0], ...PREVIEW_NAV, ...items.slice(1)];
 

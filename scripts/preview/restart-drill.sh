@@ -22,7 +22,7 @@ H=(-H 'X-Preview-Key: sk_preview_local_drill' -H 'content-type: application/json
 T=$(curl -sf "${H[@]}" -X POST "$API/v1/tasks" -d '{"text":"Buy a sci-fi e-book gift code under $12","idempotency_key":"drill-000000001"}')
 ID=$(echo "$T" | jq -r .task.id); QID=$(echo "$T" | jq -r .task.quote.quote_id); QV=$(echo "$T" | jq -r .task.quote.version)
 echo "task $ID state $(echo "$T" | jq -r .task.state)"
-curl -sf "${H[@]}" -X POST "$API/v1/tasks/$ID/approve" -d "{\"quote_id\":\"$QID\",\"quote_version\":$QV}" | jq -r '"approved → " + .task.state'
+curl -sf "${H[@]}" -H "Idempotency-Key: drill-approve-$ID" -X POST "$API/v1/tasks/$ID/approve" -d "{\"quote_id\":\"$QID\",\"quote_version\":$QV}" | jq -r '"approved → " + .task.state'
 for _ in $(seq 1 40); do S=$(curl -sf "${H[@]}" "$API/v1/tasks/$ID" | jq -r .task.state); [ "$S" = EXECUTING ] && break; sleep 0.1; done
 echo "state before kill: $S"; [ "$S" = EXECUTING ] || { echo "FAIL: never observed EXECUTING"; exit 1; }
 kill -9 "$API_PID"; wait "$API_PID" 2>/dev/null || true; API_PID=""

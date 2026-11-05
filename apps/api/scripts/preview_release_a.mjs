@@ -21,6 +21,8 @@ import { createTasksRouter } from '../src/routes/tasks_route.js';
 import { ConnectionStore } from '../src/workflows/connectors/oauth_pkce.js';
 import { createMcpFoodConnector } from '../src/workflows/connectors/mcp_food_connector.js';
 import { createTradingConnector } from '../src/workflows/connectors/trading_connector.js';
+import { createOpenApiDataConnector } from '../src/workflows/connectors/rest_openapi_driver.js';
+import { DeveloperKeys } from '../src/workflows/developer_keys.js';
 import { PgEvaluationStore } from '../src/trading/engine/index.js';
 import { getBetterAuth, mountBetterAuth } from '../src/auth/better_auth.mjs';
 import { getMigrations } from 'better-auth/db/migration';
@@ -71,12 +73,20 @@ const svc = await TaskService.create({
     mock_store: createMockStoreConnector({ baseUrl: process.env.MOCK_STORE_URL || 'http://127.0.0.1:4410' }),
     mcp_food: createMcpFoodConnector({ url: `${FOOD_URL}/mcp`, connectorId: 'food_delivery_mock', connections }),
     trading_engine: createTradingConnector({ evaluationStore: new PgEvaluationStore((t, p) => pool.query(t, p)) }),
+    rest_openapi_data: createOpenApiDataConnector({ baseUrl: process.env.MOCK_DATA_URL || 'http://127.0.0.1:4430' }),
   },
   workflowOptions: { store: new PgDurableStore(pool, { prefix: 'wf_' }), runStore: new PgRunStore(pool), env: {} },
 });
 console.log(`[preview] recovered at boot: ${JSON.stringify(svc.lastRecovery)}`);
 
+const developerKeys = new DeveloperKeys({ pool });
 const resolvePrincipal = async (req) => {
+  // Developer keys (S4): Authorization: Bearer slk_preview_… or X-API-Key. A presented-but-unknown key is a 401, never a fallback.
+  const bearer = /^Bearer\s+(\S+)$/i.exec(req.get('Authorization') || '')?.[1] || req.get('X-API-Key') || '';
+  if (bearer) {
+    const k = await developerKeys.authenticate(bearer);
+    return k ? { id: k.principal, via: 'api_key', actor_type: 'developer', scopes: k.scopes, key_id: k.key_id } : null;
+  }
   const key = req.get('X-Preview-Key') || '';
   const m = /^sk_preview_local_([a-z0-9-]{3,40})$/.exec(key);
   if (m) return { id: `user:preview-${m[1]}`, via: 'api_key', actor_type: 'human' };
@@ -99,7 +109,7 @@ app.get('/preview/mailbox', (req, res) => {
   const mail = lines.map((l) => JSON.parse(l)).filter((m) => m.to.toLowerCase() === to).pop() || null;
   res.json({ ok: true, preview: true, mail });
 });
-app.use('/v1', createTasksRouter(svc, { resolvePrincipal, connections, consoleOrigin: CONSOLE_ORIGIN }));
+app.use('/v1', createTasksRouter(svc, { resolvePrincipal, connections, developerKeys, consoleOrigin: CONSOLE_ORIGIN }));
 // Local operator check (preview only): ledger ↔ steps ↔ receipts.
 app.post('/preview/reconcile', async (_req, res) => { res.json({ ok: true, ...(await svc.reconcile()) }); });
 app.use((_req, res) => res.status(404).json({ ok: false, error: { code: 'NOT_FOUND', message: 'Not available in the preview.', retryable: false } }));

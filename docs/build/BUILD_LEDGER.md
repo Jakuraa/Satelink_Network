@@ -7,15 +7,30 @@ categories only (R14); details in `docs/build/evidence/private/` on the build ma
 
 ## ▶ RESUME CAPSULE — Release State A (updated after each phase)
 1. Mandate: Release State A master prompt v2026-11-04b + founder conditions 1–6 (2026-11-04).
-2. Worktree: `.claude/worktrees/release-a`; stack `build/p0-safety` (#610) → `build/integration-base` (#611) → `build/p2-foundation` → `build/s1-primary-journey`.
-3. Last phase done: **S3** (Trading AI) — VERIFIED, CI all green on `c3cb8ef3`. S1, S2 VERIFIED.
+2. Worktree: `.claude/worktrees/release-a`; stack `build/p0-safety` (#610) → `build/integration-base` (#611) → `build/p2-foundation` (#612) → `build/s1-primary-journey` (#616) → `build/s2-food-mcp` (#617) → `build/s3-trading` (#618) → `build/s4-developer`.
+3. Last phase done: **S4** (developer procurement) — VERIFIED locally (unit, integration, E2E ×3, drill); CI on the draft PR. S1–S3 VERIFIED.
 4. Last SHA: see `git log -1 build/p0-safety`.
-5. Next sub-step: **S4** developer procurement (API keys + REST/OpenAPI driver; branch `build/s4-developer` from `build/s3-trading`).
+5. Next sub-step: **S5** MCP server generated from the registry + A2A card (branch `build/s5-mcp-server` from `build/s4-developer`).
 6. Open risks: E1 JWT secret + webhooks public (OB-1/2); plaintext signer/treasury keys in local stash (OB-3); single-copy backup (OB-5).
 7. Rule: no work touching auth secrets, payment config or production (D-A2); local test credentials only.
 8. Backups: never touch `backups/protected/*.dump`, `docs/release/*.dump` (BACKUP_POSTURE.md).
 9. Blockers: `OPEN_BLOCKERS.md` (7 open, all FOUNDER).
-10. Decisions: `DECISION_LOG.md` (D-A1…D-A5, ADR-1…4).
+10. Decisions: `DECISION_LOG.md` (D-A1…D-A8, ADR-1…8).
+
+## Release A — Slice S4 — 2026-11-05
+- New piece: REST/OpenAPI driver — loads the provider's OpenAPI 3.x, calls only declared operationIds, validates request
+  before sending and response after (R7). Provider: local "Demo Data API (MOCK)" (`tools/mock-data-api`, :4430).
+- Developer keys (migration 045, ADR-8): `slk_preview_…`, sha256 hash only, shown once, 5 scopes, revocable, per-key
+  fixed-window rate limit (60/min) + durable per-day usage + last-used. Keys cannot mint/list keys or use connections.
+  The live RPC key system (`/api/keys`, money path) is untouched; the hub lives at `/developer-hub`.
+- Task API: per-route scopes; API-key approvals REQUIRE `Idempotency-Key` (400 otherwise); generated `/v1/openapi.json`
+  (routes + scopes + registry capabilities). Restart drill and the P2 CSV test updated for this contract.
+- `tests/dev/procure.sh` (curl+jq): capabilities → task → quote → approve (+replay) → output → receipt → usage. Loopback only.
+- Evidence: unit 49/49; integration S4 10/10 + all non-Docker suites green (Docker-only suites run in CI — local
+  testcontainers still broken); E2E `s4-developer` ×3 viewports green (key created in UI, script run, usage + receipt
+  visible, revoke → 401); restart drill PASS. Credits charge only the PROPOSED Satelink fee ($0.002 min); the supplier
+  amount shows as paid by the user at the provider (simulated).
+- Known gap (tech debt): receipt `verification.method` is the generic `order_status_lookup` for every connector.
 
 ## Release A — Slice S3 — 2026-11-05
 - New piece: recorded/synthetic market adapter. Evaluate (walk-forward, costs, look-ahead) → deterministic GO/WAIT/REJECT

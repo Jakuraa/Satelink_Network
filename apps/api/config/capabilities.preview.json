@@ -612,6 +612,125 @@
       "last_verified_at": null,
       "last_verified_evidence": "database/__tests__/trading_s3.integration.test.ts",
       "disclaimer": "Education and simulation only. Not investment advice. SIMULATED_PAPER_EXECUTION: NOT_ACTUAL_RETURNS."
+    },
+    {
+      "id": "dev.data.extract",
+      "version": 1,
+      "name": "Extract structured data from text (API)",
+      "description": "Send text to a data-extraction API and get emails, dates, amounts and links back as JSON. Procured per call from the provider's OpenAPI.",
+      "category": "developer",
+      "tags": [
+        "developer",
+        "api",
+        "extract",
+        "extraction",
+        "data",
+        "emails",
+        "dates",
+        "parse",
+        "json",
+        "openapi"
+      ],
+      "intents": [
+        "extract",
+        "parse"
+      ],
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "source_text"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "source_text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 5000,
+            "description": "The text to extract from"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "job_id",
+          "result"
+        ],
+        "properties": {
+          "job_id": {
+            "type": "string"
+          },
+          "result": {
+            "type": "object"
+          }
+        }
+      },
+      "providers": [
+        {
+          "id": "demo_data_api_mock",
+          "name": "Demo Data API (MOCK)",
+          "kind": "mock",
+          "connector": "rest_openapi_data",
+          "terms_url": null
+        }
+      ],
+      "connector_type": "rest",
+      "interface_meta": {
+        "rest": {
+          "openapi": "/openapi.json",
+          "operations": [
+            "getPricing",
+            "createExtraction",
+            "getExtraction"
+          ]
+        }
+      },
+      "skill_refs": [],
+      "credential_requirements": [],
+      "permission_scope": "tasks:procure",
+      "markets": [
+        "GLOBAL"
+      ],
+      "currencies": [
+        "USD"
+      ],
+      "price_model": {
+        "kind": "provider_price_per_call",
+        "source": "getPricing"
+      },
+      "fee_policy_id": "procurement_10pct_min_2000",
+      "commercial_rights": {
+        "resale_allowed": false,
+        "terms_url": null,
+        "evidence": "Local mock provider; no commercial relationship."
+      },
+      "security_class": "standard",
+      "timeout_ms": 10000,
+      "idempotency": {
+        "required": true,
+        "scope": "order"
+      },
+      "retry": {
+        "max_attempts": 2,
+        "on": [
+          "UPSTREAM_TIMEOUT"
+        ]
+      },
+      "verification": {
+        "method": "job_status_lookup",
+        "evidence_fields": [
+          "job_id",
+          "status",
+          "price_usd_minor"
+        ]
+      },
+      "refund_policy": "Preview: nothing is charged; a failed order releases the simulated hold.",
+      "availability": "local_mock",
+      "release_status": "SIMULATED",
+      "environment": "preview",
+      "internal_only": false,
+      "last_verified_at": null,
+      "last_verified_evidence": "tests/e2e/s4-developer.spec.ts (local mock)"
     }
   ]
 }
