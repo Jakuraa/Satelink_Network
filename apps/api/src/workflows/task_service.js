@@ -134,7 +134,13 @@ export class TaskService {
     for (const s of plan.steps) {
       const entry = await this.registry.get(s.capability_id);
       const connector = this.connectors[this.providerConnector.get(s.provider_id)];
-      const q = await connector.quoteStep({ inputs: s.inputs });
+      if (connector.requiresConnection && !(await connector.isConnected(run.principal))) {
+        // OAuth connection needed before the supplier can even be searched: ask the user to connect, then re-plan.
+        return this._move(run, 'AWAITING_INPUT', { plan, blocked: {
+          question: `Connect ${s.provider_name} to continue. You approve its permissions on the next screen.`,
+          field: 'connection', connector_id: connector.requiresConnection, step_no: s.step_no, inputs: s.inputs } });
+      }
+      const q = await connector.quoteStep({ inputs: s.inputs, principal: run.principal });
       if (!q) {
         return this._move(run, 'REJECTED', { plan, error: { code: 'NO_MATCHING_OFFER', message: `${s.provider_name} has nothing matching that within your price.`, retryable: false } });
       }
@@ -159,6 +165,11 @@ export class TaskService {
     const run = await this._own(principal, id);
     if (run.state !== 'AWAITING_INPUT') throw new TaskError(ERR.ILLEGAL_TRANSITION, `A ${run.state} task is not waiting for input.`, { status: 409 });
     if (field !== run.blocked?.field) throw new TaskError(ERR.VALIDATION, `This task is waiting for "${run.blocked?.field}".`);
+    if (field === 'connection') {
+      const c = Object.values(this.connectors).find((x) => x.requiresConnection === run.blocked.connector_id);
+      if (!c || !(await c.isConnected(run.principal))) throw new TaskError('CONNECTION_REQUIRED', 'Connect the service first, then continue.', { status: 409, extra: { connector_id: run.blocked.connector_id } });
+      return { task: await this.view(await this._plan(run, { priorPlan: run.plan, priorInputs: run.blocked.inputs || {} })) };
+    }
     let v = value;
     if (/usd_minor$/.test(field) && typeof v === 'string') {
       const m = /^\$?\s*(\d{1,6})(?:\.(\d{1,2}))?$/.exec(v.trim());
@@ -277,7 +288,7 @@ export class TaskService {
     const txId = this._stepTx(run.id, step.step_no);
     const connector = this.connectors[this.providerConnector.get(step.provider_id)];
     let v;
-    try { v = await connector.verifyStep({ idempotencyKey: idemKey(txId, 'EXECUTE'), offer: step.offer }); } catch (e) {
+    try { v = await connector.verifyStep({ idempotencyKey: idemKey(txId, 'EXECUTE'), offer: step.offer, principal: run.principal }); } catch (e) {
       return run; // supplier unreachable: stay put; recovery/sweep retries verification (never guesses)
     }
     if (run.state === 'UNKNOWN_EXECUTION_OUTCOME') {
@@ -359,7 +370,7 @@ export class TaskService {
     const step = run.plan.steps[0];
     const txId = this._stepTx(run.id, step.step_no);
     const connector = this.connectors[this.providerConnector.get(step.provider_id)];
-    let v; try { v = await connector.verifyStep({ idempotencyKey: idemKey(txId, 'EXECUTE'), offer: step.offer }); } catch { return run; }
+    let v; try { v = await connector.verifyStep({ idempotencyKey: idemKey(txId, 'EXECUTE'), offer: step.offer, principal: run.principal }); } catch { return run; }
     if (!v.found && !this.dk.journal.read(txId).some((e) => e.phase === 'EXECUTE')) {
       // The supplier has no order AND the kernel never ran EXECUTE: safe to execute now (idempotent key).
       const back = await this._move(run, 'VERIFYING', {}, { recovered: 'resubmit' });
@@ -427,7 +438,7 @@ export class TaskService {
     return {
       id: run.id, state: run.state, version: run.version, intent: run.intent, actor_type: run.actor_type, ...SIM,
       environment: run.environment, created_at: run.created_at, updated_at: run.updated_at,
-      question: run.state === 'AWAITING_INPUT' ? { text: run.blocked?.question, field: run.blocked?.field } : null,
+      question: run.state === 'AWAITING_INPUT' ? { text: run.blocked?.question, field: run.blocked?.field, connector_id: run.blocked?.connector_id || null } : null,
       plan: run.plan ? { steps: (run.plan.steps || []).map(({ offer, ...s }) => ({ ...s, offer: offer ? { title: offer.title, sku: offer.sku, price_usd: formatUsd(BigInt(offer.price_usd_minor)) } : null })), model: run.plan.model || null } : null,
       model_badge: this.router.badge,
       quote: quote ? this._quoteOut(quote) : null,

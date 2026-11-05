@@ -37,7 +37,7 @@ export function validateEntry(e) {
   if (!Array.isArray(e.providers) || e.providers.length === 0) bad('providers must be non-empty');
   for (const p of e.providers) {
     if (!p.id || !p.name) bad('provider id/name');
-    if (p.kind === 'mock' && !/\(MOCK\)$/.test(p.name)) bad(`mock provider must be named "<name> (MOCK)": ${p.name}`);
+    if (p.kind === 'mock' && !/\(MOCK(?: — [^)]+)?\)$/.test(p.name)) bad(`mock provider must be named "<name> (MOCK)": ${p.name}`);
   }
   if (typeof e.internal_only !== 'boolean') bad('internal_only must be boolean');
   if (!Number.isSafeInteger(e.timeout_ms) || e.timeout_ms <= 0) bad('timeout_ms');

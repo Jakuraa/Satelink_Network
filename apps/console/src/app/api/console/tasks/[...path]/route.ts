@@ -8,8 +8,8 @@ import { previewEnabled } from "@/lib/preview";
 // Mutations: same-origin + live session (guard) and the console CSRF header upstream.
 // Only allowlisted paths are forwarded; everything else is 404.
 const RUN = "run_[0-9a-f]{8,64}";
-const POSTS: RegExp[] = [/^tasks$/, /^assistant\/messages$/, /^onboarding$/, new RegExp(`^tasks\\/${RUN}\\/(input|approve|cancel)$`)];
-const GETS: RegExp[] = [/^tasks$/, new RegExp(`^tasks\\/${RUN}(\\/events)?$`), /^receipts\/rcpt_[0-9a-f]{8,64}$/, /^usage$/, /^capabilities$/, /^capabilities\/[a-z0-9_.]+$/];
+const POSTS: RegExp[] = [/^tasks$/, /^assistant\/messages$/, /^onboarding$/, new RegExp(`^tasks\\/${RUN}\\/(input|approve|cancel)$`), /^connections\/[a-z0-9_]+\/(start|revoke)$/];
+const GETS: RegExp[] = [/^tasks$/, new RegExp(`^tasks\\/${RUN}(\\/events)?$`), /^receipts\/rcpt_[0-9a-f]{8,64}$/, /^usage$/, /^connections$/, /^capabilities$/, /^capabilities\/[a-z0-9_.]+$/];
 
 const notFound = () => NextResponse.json({ ok: false, error: { code: "NOT_FOUND", message: "Not found.", retryable: false } }, { status: 404 });
 

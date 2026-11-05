@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui";
 import { PlanPanel, QuoteCard } from "./QuoteCard";
 import { SimulationBadge } from "./SimulationBadge";
 import { getTask, newKey, post, type ApiError } from "./taskClient";
+import { ConnectButton } from "./ConnectButton";
 
 type Ev = { seq: number; from: string | null; to: string; at: string };
 
@@ -18,6 +19,15 @@ export function TaskLive({ initial }: { initial: Task }) {
   const [answer, setAnswer] = useState("");
 
   const refresh = useCallback(async () => { const t = await getTask(task.id); if (t) setTask(t); }, [task.id]);
+
+  // Back from the provider's consent page (?connected=<id>): resume the task automatically.
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    if (p.get("connected") && task.state === "AWAITING_INPUT" && task.question?.field === "connection") {
+      window.history.replaceState(null, "", window.location.pathname);
+      post<{ task: Task }>(`tasks/${task.id}/input`, { field: "connection", value: "connected" }).then((r) => { if (r.ok) setTask(r.data.task); else setErr(r.error); });
+    }
+  }, [task.id, task.state, task.question?.field]);
 
   useEffect(() => {
     const es = new EventSource(`/api/console/tasks/tasks/${task.id}/events`);
@@ -55,7 +65,13 @@ export function TaskLive({ initial }: { initial: Task }) {
         {task.error && TERMINAL.includes(task.state) && (
           <p role="status" data-testid="task-error" className="rounded-md border border-sl-border bg-sl-bg-raised px-3 py-2 text-[13px]">{task.error.message}</p>
         )}
-        {task.state === "AWAITING_INPUT" && task.question && (
+        {task.state === "AWAITING_INPUT" && task.question?.field === "connection" && task.question.connector_id && (
+          <div className="space-y-2 rounded-md border border-sl-border bg-sl-surface p-3" data-testid="connect-needed">
+            <p className="text-[13px] text-sl-text">{task.question.text}</p>
+            <ConnectButton connectorId={task.question.connector_id} returnTo={`/tasks/${task.id}`} />
+          </div>
+        )}
+        {task.state === "AWAITING_INPUT" && task.question && task.question.field !== "connection" && (
           <form className="space-y-2 rounded-md border border-sl-border bg-sl-surface p-3" onSubmit={(e) => { e.preventDefault(); act("input", { field: task.question!.field, value: answer }); }}>
             <label htmlFor="answer" className="block text-[13px] text-sl-text">{task.question.text}</label>
             <div className="flex gap-2">

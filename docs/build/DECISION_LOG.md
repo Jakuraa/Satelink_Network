@@ -69,3 +69,10 @@ simulated. INR users see "priced in USD (INR display not available in preview)".
 ## ADR-6 — 2026-11-04 — One outbox/worker for tasks
 #609's DurableKernel (`wf_journal` + `wf_idempotency` + `wf_dlq`) is the outbox for task steps. Recovery runs
 at boot and one in-process sweep expires quotes, approvals and reservations. No BullMQ path and no second queue.
+
+## ADR-7 — 2026-11-05 — MCP client driver without changing apps/api's lockfile
+Adding any dependency to `apps/api` makes npm re-resolve the x402 payment stack (the committed lock already holds an
+invalid edge: `@coinbase/cdp-sdk` wants `@x402/evm ^2.25.0`, lock has 2.18.0) — an unreviewed change to a live money-path
+dependency in the production deploy lockfile. Decision: the S2 MCP client driver loads `@modelcontextprotocol/sdk@1.29.0`
+lazily from the workspace install (already present via `apps/mcp-server`) and is constructed only by the local preview
+server; production never imports it. Declare the dependency once OB-12 is resolved. (Attempted and reverted, nothing committed.)

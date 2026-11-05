@@ -8,14 +8,25 @@ categories only (R14); details in `docs/build/evidence/private/` on the build ma
 ## ▶ RESUME CAPSULE — Release State A (updated after each phase)
 1. Mandate: Release State A master prompt v2026-11-04b + founder conditions 1–6 (2026-11-04).
 2. Worktree: `.claude/worktrees/release-a`; stack `build/p0-safety` (#610) → `build/integration-base` (#611) → `build/p2-foundation` → `build/s1-primary-journey`.
-3. Last phase done: **S1** — all gates met (E2E 15/15 ×3 viewports, axe, browser restart drill, 2 consecutive green CI runs on `de142340`).
+3. Last phase done: **S2** (food over MCP) — VERIFIED, CI all green on `3e7ca49e`. S1 fully verified (2 consecutive green CI runs).
 4. Last SHA: see `git log -1 build/p0-safety`.
-5. Next sub-step: **S2** food procurement via MCP client driver (branch `build/s2-food-mcp` from `build/s1-primary-journey`).
+5. Next sub-step: **S3** Trading AI (branch `build/s3-trading` from `build/s2-food-mcp`; reuse #609 Strategy Lab/PaperBroker).
 6. Open risks: E1 JWT secret + webhooks public (OB-1/2); plaintext signer/treasury keys in local stash (OB-3); single-copy backup (OB-5).
 7. Rule: no work touching auth secrets, payment config or production (D-A2); local test credentials only.
 8. Backups: never touch `backups/protected/*.dump`, `docs/release/*.dump` (BACKUP_POSTURE.md).
 9. Blockers: `OPEN_BLOCKERS.md` (7 open, all FOUNDER).
 10. Decisions: `DECISION_LOG.md` (D-A1…D-A5, ADR-1…4).
+
+## Release A — Slice S2 — 2026-11-05
+- One new infrastructure piece: MCP client driver (official SDK client; lazy, ADR-7 — apps/api lockfile untouched, OB-12).
+- `tools/mock-food-mcp`: "Food Delivery (MOCK — not connected to Swiggy)" MCP tools + local OAuth 2.1 AS (PKCE S256 only).
+- Migration 044 (server-held PKCE verifiers, encrypted revocable tokens); `food.order.place` (connector_type mcp).
+- Console: Connections page, connect step + auto-resume, mandated approval wording; Zomato BLOCKED (EXTERNAL).
+- Tests: food_mcp.integration 8/8 (PKCE negative cases, encryption at rest, SDK discovery, injection, revoke);
+  s2-food E2E green; S1+S2 E2E 18 passed ×3 viewports. Docs: `SWIGGY_PRODUCTION_APPLICATION.md`.
+- CI: E2E job green on first S2 run; Financial OS suite red only from a pre-existing teardown race (57P01 on idle pool
+  clients in part11_acceptance / trading_append_only) — fixed test-only on the integration base and merged up the stack.
+- Draft PR #617 (stacked on #616).
 
 ## Release A — Slice S1 — 2026-11-04
 - Console (SATELINK_PREVIEW=1 only): /signup → /onboarding → /assistant → /tasks/[id] (SSE) → /receipts/[id] (JSON/CSV) →

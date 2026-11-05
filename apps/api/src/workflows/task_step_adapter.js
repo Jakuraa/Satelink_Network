@@ -19,7 +19,7 @@ export class TaskStepAdapter extends WorkloadAdapter {
     const connector = this.connectorFor(s.supplierId);
     if (!connector) throw new Error(`[connector_missing] no connector for provider ${s.supplierId}`);
     let data;
-    try { data = await connector.executeStep({ inputs: req.payload.inputs, offer: req.payload.offer, idempotencyKey: ctx.idemKey }); } catch (e) {
+    try { data = await connector.executeStep({ inputs: req.payload.inputs, offer: req.payload.offer, idempotencyKey: ctx.idemKey, principal: req.payer }); } catch (e) {
       // Kernel failure reasons use #609's "[code] detail" convention (parseReason); keep the connector's code.
       throw new Error(`[${String(e?.code || 'execution_failed').toLowerCase()}] ${e?.message || 'step failed'}`);
     }
