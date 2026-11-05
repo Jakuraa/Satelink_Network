@@ -29,7 +29,7 @@ Evidence keys: **P** = production probe 2026-10-20 (curl transcript in the ledge
 | S2 food procurement via MCP | VERIFIED | food_mcp.integration 8/8; s2-food E2E ×3 viewports; injection + PKCE negative tests; CI all green on 3e7ca49e; PR #617 |
 | Zomato connector | BLOCKED (EXTERNAL) | terms for automated ordering unverified |
 | Swiggy production integration | BLOCKED (FOUNDER) | no relationship/access; preparation pack SWIGGY_PRODUCTION_APPLICATION.md |
-| S3 Trading AI (evaluate → risk → paper) | VERIFIED (local) — CI pending | trading_s3.integration 9/9; s3-trading E2E ×3 viewports; live-host refusal test; PR #618 |
+| S3 Trading AI (evaluate → risk → paper) | VERIFIED | trading_s3.integration 9/9; s3-trading E2E ×3 viewports; live-host refusal test; CI all green on c3cb8ef3; PR #618 |
 | Alpaca paper adapter (live) | BLOCKED (FOUNDER) | needs ALPACA_PAPER_* keys; host pinned to paper-api |
 | Slices S4–S6 | NOT STARTED | — |
 
