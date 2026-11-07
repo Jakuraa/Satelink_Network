@@ -10,6 +10,7 @@ const blurbs: Record<string, string> = {
   "/legal/privacy": "What this website collects, why, and your rights under the Digital Personal Data Protection Act, 2023.",
   "/legal/terms": "The terms that apply to your use of jakuraa.com.",
   "/legal/grievance": "How to raise a grievance and who handles it.",
+  "/legal/refunds": "When you get your money back, how to ask, and how long it takes.",
 };
 
 export default function LegalIndex() {
