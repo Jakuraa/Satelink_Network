@@ -5,16 +5,22 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
 import axios from 'axios';
+// Signed-message formats verified by the API (see protocol.js).
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { walletFromEnv, signedRegistration, signedHeartbeat, createHeartbeatClock } = require('./protocol');
 
 const CONFIG_DIR = join(homedir(), '.satelink');
 const CONFIG_FILE = join(CONFIG_DIR, 'node.json');
-const API_BASE = process.env.SATELINK_API || 'https://rpc.satelink.network';
+const API_BASE = (process.env.SATELINK_API || 'https://rpc.satelink.network').replace(/\/+$/, '');
+const KEY_ENV = 'SATELINK_NODE_PRIVATE_KEY';
 
 interface NodeConfig {
-  nodeId: string;
-  wallet: string;
+  nodeId: string;        // assigned by the API at registration
+  wallet: string;        // payout wallet (signs registration and heartbeats)
+  nodeType: string;
+  endpointUrl: string;
   region: string;
-  capabilities: string[];
+  chainIds: number[];
   registeredAt: string;
 }
 
@@ -22,8 +28,8 @@ const program = new Command();
 
 program
   .name('satelink-node')
-  .description('Satelink node operator CLI')
-  .version('1.0.0');
+  .description(`Satelink node operator CLI. Signing key: set ${KEY_ENV} (the payout wallet's private key).`)
+  .version('1.1.0');
 
 function loadConfig(): NodeConfig | null {
   if (!existsSync(CONFIG_FILE)) return null;
@@ -36,66 +42,63 @@ function loadConfig(): NodeConfig | null {
 
 function saveConfig(config: NodeConfig): void {
   if (!existsSync(CONFIG_DIR)) {
-    mkdirSync(CONFIG_DIR, { recursive: true });
+    mkdirSync(CONFIG_DIR, { recursive: true, mode: 0o700 });
   }
-  writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+  writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), { mode: 0o600 });
 }
 
-async function apiCall(endpoint: string, method = 'GET', body: any = null) {
+async function apiCall(endpoint: string, method = 'GET', body: any = null): Promise<{ status: number; data: any }> {
   try {
     const res = await axios({
       method,
       url: `${API_BASE}${endpoint}`,
       data: body,
       headers: { 'Content-Type': 'application/json' },
-      timeout: 10000
+      timeout: 10000,
+      maxRedirects: 0,
     });
-    return res.data;
+    return { status: res.status, data: res.data };
   } catch (err: any) {
-    if (err.response) return err.response.data;
+    if (err.response) return { status: err.response.status, data: err.response.data };
     throw err;
+  }
+}
+
+function loadWallet() {
+  try {
+    return walletFromEnv(process.env, KEY_ENV);
+  } catch (err: any) {
+    console.error(err.message);
+    process.exit(1);
   }
 }
 
 program
   .command('register')
-  .description('Register this node with the Satelink network')
-  .requiredOption('-w, --wallet <address>', 'Operator wallet address (0x...)')
-  .option('-r, --region <region>', 'Node region', 'us-east-1')
-  .option('-c, --capabilities <caps>', 'Comma-separated capabilities', 'rpc,bandwidth')
+  .description('Register this node (signed by the payout wallet)')
+  .requiredOption('-e, --endpoint <url>', 'Public http(s) URL of your RPC endpoint (must answer GET /health with 200)')
+  .option('-r, --region <region>', 'Node region (ap-south-1, us-east-1, eu-west-1, ap-southeast-1)', 'us-east-1')
+  .option('-t, --type <type>', 'Node type (rpc, bandwidth, compute)', 'rpc')
+  .option('-c, --chains <ids>', 'Comma-separated chain ids', '137')
   .action(async (opts) => {
-    console.log('Registering node...');
-
-    const nodeId = `node_${opts.wallet.slice(2, 10)}_${Date.now().toString(36)}`;
-
+    const wallet = loadWallet();
+    const chainIds = String(opts.chains).split(',').map((s: string) => Number(s.trim()));
+    console.log(`Registering node for wallet ${wallet.address} ...`);
     try {
-      const result = await apiCall('/nodes/register', 'POST', {
-        node_id: nodeId,
-        wallet: opts.wallet,
-        region: opts.region,
-        capabilities: opts.capabilities.split(','),
-        registered_at: Date.now()
-      });
-
-      if (result.error) {
-        console.error('Registration failed:', result.error);
+      const body = await signedRegistration(wallet, { nodeType: opts.type, endpointUrl: opts.endpoint, region: opts.region, chainIds });
+      const { status, data } = await apiCall('/api/nodes/register', 'POST', body);
+      if (status !== 201 || !data?.nodeId) {
+        console.error(`Registration failed (HTTP ${status}):`, data?.error || data);
         process.exit(1);
       }
-
       const config: NodeConfig = {
-        nodeId,
-        wallet: opts.wallet,
-        region: opts.region,
-        capabilities: opts.capabilities.split(','),
-        registeredAt: new Date().toISOString()
+        nodeId: data.nodeId, wallet: wallet.address, nodeType: opts.type, endpointUrl: opts.endpoint,
+        region: opts.region, chainIds, registeredAt: new Date().toISOString(),
       };
-
       saveConfig(config);
-
       console.log('Node registered successfully!');
-      console.log(`  Node ID: ${nodeId}`);
-      console.log(`  Wallet:  ${opts.wallet}`);
-      console.log(`  Region:  ${opts.region}`);
+      console.log(`  Node ID: ${config.nodeId}`);
+      console.log(`  Status:  ${data.status} (becomes active after the first signed heartbeat)`);
       console.log(`\nConfig saved to: ${CONFIG_FILE}`);
       console.log('Run "satelink-node start" to begin sending heartbeats.');
     } catch (err: any) {
@@ -106,11 +109,16 @@ program
 
 program
   .command('start')
-  .description('Start the node agent (sends heartbeat every 2 minutes)')
+  .description('Start the node agent (signed heartbeat every 2 minutes)')
   .action(async () => {
     const config = loadConfig();
     if (!config) {
-      console.error('Node not registered. Run "satelink-node register --wallet 0x..." first.');
+      console.error('Node not registered. Run "satelink-node register --endpoint https://..." first.');
+      process.exit(1);
+    }
+    const wallet = loadWallet();
+    if (wallet.address.toLowerCase() !== config.wallet.toLowerCase()) {
+      console.error(`${KEY_ENV} belongs to ${wallet.address}, but this node is registered to ${config.wallet}.`);
       process.exit(1);
     }
 
@@ -120,36 +128,30 @@ program
     console.log(`  API:     ${API_BASE}`);
     console.log('');
 
-    async function sendHeartbeat() {
-      const timestamp = new Date().toISOString();
-      try {
-        const result = await apiCall('/nodes/heartbeat', 'POST', {
-          node_id: config!.nodeId,
-          wallet: config!.wallet,
-          timestamp: Date.now(),
-          status: 'online',
-          metrics: {
-            uptime: process.uptime(),
-            memory: process.memoryUsage().heapUsed,
-            load: 0.1
-          }
-        });
+    const nextTimestamp = createHeartbeatClock();
 
-        if (result.ok) {
-          console.log(`[${timestamp}] Heartbeat sent`);
+    async function sendHeartbeat() {
+      const at = new Date().toISOString();
+      try {
+        const body = await signedHeartbeat(wallet, {
+          nodeId: config!.nodeId,
+          timestamp: nextTimestamp(),
+          metrics: { uptime_seconds: Math.round(process.uptime()) },
+        });
+        const { status, data } = await apiCall(`/api/nodes/${encodeURIComponent(config!.nodeId)}/heartbeat`, 'POST', body);
+        if (status === 200 && data?.ok) {
+          console.log(`[${at}] Heartbeat sent (status ${data.status})`);
         } else {
-          console.log(`[${timestamp}] Heartbeat warning: ${result.error || 'unknown'}`);
+          console.log(`[${at}] Heartbeat refused (HTTP ${status}): ${data?.error || 'unknown'}`);
         }
       } catch (err: any) {
-        console.error(`[${timestamp}] Heartbeat failed: ${err.message}`);
+        console.error(`[${at}] Heartbeat failed: ${err.message}`);
       }
     }
 
     await sendHeartbeat();
-
     const INTERVAL_MS = 2 * 60 * 1000;
     setInterval(sendHeartbeat, INTERVAL_MS);
-
     console.log('Node agent running. Press Ctrl+C to stop.\n');
   });
 
@@ -160,25 +162,28 @@ program
     const config = loadConfig();
     if (!config) {
       console.log('Status: NOT REGISTERED');
-      console.log('Run "satelink-node register --wallet 0x..." to register.');
+      console.log('Run "satelink-node register --endpoint https://..." to register.');
       return;
     }
 
     console.log('Satelink Node Status');
     console.log('--------------------');
-    console.log(`Node ID:      ${config.nodeId}`);
-    console.log(`Wallet:       ${config.wallet}`);
-    console.log(`Region:       ${config.region}`);
-    console.log(`Capabilities: ${config.capabilities.join(', ')}`);
-    console.log(`Registered:   ${config.registeredAt}`);
-    console.log(`API:          ${API_BASE}`);
+    console.log(`Node ID:    ${config.nodeId}`);
+    console.log(`Wallet:     ${config.wallet}`);
+    console.log(`Region:     ${config.region}`);
+    console.log(`Endpoint:   ${config.endpointUrl}`);
+    console.log(`Chains:     ${config.chainIds.join(', ')}`);
+    console.log(`Registered: ${config.registeredAt}`);
+    console.log(`API:        ${API_BASE}`);
 
     try {
-      const result = await apiCall(`/nodes/${config.nodeId}/status`);
-      if (result.ok) {
-        console.log(`\nNetwork Status: ${result.status || 'online'}`);
-        console.log(`Last Heartbeat: ${result.lastHeartbeat || 'unknown'}`);
-        console.log(`Reputation:     ${result.reputation || 'pending'}`);
+      const { status, data } = await apiCall(`/api/nodes/${encodeURIComponent(config.nodeId)}`);
+      if (status === 200 && data?.ok) {
+        console.log(`\nNetwork Status: ${data.node?.status}`);
+        console.log(`Last Heartbeat: ${data.node?.lastHeartbeatAt ? new Date(data.node.lastHeartbeatAt * 1000).toISOString() : 'never'}`);
+        console.log(`Reputation:     ${data.node?.reputationScore ?? 'pending'}`);
+      } else {
+        console.log(`\nNetwork Status: unavailable (HTTP ${status})`);
       }
     } catch {
       console.log('\nNetwork Status: Unable to reach API');
