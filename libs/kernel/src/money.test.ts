@@ -552,6 +552,16 @@ describe('Money', () => {
       expect(r.isErr).toBe(true);
     });
 
+    it('rejects fractional ratios (integer weights only, S-4)', () => {
+      const m = Money.fromMinorUnits(100n, USDC);
+      for (const bad of [0.5, 1.5, 1e-9]) {
+        const r = m.allocate([bad, 1]);
+        expect(r.isErr, String(bad)).toBe(true);
+      }
+      const ok3 = m.allocate([5000, 3000, 2000]);
+      expect(ok3.isOk && ok3.value.map((p) => p.amount)).toEqual([50n, 30n, 20n]);
+    });
+
     it('rejects Infinity ratio', () => {
       const m = Money.fromMinorUnits(100n, USDC);
       const r = m.allocate([Infinity]);
