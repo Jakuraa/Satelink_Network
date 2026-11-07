@@ -2,7 +2,9 @@ import { Router } from 'express';
 import { ethers } from 'ethers';
 import { verifyJWT } from '../gateway/routes/auth_v2.js';
 import { requireAdminAuth } from '../admin/admin_router.js';
+import { secretEquals } from '../security/header_secret.js';
 import { generateClaimSignature } from '../services/claims/claim_processor.js';
+import { CONSUMED_USAGE_PREDICATE } from '../services/financial/truth.js';
 import { broadcaster } from '../realtime/broadcaster-instance.js';
 import { discord } from '../services/discord_notify.mjs';
 
@@ -20,7 +22,7 @@ export function createClaimsRouter(pool) {
       if (!process.env.ADMIN_BACKFILL_SECRET) {
         return res.status(503).json({ success: false, error: 'ADMIN_BACKFILL_SECRET not configured' });
       }
-      if (adminSecret !== process.env.ADMIN_BACKFILL_SECRET) {
+      if (!secretEquals(adminSecret, process.env.ADMIN_BACKFILL_SECRET)) {
         return res.status(403).json({ success: false, error: 'Invalid admin secret' });
       }
 
@@ -75,14 +77,20 @@ export function createClaimsRouter(pool) {
   // Admin endpoint: directly allocate earnings to a node based on revenue
   router.post('/admin/allocate-earnings', verifyJWT, async (req, res) => {
     try {
-      const { nodeId, walletAddress, adminSecret } = req.body;
+      const { nodeId, adminSecret } = req.body;
 
       // T-02: no hard-coded fallback (see backfill-revenue above).
       if (!process.env.ADMIN_BACKFILL_SECRET) {
         return res.status(503).json({ success: false, error: 'ADMIN_BACKFILL_SECRET not configured' });
       }
-      if (adminSecret !== process.env.ADMIN_BACKFILL_SECRET) {
+      if (!secretEquals(adminSecret, process.env.ADMIN_BACKFILL_SECRET)) {
         return res.status(403).json({ success: false, error: 'Invalid admin secret' });
+      }
+      // One allocator per revenue row: the epoch scheduler/finalizer writes node earnings for
+      // every closed epoch. This manual tool allocates from all-time node revenue, so running
+      // both double-pays the same revenue. Off unless explicitly enabled for a backfill.
+      if (process.env.MANUAL_EARNINGS_ALLOCATION_ENABLED !== 'true') {
+        return res.status(503).json({ success: false, error: 'manual_allocation_disabled' });
       }
 
       if (!nodeId) {
@@ -90,73 +98,90 @@ export function createClaimsRouter(pool) {
       }
 
       const client = await pool.connect();
+      let broken;
       try {
-        // Ensure epoch_earnings table exists
-        await client.query(`
-          CREATE TABLE IF NOT EXISTS epoch_earnings (
-            id SERIAL PRIMARY KEY,
-            epoch_id INTEGER,
-            role TEXT DEFAULT 'node_operator',
-            wallet_or_node_id TEXT NOT NULL,
-            amount_usdt NUMERIC(18,8) NOT NULL DEFAULT 0,
-            status TEXT NOT NULL DEFAULT 'UNPAID',
-            created_at BIGINT DEFAULT EXTRACT(EPOCH FROM NOW())
-          )
-        `);
-
-        // Calculate total revenue attributed to this node
-        const revenueResult = await client.query(
-          `SELECT COALESCE(SUM(amount_usdt), 0) as total FROM revenue_events_v2 WHERE node_id = $1`,
-          [nodeId]
-        );
-        const totalRevenue = parseFloat(revenueResult.rows[0]?.total || 0);
-
-        if (totalRevenue === 0) {
-          return res.json({ success: true, message: 'No revenue attributed to this node', allocated: 0 });
+        // The node's payout wallet from the registry, never from the request body: earnings
+        // rows may be keyed by node id OR wallet (legacy writers), and claims match both.
+        // Looked up before BEGIN (a missing legacy table must not abort the transaction).
+        // Wallets from BOTH node tables (they can differ); only a missing table/column is
+        // tolerated — any other error aborts, since a silently missing wallet would let rows
+        // keyed by it go uncounted (double allocation).
+        const wallets = [];
+        for (const table of ['registered_nodes', 'nodes']) {
+          let w;
+          try {
+            w = await client.query(`SELECT wallet FROM ${table} WHERE node_id = $1`, [nodeId]);
+          } catch (e) {
+            if (e.code === '42P01' || e.code === '42703') continue; // undefined table / column
+            throw e;
+          }
+          for (const r of w.rows) if (r.wallet) wallets.push(String(r.wallet).toLowerCase());
         }
 
-        // Calculate node's share (50%)
-        const nodeShare = totalRevenue * 0.50;
+        await client.query('BEGIN');
+        await client.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`alloc:${String(nodeId).toLowerCase()}`]);
+        const ids = [...new Set([nodeId, ...wallets].filter(Boolean).map((x) => String(x).toLowerCase()))];
 
-        // Check if earnings already exist for this node
-        const existingResult = await client.query(
-          `SELECT COALESCE(SUM(amount_usdt), 0) as existing FROM epoch_earnings WHERE wallet_or_node_id = $1 AND status = 'UNPAID'`,
-          [nodeId]
+        // All amounts in SQL numeric, truncated to 6 dp (never round a payout up).
+        //  share    = 50% of the node's real consumed usage (no test data, deposits, refunds,
+        //             unbilled rows or x402 bundle purchases — same rule as /api/financial/truth)
+        //  existing = everything already allocated to this node under either id, any status,
+        //             except claim-expiry reallocations (epoch 0: other nodes' expired money)
+        const r = await client.query(
+          `SELECT trunc(s.total, 8)::text AS total_revenue,
+                  trunc(s.total * 0.5, 6)::text AS node_share,
+                  trunc(x.existing, 6)::text AS existing,
+                  trunc(s.total * 0.5 - x.existing, 6)::text AS to_allocate
+             FROM (SELECT COALESCE(SUM(e.amount_usdt), 0) AS total FROM revenue_events_v2 e
+                    WHERE e.node_id = $1
+                      -- Backfill only: revenue of CLOSED epochs the finalizer never ran on. The
+                      -- open epoch (or unassigned revenue) is paid by the finalizer at close; a
+                      -- finalized epoch was already split (equally across its nodes) — topping a
+                      -- node up to 50% of its own revenue there paid the pool out twice.
+                      AND e.epoch_id IN (SELECT id FROM epochs WHERE status = 'CLOSED')
+                      -- "never finalized" = no earnings row of ANY role for the epoch (the finalizer
+                      -- always writes the platform row, even when the node pool is 0)
+                      AND NOT EXISTS (SELECT 1 FROM epoch_earnings f WHERE f.epoch_id = e.epoch_id)
+                      AND (e.is_test_data = false OR e.is_test_data IS NULL)
+                      AND (${CONSUMED_USAGE_PREDICATE})) s,
+                  (SELECT COALESCE(SUM(amount_usdt), 0) AS existing FROM epoch_earnings
+                    WHERE lower(wallet_or_node_id) = ANY($2::text[]) AND epoch_id <> 0) x`,
+          [nodeId, ids]
         );
-        const existingEarnings = parseFloat(existingResult.rows[0]?.existing || 0);
+        const row = r.rows[0];
+        const toAllocate = Number(row.to_allocate);
 
-        // Only allocate if not already allocated
-        const toAllocate = nodeShare - existingEarnings;
-
-        if (toAllocate > 0) {
-          // Use wallet address if provided, otherwise use nodeId
-          const earningsId = walletAddress || nodeId;
-
+        if (toAllocate >= 0.000001) {
+          // Own key (epoch -1, role manual_allocation) — never collides with a real epoch's
+          // node_operator row; repeat allocations add to it (production PK is
+          // (epoch_id, role, wallet_or_node_id)).
           await client.query(
             `INSERT INTO epoch_earnings (epoch_id, role, wallet_or_node_id, amount_usdt, status, created_at)
-             VALUES (1, 'node_operator', $1, $2, 'UNPAID', $3)`,
-            [earningsId, toAllocate, Math.floor(Date.now() / 1000)]
+             VALUES (-1, 'manual_allocation', $1, $2::numeric, 'UNPAID', $3)
+             ON CONFLICT (epoch_id, role, wallet_or_node_id)
+             DO UPDATE SET amount_usdt = epoch_earnings.amount_usdt + EXCLUDED.amount_usdt`,
+            [nodeId, row.to_allocate, Math.floor(Date.now() / 1000)]
           );
-
-          console.log(`[ALLOCATE] Allocated $${toAllocate.toFixed(6)} to ${earningsId}`);
+          console.log(`[ALLOCATE] Allocated $${row.to_allocate} to ${nodeId}`);
         }
+        await client.query('COMMIT');
 
         res.json({
           success: true,
-          totalRevenue,
-          nodeShare,
-          existingEarnings,
-          allocated: toAllocate,
-          claimableTotal: nodeShare
+          totalRevenue: Number(row.total_revenue),
+          nodeShare: Number(row.node_share),
+          existingEarnings: Number(row.existing),
+          allocated: toAllocate >= 0.000001 ? toAllocate : 0,
         });
-
+      } catch (err) {
+        await client.query('ROLLBACK').catch((rbErr) => { broken = rbErr; });
+        throw err;
       } finally {
-        client.release();
+        client.release(broken);
       }
-
     } catch (err) {
       console.error('[Allocate] Failed:', err.message);
-      res.status(500).json({ success: false, error: err.message });
+      res.status(500).json({ success: false, error: 'allocation_failed' });
     }
   });
 
@@ -169,8 +194,15 @@ export function createClaimsRouter(pool) {
       if (!process.env.ADMIN_BACKFILL_SECRET) {
         return res.status(503).json({ success: false, error: 'ADMIN_BACKFILL_SECRET not configured' });
       }
-      if (adminSecret !== process.env.ADMIN_BACKFILL_SECRET) {
+      if (!secretEquals(adminSecret, process.env.ADMIN_BACKFILL_SECRET)) {
         return res.status(403).json({ success: false, error: 'Invalid admin secret' });
+      }
+      // Manual epoch tool: it writes epoch_ledger ids into revenue_events_v2.epoch_id (a
+      // column that holds epochs ids) and pays wallet-keyed shares outside the scheduler —
+      // a second allocator that can double-pay with the finalizer. Its OWN flag, so enabling
+      // the bounded allocate-earnings backfill never enables this.
+      if (process.env.MANUAL_CLOSE_EPOCH_ENABLED !== 'true') {
+        return res.status(503).json({ success: false, error: 'manual_allocation_disabled' });
       }
 
       const client = await pool.connect();
