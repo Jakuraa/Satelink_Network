@@ -246,6 +246,131 @@ export async function markClaimCompleted(claimId, txHash, pool) {
 }
 
 /**
+ * On-chain facts about a claim signature, read from ClaimsContract (read-only).
+ * Throws on any RPC/config problem: callers fail closed.
+ */
+export function createClaimChainReader({ rpcUrl = process.env.POLYGON_RPC_URL, contract = process.env.CLAIMS_CONTRACT_ADDRESS } = {}) {
+    // One provider, chain id verified, both facts read at the same FINALIZED block: a reorg
+    // cannot replace the deciding block with one that contains the redeem.
+    async function finalized() {
+        if (!rpcUrl || !contract) throw new Error('chain_unconfigured');
+        const provider = new ethers.JsonRpcProvider(rpcUrl);
+        const net = await provider.getNetwork();
+        if (net.chainId !== 137n) throw new Error('wrong_chain');
+        const block = await provider.getBlock('finalized');
+        if (!block) throw new Error('no_finalized_block');
+        return { provider, block };
+    }
+    return {
+        contract,
+        async read(nonce) {
+            const { provider, block } = await finalized();
+            const c = new ethers.Contract(contract, ['function usedNonces(uint256) view returns (bool)'], provider);
+            const used = Boolean(await c.usedNonces(BigInt(nonce), { blockTag: block.number }));
+            return { chainTime: Number(block.timestamp), used };
+        },
+    };
+}
+
+// "2.50000000" -> "2.500000" (string truncation, no float round-trip).
+function truncTo6(numericText) {
+    const [i, f = ''] = String(numericText).split('.');
+    return `${i}.${(f + '000000').slice(0, 6)}`;
+}
+
+function signatureMatchesCurrentContract(claim, contract) {
+    try {
+        const signerKey = process.env.SETTLEMENT_EVM_SIGNER_PRIVATE_KEY;
+        if (!signerKey || !contract) return false;
+        const expected = new ethers.Wallet(signerKey).address;
+        const recovered = ethers.verifyTypedData(
+            { name: 'SatelinkClaims', version: '1', chainId: 137, verifyingContract: contract },
+            { Claim: [{ name: 'nodeId', type: 'string' }, { name: 'wallet', type: 'address' }, { name: 'amount', type: 'uint256' },
+                { name: 'nonce', type: 'uint256' }, { name: 'expiry', type: 'uint256' }] },
+            { nodeId: claim.node_id, wallet: claim.wallet, amount: ethers.parseUnits(truncTo6(claim.amount_usdt), 6),
+              nonce: BigInt(claim.nonce), expiry: BigInt(claim.expiry) },
+            claim.signature);
+        return recovered.toLowerCase() === expected.toLowerCase();
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Staff-only: void a pending claim whose signature can no longer be redeemed, releasing the
+ * earnings it reserved (CLAIMING -> UNPAID) so a new claim can be signed.
+ * Safe only when BOTH hold on-chain: the signature has expired (chain time, since
+ * ClaimsContract.claim() checks block.timestamp < expiry) AND its nonce was never used. Any
+ * chain error refuses (fail closed). A redeemed nonce must be completed, never voided.
+ * @returns {Promise<{ok: true, claimId: string, released: string} | {ok: false, http: number, error: string}>}
+ */
+export async function voidClaim(claimId, pool, { chain = createClaimChainReader() } = {}) {
+    const client = await pool.connect();
+    let broken;
+    try {
+        await client.query('BEGIN');
+        const found = await client.query(
+            `SELECT claim_id, node_id, wallet, amount_usdt::text AS amount_usdt, signature, nonce, expiry, status
+               FROM claims WHERE claim_id = $1 FOR UPDATE`,
+            [claimId]
+        );
+        const claim = found.rows[0];
+        if (!claim) { await client.query('ROLLBACK'); return { ok: false, http: 404, error: 'claim_not_found' }; }
+        if (claim.status !== 'pending') { await client.query('ROLLBACK'); return { ok: false, http: 409, error: `claim_${claim.status}` }; }
+
+        // The claims row does not record which contract it was signed for. The signature does:
+        // it must recover to the current signer under the CURRENT contract's EIP-712 domain,
+        // otherwise usedNonces() on this contract says nothing about that signature.
+        if (!signatureMatchesCurrentContract(claim, chain.contract)) {
+            await client.query('ROLLBACK');
+            return { ok: false, http: 409, error: 'claim_signed_for_other_contract' };
+        }
+
+        let chainNow, used;
+        try {
+            ({ chainTime: chainNow, used } = await chain.read(claim.nonce));
+        } catch {
+            await client.query('ROLLBACK');
+            return { ok: false, http: 503, error: 'chain_unavailable' };
+        }
+        if (!(chainNow >= Number(claim.expiry))) {
+            await client.query('ROLLBACK');
+            return { ok: false, http: 409, error: 'claim_not_expired' };
+        }
+        if (used) {
+            await client.query('ROLLBACK');
+            return { ok: false, http: 409, error: 'claim_redeemed_on_chain' };
+        }
+
+        const ids = [claim.node_id, claim.wallet].filter(Boolean).map((x) => String(x).toLowerCase());
+        await client.query(`UPDATE claims SET status = 'void', updated_at = $2 WHERE claim_id = $1`, [claimId, Math.floor(Date.now() / 1000)]);
+        const released = await client.query(
+            `WITH r AS (
+                UPDATE epoch_earnings SET status = 'UNPAID'
+                 WHERE lower(wallet_or_node_id) = ANY($1::text[]) AND status = 'CLAIMING'
+                 RETURNING amount_usdt
+             ) SELECT trunc(COALESCE(SUM(amount_usdt), 0), 6)::text AS released FROM r`,
+            [ids]
+        );
+        // Release exactly what this claim reserved. A mismatch means CLAIMING rows that belong to
+        // another (e.g. legacy, possibly redeemed) claim: refuse rather than make them signable.
+        const same = await client.query(`SELECT $1::numeric = trunc($2::numeric, 6) AS eq`, [released.rows[0].released, claim.amount_usdt]);
+        if (!same.rows[0].eq) {
+            await client.query('ROLLBACK');
+            return { ok: false, http: 409, error: 'reservation_mismatch' };
+        }
+        await client.query('COMMIT');
+        logger.info({ claimId, released: released.rows[0].released }, 'CLAIM_VOID: expired, unredeemed claim voided');
+        return { ok: true, claimId, released: released.rows[0].released };
+    } catch (err) {
+        await client.query('ROLLBACK').catch((rbErr) => { broken = rbErr; });
+        throw err;
+    } finally {
+        client.release(broken);
+    }
+}
+
+/**
  * Get pending claims for a wallet.
  * @param {string} walletAddress - Wallet address
  * @param {import('pg').Pool} pool - PostgreSQL pool
@@ -263,6 +388,7 @@ export async function getPendingClaims(walletAddress, pool) {
 }
 
 export default {
+    voidClaim,
     generateClaimSignature,
     markClaimCompleted,
     getPendingClaims
