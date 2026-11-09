@@ -4,11 +4,11 @@
 
 import { TaskError, ERR } from './errors.js';
 
-const LOOPBACK = new Set(['127.0.0.1', 'localhost', '::1', '[::1]']);
+import { assertEgressUrl, egressFetch } from './connectors/egress_guard.js';
 
 export function createMockStoreConnector({ baseUrl = process.env.MOCK_STORE_URL || 'http://127.0.0.1:4410', fetchImpl = globalThis.fetch, timeoutMs = 10_000 } = {}) {
-  const u = new URL(baseUrl);
-  if (!LOOPBACK.has(u.hostname) || !['http:', 'https:'].includes(u.protocol)) throw new Error(`mock store must be loopback, got ${u.hostname}`);
+  const u = assertEgressUrl(baseUrl, { what: 'mock store' });
+  fetchImpl = egressFetch(fetchImpl, { what: 'mock store' });
   const base = u.origin;
 
   async function call(path, init = {}) {
@@ -60,7 +60,8 @@ export function createMockStoreConnector({ baseUrl = process.env.MOCK_STORE_URL 
       const o = await this.lookupOrder(idempotencyKey);
       if (!o) return { verified: false, found: false, reason: 'no_order_for_key' };
       const ok = o.status === 'confirmed' && o.sku === offer.sku && o.price_usd_minor === offer.price_usd_minor;
-      return { verified: ok, found: true, reason: ok ? null : 'order_mismatch', evidence: o };
+      // result: the supplier's record in executeStep's shape, so a crash-recovered task still shows what was bought.
+      return { verified: ok, found: true, reason: ok ? null : 'order_mismatch', evidence: o, ...(ok ? { result: o } : {}) };
     },
 
     /** Verification lookup by idempotency key (null if the store has no such order). */

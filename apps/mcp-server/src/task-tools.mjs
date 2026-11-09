@@ -78,7 +78,7 @@ export function createTaskTools({ fetch: f, apiBase, apiKey, consoleUrl = 'http:
     const headers = { Accept: 'application/json', 'User-Agent': 'satelink-mcp' };
     if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
     if (body !== undefined) headers['Content-Type'] = 'application/json';
-    const res = await f(`${base.origin}/v1${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+    const res = await f(`${base.origin}/v1${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), redirect: 'error' });
     const data = await res.json().catch(() => ({ ok: false, error: { code: 'BAD_UPSTREAM', message: 'Non-JSON response.' } }));
     return { status: res.status, data };
   }

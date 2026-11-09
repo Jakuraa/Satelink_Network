@@ -46,6 +46,15 @@ test("P3: navigation, six-domain suggestions, pending approvals on Home, and eve
   await page.goto("/home");
   await expect(page.getByTestId("pending-approvals")).toContainText("Buy a sci-fi e-book gift code under $12");
 
+  // Every task-type suggestion must really start its journey from the chat (not fall back to small talk).
+  for (const [domain, next] of [["Food", "connect-food_delivery_mock"], ["Trading AI", "approve-open"], ["Developer APIs", "approve-open"]] as const) {
+    await page.goto("/home");
+    await page.getByTestId("suggested-tasks").getByRole("link", { name: new RegExp(domain) }).click();
+    await expect(page.getByRole("button", { name: "Send" })).toBeEnabled();
+    await page.locator("#assistant-input").press("Enter");
+    await expect(page.getByTestId(next).last(), `${domain} suggestion`).toBeVisible({ timeout: 30_000 });
+  }
+
   // Approved navigation order (desktop sidebar; on small screens it lives in the drawer).
   if (P === "desktop-1440") {
     const labels = await page.locator('aside nav a').allInnerTexts();

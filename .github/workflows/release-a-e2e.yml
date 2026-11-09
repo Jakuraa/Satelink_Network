@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   s1:
-    name: Release A journeys S1–S6 (390/768/1440) + restart drill
+    name: Release A journeys S1–S6 + P3/P4 (390/768/1440) + restart drill + audit gate
     runs-on: ubuntu-latest
     timeout-minutes: 30
     services:
@@ -46,6 +46,8 @@ jobs:
           cache: 'npm'
       - name: Install dependencies
         run: npm ci --prefer-offline
+      - name: Dependency audit gate (fails on NEW high/critical advisories; known ones = OB-14)
+        run: node scripts/security/audit-gate.mjs
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: Fresh preview database + migrations

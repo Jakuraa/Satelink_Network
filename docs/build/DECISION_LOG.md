@@ -115,3 +115,18 @@ are in-process (fixed window), usage counters are durable (per key per day).
   `transaction: ""`, `extra.settled: false`.
 - A test walks the preview server's import graph and fails if any live x402 middleware, vault/deposit listener, RPC
   credit path or `app_factory.mjs` is reachable, or if reachable code names a vault address / a real facilitator.
+
+## ADR-11 — 2026-11-05 — P4 hardening decisions
+- **One egress guard** (`workflows/connectors/egress_guard.js`) for every connector and the x402 facilitator: preview =
+  loopback http(s) only; beta/live = https and no private/loopback/link-local/metadata targets (IPv4-mapped IPv6 in
+  both forms); every request `redirect: 'error'`. Replaces four per-driver loopback checks (R1).
+- **Registry-driven intent routing**: the conversation/plan router recognises the action words the capability registry
+  declares (`intents`), so a new capability is reachable from the chat without code changes (R9).
+- **Deterministic trading evaluation per quote**: the evaluation clock is anchored to the quote (`offer.as_of`); a
+  re-execution is a replay and recovery can verify by recomputation. The bundle-synced trading engine is unchanged.
+- **Recovery records the deliverable**: on crash recovery, a connector's verify returns the supplier's own record
+  (verified only); the engine stores it when no result was recorded — it never overrides one.
+- **x402: one payment per task**: the simulated deposit is booked only inside the winning approval transition and is
+  keyed per task.
+- **Dependency audit gate**: CI fails on NEW high/critical production advisories; the existing 40 (4 critical) are
+  founder actions (OB-14) because fixing them changes production lockfiles and requires deploys.

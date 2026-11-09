@@ -21,6 +21,11 @@ describe('model router (P2.3)', () => {
     expect(classify('Buy me a $10 e-book gift code')).to.equal('plan');
     expect(classify('please backtest a moving average strategy')).to.equal('plan');
     expect(classify('what can you do?')).to.equal('conversation');
+    // Registry-declared intents (R9) also route to planning; anything regex-like in them is ignored.
+    expect(classify('Extract the contacts from: a@b.co')).to.equal('conversation');
+    expect(classify('Extract the contacts from: a@b.co', ['extract', 'parse'])).to.equal('plan');
+    expect(classify('please parse this invoice', ['extract', 'parse'])).to.equal('plan');
+    expect(classify('anything at all', ['.*', 'a|b'])).to.equal('conversation');
   });
 
   it('without a key it uses the fixture: served_by fixture/<model>, cost 0, badge shown', async () => {

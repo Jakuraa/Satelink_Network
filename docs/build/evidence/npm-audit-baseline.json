@@ -1,0 +1,246 @@
+{
+  "note": "High/critical production advisories present when the Release A gate was introduced. Founder action OB-14: remediate; never add entries to hide new ones.",
+  "generated_at": "2026-11-05T13:51:02.360Z",
+  "advisories": {
+    "https://github.com/advisories/GHSA-22jm-h49p-29qw": {
+      "package": "@modelcontextprotocol/sdk",
+      "severity": "high",
+      "range": ">=1.24.0 <1.32.0",
+      "title": "MCP TypeScript SDK: Experimental tasks were not tied to the session that created them"
+    },
+    "https://github.com/advisories/GHSA-2464-fhr4-w9xw": {
+      "package": "next",
+      "severity": "critical",
+      "range": ">=10.0.0 <=15.5.27",
+      "title": "Next.js: Unauthenticated Remote Code Execution in Image Optimization API when SVG files are used"
+    },
+    "https://github.com/advisories/GHSA-27r3-jxmh-p828": {
+      "package": "body-parser",
+      "severity": "high",
+      "range": ">=2.0.0 <2.4.0",
+      "title": "body-parser vulnerable to Denial of Service via trailing bytes after a compressed request body"
+    },
+    "https://github.com/advisories/GHSA-2883-xcg3-v3hh": {
+      "package": "js-yaml",
+      "severity": "high",
+      "range": ">=4.0.0 <4.3.2",
+      "title": "js-yaml: maxTotalMergeKeys does not limit CPU use for empty merge sources"
+    },
+    "https://github.com/advisories/GHSA-3jxr-9vmj-r5cp": {
+      "package": "brace-expansion",
+      "severity": "high",
+      "range": ">=3.0.0 <5.0.7",
+      "title": "brace-expansion: DoS via exponential-time expansion of consecutive non-expanding {} groups"
+    },
+    "https://github.com/advisories/GHSA-3pq3-5fj3-cg6v": {
+      "package": "axios",
+      "severity": "high",
+      "range": ">=1.13.0 <1.20.0",
+      "title": "Axios: HTTP/2 adapter bypasses configured DNS lookup and proxy controls"
+    },
+    "https://github.com/advisories/GHSA-46jr-4wx8-v453": {
+      "package": "@modelcontextprotocol/sdk",
+      "severity": "high",
+      "range": ">=1.3.0 <1.32.0",
+      "title": "MCP TypeScript SDK: One HTTP request within the default size limit could exhaust server memory during validation"
+    },
+    "https://github.com/advisories/GHSA-52cp-r559-cp3m": {
+      "package": "js-yaml",
+      "severity": "high",
+      "range": ">=4.0.0 <4.3.0",
+      "title": "js-yaml: YAML merge-key chains can force quadratic CPU consumption"
+    },
+    "https://github.com/advisories/GHSA-542g-h47m-68v8": {
+      "package": "axios",
+      "severity": "high",
+      "range": ">=1.13.0 <1.20.0",
+      "title": "Axios: Denial of Service via Unhandled 'error' Event in HTTP/2 ClientHttp2Session Initialization"
+    },
+    "https://github.com/advisories/GHSA-5p4m-2wfm-xmqj": {
+      "package": "js-yaml",
+      "severity": "high",
+      "range": ">=4.0.0 <4.3.1",
+      "title": "JS-YAML: Quadratic CPU consumption in !!omap resolution (3.x and 4.x) — CVE-2026-59870 fix not backported"
+    },
+    "https://github.com/advisories/GHSA-68fv-2mgg-jv7q": {
+      "package": "source-map-js",
+      "severity": "high",
+      "range": ">=1.0.0 <1.2.2",
+      "title": "source-map-js allows event-loop denial of service through indexed source-map section offsets"
+    },
+    "https://github.com/advisories/GHSA-6g55-p6wh-862q": {
+      "package": "postcss",
+      "severity": "high",
+      "range": "<=8.5.11",
+      "title": "PostCSS: Arbitrary file read and information disclosure via attacker-controlled sourceMappingURL in CSS comments"
+    },
+    "https://github.com/advisories/GHSA-6j4f-fj2g-mc7p": {
+      "package": "brace-expansion",
+      "severity": "high",
+      "range": ">=4.0.0 <5.0.10",
+      "title": "brace-expansion: DoS via uncontrolled recursion in parseCommaParts causing stack exhaustion"
+    },
+    "https://github.com/advisories/GHSA-6qxp-vccf-f47h": {
+      "package": "@modelcontextprotocol/sdk",
+      "severity": "high",
+      "range": ">=1.12.0 <1.31.0",
+      "title": "MCP TypeScript SDK: OAuth client could send credentials to an authorization server chosen by the MCP server"
+    },
+    "https://github.com/advisories/GHSA-8r9p-f939-6h3c": {
+      "package": "follow-redirects",
+      "severity": "high",
+      "range": ">=1.16.0 <1.16.1",
+      "title": "follow-redirects sensitiveHeaders regex escaping can expose credential headers"
+    },
+    "https://github.com/advisories/GHSA-965c-763c-88jm": {
+      "package": "better-auth",
+      "severity": "critical",
+      "range": ">=1.4.0-beta.18 <1.7.7",
+      "title": "better-auth: OAuth state can be used as a Magic Link to sign in as another user"
+    },
+    "https://github.com/advisories/GHSA-96hv-2xvq-fx4p": {
+      "package": "ws",
+      "severity": "high",
+      "range": ">=8.0.0 <8.21.0",
+      "title": "ws: Memory exhaustion DoS from tiny fragments and data chunks"
+    },
+    "https://github.com/advisories/GHSA-c29m-xwm3-cm6r": {
+      "package": "axios",
+      "severity": "high",
+      "range": ">=1.16.1 <1.20.0",
+      "title": "Axios: ReDoS in fromDataURI data: URL parser freezes the Node event loop (DoS)"
+    },
+    "https://github.com/advisories/GHSA-cg2g-xh64-v4q7": {
+      "package": "dompurify",
+      "severity": "critical",
+      "range": ">=3.4.4 <=3.4.16",
+      "title": "DOMPurify SAFE_FOR_TEMPLATES bypass: split template expressions survive in attached shadow root content on DOM output modes"
+    },
+    "https://github.com/advisories/GHSA-f88m-g3jw-g9cj": {
+      "package": "sharp",
+      "severity": "high",
+      "range": "<0.35.0",
+      "title": "sharp inherited vulnerabilities in libvips: CVE-2026-33327, CVE-2026-33328, CVE-2026-35590, CVE-2026-35591"
+    },
+    "https://github.com/advisories/GHSA-f897-62hf-6gxq": {
+      "package": "@modelcontextprotocol/sdk",
+      "severity": "high",
+      "range": ">=1.10.0 <1.30.1",
+      "title": "MCP TypeScript SDK: HTTP server transports and handlers did not limit request body size or JSON-RPC batch length"
+    },
+    "https://github.com/advisories/GHSA-gcfj-64vw-6mp9": {
+      "package": "axios",
+      "severity": "high",
+      "range": ">=1.15.2 <1.18.0",
+      "title": "Axios Node HTTP adapter can use an inherited proxy after interceptor config cloning"
+    },
+    "https://github.com/advisories/GHSA-jqcg-44mw-7w3h": {
+      "package": "proxy-addr",
+      "severity": "critical",
+      "range": ">=1.1.0 <2.0.8",
+      "title": "proxy-addr vulnerable to IP spoofing via IPv4-mapped IPv6 trust subnet"
+    },
+    "https://github.com/advisories/GHSA-m8m8-qj5v-23w3": {
+      "package": "axios",
+      "severity": "high",
+      "range": ">=1.15.2 <1.20.0",
+      "title": "Axios: Node HTTP adapter prototype-pollution gadget allows request socket hijack via inherited createConnection"
+    },
+    "https://github.com/advisories/GHSA-mghh-pgcx-3jjj": {
+      "package": "axios",
+      "severity": "high",
+      "range": ">=1.15.0 <1.20.0",
+      "title": "Axios: ReDoS (O(N²)) in shouldBypassProxy host normalization, reachable via untrusted redirect Location"
+    },
+    "https://github.com/advisories/GHSA-mh99-v99m-4gvg": {
+      "package": "brace-expansion",
+      "severity": "high",
+      "range": ">=4.0.0 <5.0.8",
+      "title": "brace-expansion: DoS via unbounded expansion length causing an out-of-memory process crash"
+    },
+    "https://github.com/advisories/GHSA-mrhx-c7xc-m3w5": {
+      "package": "zod",
+      "severity": "high",
+      "range": "<4.6.6",
+      "title": "Zod can exhaust memory while validating oversized constrained collections"
+    },
+    "https://github.com/advisories/GHSA-mrv2-3pqr-j5jr": {
+      "package": "dompurify",
+      "severity": "high",
+      "range": "<=3.4.16",
+      "title": "DOMPurify IN_PLACE: hook that removes a parent or sibling leaves the detached subtree's event handlers armed (incomplete fix for GHSA-p98j-92pf-mc4p)"
+    },
+    "https://github.com/advisories/GHSA-mrwp-f3q8-3g9p": {
+      "package": "follow-redirects",
+      "severity": "high",
+      "range": ">=1.16.0 <=1.16.1",
+      "title": "follow-redirects: Cross-realm sensitiveHeaders arrays are discarded and custom credentials can follow redirects"
+    },
+    "https://github.com/advisories/GHSA-p3m5-59mp-jv5r": {
+      "package": "next",
+      "severity": "high",
+      "range": ">=13.0.0 <=15.5.27",
+      "title": "Next.js: Denial of Service in App Router using Server Actions"
+    },
+    "https://github.com/advisories/GHSA-q3jh-wrc6-jgq8": {
+      "package": "follow-redirects",
+      "severity": "high",
+      "range": ">=1.16.0 <1.16.1",
+      "title": "follow-redirects array-form headers bypass cross-origin credential stripping"
+    },
+    "https://github.com/advisories/GHSA-qhr7-859c-m2p7": {
+      "package": "brace-expansion",
+      "severity": "high",
+      "range": ">=4.0.0 <5.0.11",
+      "title": "brace-expansion: DoS via uncontrolled recursion on nested brace groups causing stack exhaustion"
+    },
+    "https://github.com/advisories/GHSA-r28c-9q8g-f849": {
+      "package": "postcss",
+      "severity": "high",
+      "range": "<=8.5.17",
+      "title": "PostCSS: Path Traversal in Previous Source Map Auto-Loading (sourceMappingURL) leads to Arbitrary .map File Disclosure"
+    },
+    "https://github.com/advisories/GHSA-r4gj-5m52-g5wh": {
+      "package": "axios",
+      "severity": "high",
+      "range": ">=1.17.0 <1.20.0",
+      "title": "Axios: maxRedirects: 0 is not enforced by the fetch adapter, allowing redirect-based SSRF"
+    },
+    "https://github.com/advisories/GHSA-r4xp-prcw-77qf": {
+      "package": "better-auth",
+      "severity": "high",
+      "range": ">=1.5.0-beta.12 <1.7.7",
+      "title": "better-auth: OAuth Proxy lets an attacker sign in as another user"
+    },
+    "https://github.com/advisories/GHSA-rgj7-g3m4-5g8c": {
+      "package": "sharp",
+      "severity": "high",
+      "range": "<0.35.4",
+      "title": "sharp: Vulnerabilities in libheif: GHSA-g89c-p67h-r497 and GHSA-2jg2-4ch7-h545"
+    },
+    "https://github.com/advisories/GHSA-rgw5-rvv9-x895": {
+      "package": "brace-expansion",
+      "severity": "high",
+      "range": "<1.1.18",
+      "title": "brace-expansion: DoS via unbounded intermediate arrays, bypassing the CVE-2026-14257 mitigation"
+    },
+    "https://github.com/advisories/GHSA-vc2v-76pw-4v95": {
+      "package": "compression",
+      "severity": "high",
+      "range": "<1.8.2",
+      "title": "compression vulnerable to Denial of Service via memory leak on premature response close"
+    },
+    "https://github.com/advisories/GHSA-wq5f-xc86-pv6w": {
+      "package": "sharp",
+      "severity": "high",
+      "range": "<0.35.5",
+      "title": "sharp : Vulnerability in librsvg dependency CVE-2026-96889"
+    },
+    "https://github.com/advisories/GHSA-x97p-jq2g-jp4f": {
+      "package": "axios",
+      "severity": "high",
+      "range": ">=1.15.1 <1.20.0",
+      "title": "Axios: Prototype Pollution Gadget in axios toFormData Options"
+    }
+  }
+}

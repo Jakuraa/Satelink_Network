@@ -36,7 +36,9 @@ Evidence keys: **P** = production probe 2026-10-20 (curl transcript in the ledge
 | MCP protocol 2026-07-28 | BLOCKED (EXTERNAL) | official SDK latest 1.32.2 negotiates ≤ 2025-11-25; server negotiates 2025-11-25 (OB-13) |
 | A2A Agent Card JWS signature | NOT STARTED | needs a KeyProvider-held signing key; card ships unsigned (field omitted, not faked) |
 | S6 Machine commerce (x402 V2 preview) | VERIFIED | machine_s6.integration 8/8 (incl. import-graph proof: no live x402/vault module reachable); s6-machine E2E ×3; mock facilitator saw only /verify; CI all green on PR #621 |
-| P3 Product quality (preview console) | VERIFIED (local) | approved 10-item nav; Home pending approvals + six-domain suggestions; Trading AI + Activity & Security real pages; Agent Marketplace honest Coming soon; p3-quality E2E ×3 (axe, overflow, hydration, headings); Lighthouse a11y 100 on 11 pages (artifacts/lighthouse/p3-a11y.json, local); CI on draft PR |
+| P3 Product quality (preview console) | VERIFIED | approved 10-item nav; Home pending approvals + six-domain suggestions; Trading AI + Activity & Security real pages; Agent Marketplace honest Coming soon; p3-quality E2E ×3 (axe, overflow, hydration, headings); Lighthouse a11y 100 on 11 pages (artifacts/lighthouse/p3-a11y.json, local); CI all green on PR #622 |
+| P4 Assurance suites | VERIFIED (local) | traceability: docs/build/ASSURANCE_P4.md; assurance_p4.integration 17/17 (authz matrix, rate limit, CSRF, SSRF redirect, oversize, headers, injection, concurrency, ledger invariants, determinism, per-slice durability); p4-adversarial E2E (XSS/CSRF); egress_guard unit; no-float-money arch rule; npm audit gate in CI; found+fixed 7 defects; CI on draft PR |
+| Production dependency advisories | BLOCKED (FOUNDER) | 4 critical / 36 high in production deps (next RCE, better-auth account takeover, proxy-addr, dompurify) — OB-14 |
 | x402 live rail for task capabilities | NOT STARTED | preview uses a LOCAL mock facilitator, testnet id, placeholder payTo; live = Release B founder decision |
 
 ### Release A tech debt
@@ -65,6 +67,8 @@ Evidence keys: **P** = production probe 2026-10-20 (curl transcript in the ledge
 - Lighthouse runs locally only (`scripts/preview/lighthouse-a11y.mjs`, pinned npx lighthouse@12.8.2); not wired into CI.
 - The Shell renders only a fixed list of nav groups; live-console groups "Activity & Logs", "Developer Tools", "Protocols" are therefore hidden in production (pre-existing; not changed by Release A).
 - Preview nav omits the live RPC product pages (they need production endpoints the preview API does not serve).
+- Egress guard does not resolve DNS: a public hostname rebinding to a private IP must be checked at connect time before any beta/live connector.
+- Dependency audit gate compares against a baseline of 40 known advisories (OB-14); the baseline must only shrink.
 
 ## M1 Identity, tenancy, access
 

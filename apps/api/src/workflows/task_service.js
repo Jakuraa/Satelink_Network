@@ -56,6 +56,8 @@ export class TaskService {
     await this.sim.ensurePlatformAccounts();
     await this.registry.seed();
     for (const e of await this.registry.all()) for (const p of e.providers) if (p.connector && this.connectors[p.connector]) this.providerConnector.set(p.id, p.connector);
+    // Action words the registry declares for customer-visible capabilities (R9) — used by the conversation/plan router.
+    this.intentWords = [...new Set((await this.registry.search({ q: '', limit: 500 })).flatMap((e) => e.intents || []))];
     // ONE kernel: the task-step adapter and providers register on #609's DurableKernel.
     this.wf = await WorkflowService.create({
       ...workflowOptions,
@@ -72,6 +74,7 @@ export class TaskService {
   }
 
   isRoutable = (_entry, provider) => this.providerConnector.has(provider.id);
+  classify = (text) => this.router.classify(text, this.intentWords || []);
 
   // ───────────────────────── events (the run's stream in #609's hash-chained journal) ─────────────────────────
   async _event(runId, phase, payload) { await this.dk.journal.append(`task:${runId}`, phase, payload, this.clock()); }
@@ -106,7 +109,7 @@ export class TaskService {
 
   async _plan(run, { priorPlan = null, priorInputs = {} } = {}) {
     let r = run;
-    if (r.state === 'CREATED') r = await this._move(r, 'UNDERSTANDING', {}, { route: this.router.classify(r.intent) });
+    if (r.state === 'CREATED') r = await this._move(r, 'UNDERSTANDING', {}, { route: this.classify(r.intent) });
     if (r.state === 'UNDERSTANDING') r = await this._move(r, 'PLANNING');
     if (r.state === 'AWAITING_INPUT') r = await this._move(r, 'PLANNING');
     let out;
@@ -199,15 +202,23 @@ export class TaskService {
     if (!quote || quote.run_id !== run.id || BigInt(payment.amount_minor) !== BigInt(quote.credit_charge_minor)) {
       throw new TaskError(ERR.QUOTE_MISMATCH, 'The payment does not match the current quote.', { status: 409 });
     }
-    if (run.state === 'AWAITING_APPROVAL') {
-      await this.sim.ensurePlatformAccounts();
-      const accounts = await this.sim.ensureCustomer(run.principal, run.actor_type || 'machine');
-      await this.sim.recordX402Payment(accounts, { nonce: payment.nonce, amount: BigInt(payment.amount_minor) });
+    // The deposit is booked only by the call whose approval transition wins, before execution is dispatched; a
+    // concurrent different payment loses the transition and is refused (one payment per task).
+    const out = await this.approve(principal, id, { quote_id, quote_version, idempotency_key: `x402:${String(payment.nonce).slice(0, 100)}` }, {
+      payment,
+      beforeDispatch: async (next) => {
+        await this.sim.ensurePlatformAccounts();
+        const accounts = await this.sim.ensureCustomer(next.principal, next.actor_type || 'machine');
+        await this.sim.recordX402Payment(accounts, { runId: next.id, nonce: payment.nonce, amount: BigInt(payment.amount_minor) });
+      },
+    });
+    if (!out.changed && (await this._own(principal, id)).approval?.payment?.nonce !== payment.nonce) {
+      throw new TaskError(ERR.ILLEGAL_TRANSITION, 'This task was already paid with a different payment.', { status: 409 });
     }
-    return this.approve(principal, id, { quote_id, quote_version, idempotency_key: `x402:${String(payment.nonce).slice(0, 100)}` }, { payment });
+    return out;
   }
 
-  async approve(principal, id, { quote_id, quote_version, idempotency_key } = {}, { payment = null } = {}) {
+  async approve(principal, id, { quote_id, quote_version, idempotency_key } = {}, { payment = null, beforeDispatch = null } = {}) {
     let run = await this._own(principal, id);
     if (run.state === 'EXPIRED') throw new TaskError(ERR.QUOTE_EXPIRED, 'The quote expired before approval. Ask for a new quote.', { status: 409, retryable: true });
     if (run.state !== 'AWAITING_APPROVAL') {
@@ -227,6 +238,7 @@ export class TaskService {
       approved_at: new Date(this.clock()).toISOString(), approved_by: principal.id, quote_id: quote.quote_id, quote_version: quote.version,
       idempotency_key: typeof idempotency_key === 'string' ? idempotency_key.slice(0, 128) : null, ...(payment ? { payment } : {}) } });
     if (!next) { run = await this._own(principal, id); return { task: await this.view(run), changed: false }; } // a concurrent approve won
+    if (beforeDispatch) await beforeDispatch(next);
     this.dispatch(next.id);
     return { task: await this.view(next), changed: true };
   }
@@ -339,10 +351,13 @@ export class TaskService {
       return this._fail(run, 'VERIFICATION_FAILED', 'The supplier has no record of the order. Nothing was charged.');
     }
     await this.store.upsertStep(run.id, { ...this._stepRow(step, txId), status: 'verified', attempts: 1, result: v.evidence, verified_at: new Date(this.clock()) });
-    return this._succeed(run, step, v.evidence);
+    // A connector that can recompute its own deterministic output (trading) returns it during crash recovery, when the
+    // crashed process never recorded the result. Only used when no result exists; it never overrides one.
+    const recovered = !run.result?.steps?.[0]?.data && v.result ? { result: { steps: [{ step_no: step.step_no, data: v.result }] } } : {};
+    return this._succeed(run, step, v.evidence, recovered);
   }
 
-  async _succeed(run, step, evidence) {
+  async _succeed(run, step, evidence, recovered = {}) {
     const quote = await this.store.getQuote(run.approval.quote_id);
     const credit = BigInt(quote.credit_charge_minor);
     if (credit > 0n) await this.sim.settle(this._rsvId(run.id), 'captured', credit); // capture only after verification
@@ -364,7 +379,7 @@ export class TaskService {
       origin: 'simulated', environment: 'preview', issued_at: issuedAt,
     };
     await this.store.insertReceipt({ receipt_id: receiptId, run_id: run.id, principal: run.principal, body, issued_at: issuedAt });
-    return this._move(run, 'SUCCEEDED', { receipt_id: receiptId }, { receipt_id: receiptId });
+    return this._move(run, 'SUCCEEDED', { receipt_id: receiptId, ...recovered }, { receipt_id: receiptId });
   }
 
   async _fail(run, code, message) {

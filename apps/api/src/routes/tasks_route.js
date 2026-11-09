@@ -83,7 +83,7 @@ export function createTasksRouter(svc, { resolvePrincipal, connections = null, d
   r.post('/assistant/messages', authed(async (req, res, p) => {
     const text = typeof req.body?.text === 'string' ? req.body.text : '';
     if (text.trim().length < 1 || text.length > 2000) throw new TaskError(ERR.VALIDATION, 'Message must be 1–2000 characters.');
-    if (svc.router.classify(text) === 'plan') {
+    if (svc.classify(text) === 'plan') {
       const { task, replayed } = await svc.createTask(p, { text, idempotency_key: req.body?.idempotency_key, actor_type: p.actor_type || 'human' });
       return res.status(replayed ? 200 : 201).json({ ok: true, kind: 'task', task, model_badge: svc.router.badge });
     }
