@@ -7,10 +7,10 @@ categories only (R14); details in `docs/build/evidence/private/` on the build ma
 
 ## ▶ RESUME CAPSULE — Release State A (updated after each phase)
 1. Mandate: Release State A master prompt v2026-11-04b + founder conditions 1–6 (2026-11-04).
-2. Worktree: `.claude/worktrees/release-a`; stack `build/p0-safety` (#610) → `build/integration-base` (#611) → `build/p2-foundation` (#612) → `build/s1-primary-journey` (#616) → `build/s2-food-mcp` (#617) → `build/s3-trading` (#618) → `build/s4-developer` (#619) → `build/s5-mcp-server` (#620) → `build/s6-machine` (#621) → `build/p3-quality` (#622) → `build/p4-assurance` (#623) → `build/p5-websites`.
-3. Last phase done: **P5** (websites, PR only) — VERIFIED locally; CI on the draft PR. P4 VERIFIED (CI green #623 after a teardown-listener fix). P3, S1–S6 VERIFIED (#616–#622).
+2. Worktree: `.claude/worktrees/release-a`; stack `build/p0-safety` (#610) → `build/integration-base` (#611) → `build/p2-foundation` (#612) → `build/s1-primary-journey` (#616) → `build/s2-food-mcp` (#617) → `build/s3-trading` (#618) → `build/s4-developer` (#619) → `build/s5-mcp-server` (#620) → `build/s6-machine` (#621) → `build/p3-quality` (#622) → `build/p4-assurance` (#623) → `build/p5-websites` (#629) → `build/p6-acceptance`.
+3. Last phase done: **P6** — acceptance written. All phases done; every PR through #629 green in CI. Awaiting founder review.
 4. Last SHA: see `git log -1 build/p0-safety`.
-5. Next sub-step: **P6** acceptance, ARCHITECTURE.md, RELEASE_B_FOUNDER_ACTIONS.md, FINAL_REPORT.md (branch `build/p6-acceptance` from `build/p5-websites`). Remaining spec verbatim: `RELEASE_A_REMAINING_SPEC.md`.
+5. Next: founder reads `FINAL_REPORT.md`, confirms acceptance, acts on `RELEASE_B_FOUNDER_ACTIONS.md` 1–7, merges in order. No agent merges or deploys.
 6. Open risks: E1 JWT secret + webhooks public (OB-1/2); plaintext signer/treasury keys in local stash (OB-3); single-copy backup (OB-5).
 7. Rule: no work touching auth secrets, payment config or production (D-A2); local test credentials only.
 8. Backups: never touch `backups/protected/*.dump`, `docs/release/*.dump` (BACKUP_POSTURE.md).
