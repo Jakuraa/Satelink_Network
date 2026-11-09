@@ -3,7 +3,7 @@
 exports[`llms.txt with the preview section > matches the committed snapshot 1`] = `
 "# Satelink — AI Assistance & Agent Commerce
 
-Satelink is AI-agent assistance and machine-commerce infrastructure for software agents and machines to discover, evaluate, access, use, meter, and pay for supported digital services programmatically. Satelink is developed and operated by Jakuraa Commercial Private Limited.
+Satelink AI Assistance: AI assistance and agent commerce for people, developers, AI agents and machines. Satelink is developed and operated by Jakuraa Commercial Private Limited.
 
 Satelink Trading AI is an intelligent algorithmic market-analysis application built on the Satelink platform: reason, validate, score (GO / WAIT / REJECT), authorize, execute, learn. AI proposes; deterministic risk and the user's signed mandate decide; the user keeps custody and withdrawals are never enabled. Currently in controlled paper-trading beta. Live trade execution is not yet enabled. Overview: https://satelink.network/trading-agent
 
@@ -19,12 +19,8 @@ Satelink Trading AI is an intelligent algorithmic market-analysis application bu
 
 ## Products
 ### Machine Commerce (https://satelink.network/products/machine-commerce)
-AI-agent assistance and machine-commerce infrastructure for software agents and machines to discover, evaluate, access, use, meter, and pay for supported digital services programmatically.
+Machine Commerce lets software agents and machines discover, evaluate, access, meter, and pay for supported digital services programmatically.
   - call: $0.00003 / call (USD)
-
-### Trading Intelligence (https://satelink.network/products/trading-intelligence)
-Trading Intelligence is a metered analytics API returning derived statistics from public market data — funding-rate, open-interest, liquidation-cluster and microstructure metrics. It is a research input, not investment advice.
-  (pricing: not published)
 
 ### RPC Infrastructure (https://satelink.network/products/rpc)
 Satelink RPC is a supported blockchain gateway capability providing metered JSON-RPC access on Polygon PoS (chain 137). Software agents and automated services access endpoints programmatically, paying per call via x402 on Base or prepaid Polygon vaults.

@@ -38,16 +38,16 @@ const REDIRECTS: Record<string, string> = {
   // /intelligence/success is a REAL page (the #398 checkout claim) and is
   // intentionally absent here, so it is never redirected.
   // Q27 (2026-10-12): the standalone Trading Intelligence sale page (Dodo
-  // checkout) is removed; both entry points land on Trading AI. The metric
-  // data pages and GET /v1/intelligence stay live.
+  // checkout) is removed; both entry points land on Trading AI. D14: the metric
+  // pages are not standalone either (see TI_METRIC_PAGES). GET /v1/intelligence
+  // stays live for existing keys.
   '/products/trading-intelligence': '/trading-agent/product',
   '/intelligence': '/trading-agent/product',
-  '/intelligence/funding-rate-heatmap': '/products/trading-intelligence/funding-rate-heatmap',
-  '/intelligence/open-interest-shifts': '/products/trading-intelligence/open-interest-shifts',
-  '/intelligence/liquidation-clusters': '/products/trading-intelligence/liquidation-clusters',
-  '/intelligence/market-microstructure': '/products/trading-intelligence/market-microstructure',
-  '/rpc': '/products/rpc',
+    '/rpc': '/products/rpc',
 }
+
+// Every old metric URL, under either prefix, lands on Trading AI.
+const TI_METRIC_PAGES = /^\/(?:intelligence|products\/trading-intelligence)\/(?!success(?:\/|$))[^/]+\/?$/
 
 const CONSOLE_ORIGIN = 'https://console.satelink.network'
 const CONSOLE_PATHS: Record<string, string> = {
@@ -109,7 +109,7 @@ export function middleware(req: NextRequest) {
       if (url.pathname === '/signup') dest.searchParams.set('mode', 'signup')
       return NextResponse.redirect(dest, 307)
     }
-    const target = REDIRECTS[url.pathname]
+    const target = TI_METRIC_PAGES.test(url.pathname) ? '/trading-agent/product' : REDIRECTS[url.pathname]
     if (target) {
       const [path, hash] = target.split('#')
       url.pathname = path

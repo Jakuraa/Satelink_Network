@@ -74,7 +74,7 @@ export const navigationFallback: Navigation = {
           { label: "Satelink Trading AI", href: "/trading-agent", description: "AI proposes, deterministic risk and signed mandates decide", badge: "Beta" },
         ] },
       ],
-      featureCard: { eyebrow: "Agent procurement", title: "Machine Commerce", description: "Programmatic infrastructure for AI agents to discover, access, and pay for services.", href: "/products/machine-commerce" },
+      featureCard: { eyebrow: "Agent procurement", title: "Machine Commerce", description: "Let AI agents discover, access, and pay for services.", href: "/products/machine-commerce" },
     },
     {
       label: "Solutions",

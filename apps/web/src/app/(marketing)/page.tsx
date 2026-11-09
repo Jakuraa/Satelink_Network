@@ -331,7 +331,7 @@ export default function HomePage() {
               {STATUS_LINE}
             </Badge>
             <h2 className="mx-auto mt-4 max-w-xl text-balance font-sl-display text-3xl font-normal tracking-[-0.02em] text-sl-text sm:text-4xl">
-              Build on Satelink machine-commerce infrastructure.
+              Build on Satelink AI Assistance.
             </h2>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               <Button asChild size="lg">

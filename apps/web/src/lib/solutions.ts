@@ -56,7 +56,7 @@ export const SOLUTIONS: Record<string, SolutionFacts> = {
         ["What certifications do you hold?", "We do not claim certifications we do not hold. Settlement is on-chain and verifiable; per-key controls and attribution are built in. Ask us about your specific requirements."],
       ] },
       { group: "Products & capabilities", items: [
-        ["Which products are available?", "Trading Intelligence and RPC today, over the same metered platform."],
+        ["Which products are available?", "Polygon RPC, x402 and prepaid credits today, over the same metered platform."],
       ] },
       { group: "Getting started", items: [
         ["How does invoicing work?", "Self-serve uses a prepaid balance; consolidated invoicing is available through a corporate engagement — contact sales."],
@@ -82,7 +82,7 @@ export const SOLUTIONS: Record<string, SolutionFacts> = {
         ["Do I need a contract?", "No — it is pay-per-call with no commitment."],
       ] },
     ],
-    relatedProducts: ["rpc", "trading-intelligence", "x402"],
+    relatedProducts: ["rpc", "x402", "metering"],
   },
   developers: {
     slug: "developers", kind: "company", name: "Developers",
@@ -121,7 +121,7 @@ export const SOLUTIONS: Record<string, SolutionFacts> = {
         ["How does an agent pay without an account?", "On the x402 rail the payment travels in the HTTP request; the wallet is the identity, so no account is needed."],
       ] },
     ],
-    relatedProducts: ["machine-commerce", "x402", "trading-intelligence"],
+    relatedProducts: ["machine-commerce", "x402", "metering"],
   },
 
   // ---- By use case ----
@@ -146,7 +146,7 @@ export const SOLUTIONS: Record<string, SolutionFacts> = {
         ["What stops an agent from paying a price that isn't real?", "The price is quoted by the service in a signed 402 response, per-key limits bound spend, and every settled call produces an on-chain receipt."],
       ] },
     ],
-    relatedProducts: ["machine-commerce", "x402", "trading-intelligence"],
+    relatedProducts: ["machine-commerce", "x402", "metering"],
   },
   commerce: {
     slug: "commerce", kind: "usecase", name: "Commerce",
@@ -210,7 +210,7 @@ export const SOLUTIONS: Record<string, SolutionFacts> = {
         ["Is this investment advice?", "No. Every metric is a statistic derived from public market data. It is a research input and Satelink never takes custody of funds."],
       ] },
     ],
-    relatedProducts: ["trading-intelligence", "x402", "metering"],
+    relatedProducts: ["machine-commerce", "x402", "metering"],
   },
   "api-monetization": {
     slug: "api-monetization", kind: "usecase", name: "API monetization",
@@ -274,8 +274,8 @@ export interface IndustryFacts {
 }
 
 export const INDUSTRIES: Record<string, IndustryFacts> = {
-  "financial-services": { slug: "financial-services", name: "Financial services", definition: "Financial-services teams use Satelink for metered derived market statistics and pay-per-call RPC, with on-chain-verifiable settlement.", body: "Consume derived funding-rate, open-interest, and microstructure metrics per call, and read chain state over metered RPC — without a data-vendor contract. Trading Intelligence is a research input, not investment advice.", useCases: ["Derived market statistics for research", "On-chain data access", "Agent trading tools"], relatedProducts: ["trading-intelligence", "rpc", "x402"] },
-  ai: { slug: "ai", name: "AI", definition: "AI teams use Satelink so agents can buy the services they call — discovery, machine-readable pricing, and keyless x402 payments.", body: "Give agents a way to pay for data, RPC, and tools on their own, with per-key spend limits and on-chain receipts. MCP integration is planned.", useCases: ["Autonomous data purchasing", "Agent fleets with bounded spend", "Tool-using agents"], relatedProducts: ["machine-commerce", "x402", "trading-intelligence"] },
+  "financial-services": { slug: "financial-services", name: "Financial services", definition: "Financial-services teams use Satelink for pay-per-call RPC and machine payments.", body: "Read chain state over metered RPC without a data-vendor contract. Trading AI is a research tool, not investment advice.", useCases: ["On-chain data access", "Agent trading tools"], relatedProducts: ["rpc", "x402", "metering"] },
+  ai: { slug: "ai", name: "AI", definition: "AI teams use Satelink so agents can buy the services they call — discovery, machine-readable pricing, and keyless x402 payments.", body: "Give agents a way to pay for data, RPC, and tools on their own, with per-key spend limits and on-chain receipts. MCP integration is planned.", useCases: ["Autonomous data purchasing", "Agent fleets with bounded spend", "Tool-using agents"], relatedProducts: ["machine-commerce", "x402", "metering"] },
   software: { slug: "software", name: "Software", definition: "Software teams monetize or consume APIs per call over a machine-native rail — no billing stack, no seats.", body: "Expose a priced endpoint behind the 402 handshake, or call priced services per request. Metering and settlement are provided.", useCases: ["API monetization", "Metered integrations", "Usage-based features"], relatedProducts: ["metering", "x402", "machine-commerce"] },
   infrastructure: { slug: "infrastructure", name: "Infrastructure", definition: "Infrastructure providers meter and settle machine traffic on-chain, with per-epoch aggregation to a verifiable Polygon vault.", body: "Charge for infrastructure calls per request and settle revenue transparently to RevenueVaultV2 on Polygon. Third-party node operator onboarding is currently paused.", useCases: ["Metered RPC", "On-chain settlement", "Infrastructure metering"], relatedProducts: ["rpc", "metering", "machine-commerce"] },
   "internet-services": { slug: "internet-services", name: "Internet services", definition: "Internet-service products charge machines per call and let agents pay keylessly with x402.", body: "Add pay-per-call to any HTTP service with the 402 handshake, and accept keyless x402 payments from autonomous callers.", useCases: ["Pay-per-call services", "Agent-accessible APIs", "Usage-based pricing"], relatedProducts: ["x402", "metering", "machine-commerce"] },

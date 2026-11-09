@@ -7,7 +7,7 @@ import DISCLAIMERS from "@/lib/trading-agent/disclaimers.json";
 export const metadata: Metadata = buildMetadata({
   title: "Frequently Asked Questions — Satelink",
   description:
-    "Technical answers about Satelink AI-agent infrastructure, machine discovery, HTTP 402 payments, flat RPC pricing, and non-custodial boundaries.",
+    "Technical answers about Satelink AI Assistance, machine discovery, HTTP 402 payments, flat RPC pricing, and non-custodial boundaries.",
   path: "/faq",
 });
 
@@ -193,7 +193,7 @@ export default function FAQPage() {
             Frequently Asked Questions
           </h1>
           <p className="mt-4 text-lg text-sl-text-muted leading-relaxed">
-            Detailed answers regarding Satelink AI-agent infrastructure, machine service discovery, HTTP 402 payment handshakes, flat RPC rates, and non-custodial safety boundaries.
+            Detailed answers regarding Satelink AI Assistance, machine service discovery, HTTP 402 payment handshakes, flat RPC rates, and non-custodial safety boundaries.
           </p>
         </div>
 

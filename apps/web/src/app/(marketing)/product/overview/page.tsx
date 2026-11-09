@@ -1,7 +1,7 @@
 // /product/overview (§8) — platform-wide overview + the interactive selector.
 // Order: H1 → 3 value cards → "Put Satelink to work" (real tasks + code) →
 // principles → capability grid → interactive selector → FAQs → CTA. Live TI
-// price comes from the catalog; every other number is a documented constant.
+// every number is a documented constant.
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
@@ -21,7 +21,6 @@ import {
 } from "lucide-react";
 import { buildMetadata } from "@satelink/seo";
 import { LifecycleStepper } from "@satelink/web-ui";
-import { getCatalog } from "@/lib/intelligence";
 import { PRODUCTS, PRODUCT_ORDER, FLAT_RATE_USD, X402_BUNDLE, type ProductSlug } from "@/lib/products";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Card, CardTitle, CardDescription } from "@/components/ui/Card";
@@ -60,7 +59,7 @@ const PRINCIPLES = [
 ];
 
 const CAPABILITIES = [
-  { title: "Public discovery", body: "/.well-known/satelink.json + the /v1/intelligence catalog." },
+  { title: "Public discovery", body: "/.well-known/satelink.json lists services and pricing." },
   { title: "402 payment flow", body: "HTTP 402 with machine-readable payment requirements." },
   { title: "Keyless x402", body: "Pay in USDC on Base with no account." },
   { title: "Prepaid credits", body: "USDT deposit drawn down per call." },
@@ -96,37 +95,27 @@ const ROLES: SelectorRole[] = [
 ];
 
 const NEEDS: SelectorNeed[] = [
-  { id: "market-data", label: "market data", product: "trading-intelligence" },
   { id: "rpc-access", label: "RPC access", product: "rpc" },
   { id: "charge-per-call", label: "to charge per call", product: "metering" },
   { id: "machine-payments", label: "machine payments", product: "x402" },
 ];
 
-export default async function OverviewPage() {
-  const { catalog } = await getCatalog();
-  const tiPrice = catalog.metrics[0]?.priceUsd ?? 0.01;
-
+export default function OverviewPage() {
   // Live price lines fed into the selector (no hardcoded catalog numbers).
   const priceLines: Record<string, string> = {
-    "trading-intelligence": `$${tiPrice} per call`,
     rpc: `$${FLAT_RATE_USD} per call · $${X402_BUNDLE.priceUsd} = ${X402_BUNDLE.calls.toLocaleString()} calls`,
     metering: `$${FLAT_RATE_USD} per call from a prepaid balance`,
     x402: `USDC on Base · $${X402_BUNDLE.priceUsd} = ${X402_BUNDLE.calls.toLocaleString()} calls`,
   };
 
   const selectorProducts: Record<string, SelectorProduct> = Object.fromEntries(
-    (["trading-intelligence", "rpc", "metering", "x402"] as const).map((slug) => {
+    (["rpc", "metering", "x402"] as const).map((slug) => {
       const p = PRODUCTS[slug];
       return [slug, { slug, name: p.name, href: p.href, priceLine: priceLines[slug], exampleRequest: p.exampleRequest, docs: p.docs }];
     })
   );
 
   const TASKS = [
-    {
-      title: "Read a derived market metric",
-      body: "An agent buys one funding-rate reading per decision.",
-      code: `curl ${catalog.metrics[0] ? "https://rpc.satelink.network/v1/intelligence/" + catalog.metrics[0].slug : "https://rpc.satelink.network/v1/intelligence"}`,
-    },
     {
       title: "Make a Polygon RPC call",
       body: "A bot reads chain state at the flat per-call rate.",

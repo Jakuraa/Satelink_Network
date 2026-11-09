@@ -5,7 +5,7 @@ export type Hit = { title: string; href: string; type: string; excerpt?: string 
 
 export const SEARCH_INDEX: Hit[] = [
   { title: "Machine Commerce", href: "/products/machine-commerce", type: "product", excerpt: "Infrastructure for software to discover, pay for, and settle machine-native services." },
-  { title: "Trading Intelligence", href: "/trading-agent/product", type: "product", excerpt: "Derived statistics from public market data (SaaS analytics)." },
+  { title: "Trading AI", href: "/trading-agent/product", type: "product", excerpt: "Satelink AI Assistance capability for paper-trading research, with metered tools inside it." },
   { title: "RPC Infrastructure", href: "/products/rpc", type: "product" },
   { title: "x402 Machine Payments", href: "/products/x402", type: "product" },
   { title: "API Metering", href: "/products/metering", type: "product" },

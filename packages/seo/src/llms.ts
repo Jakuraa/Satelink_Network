@@ -21,7 +21,7 @@ export function generateLlmsTxt(input: LlmsInput): string {
   lines.push("# Satelink — AI Assistance & Agent Commerce");
   lines.push("");
   lines.push(
-    "Satelink is AI-agent assistance and machine-commerce infrastructure for software agents and machines to discover, evaluate, access, use, meter, and pay for supported digital services programmatically. Satelink is developed and operated by Jakuraa Commercial Private Limited."
+    "Satelink AI Assistance: AI assistance and agent commerce for people, developers, AI agents and machines. Satelink is developed and operated by Jakuraa Commercial Private Limited."
   );
   lines.push("");
   lines.push(

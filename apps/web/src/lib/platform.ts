@@ -46,7 +46,7 @@ export const PLATFORM: Record<PlatformSlug, PlatformFacts> = {
     sections: [
       { title: "Authentication & API keys", body: "Requests carry an API key, or stay keyless on the x402 rail. Keys are issued and rotated from the console." },
       { title: "Machine registration (HTTP 402)", body: "An unpaid call returns HTTP 402 with machine-readable payment requirements a caller can satisfy programmatically." },
-      { title: "Products on the API", body: "Trading Intelligence (/v1/intelligence) and RPC (/rpc/polygon) are the metered products exposed today." },
+      { title: "Products on the API", body: "Polygon RPC (/rpc/polygon) is the metered product exposed today." },
       { title: "Credits & usage", body: "A USDT deposit funds a balance; every paid call draws down at the flat per-call rate, attributed per key." },
       { title: "x402", body: "Pay per request in USDC on Base with no account — the price arrives in the 402 response." },
       { title: "Webhooks", body: "Event delivery for usage and settlement is planned; the shape is not finalized.", status: "Draft" },
@@ -137,12 +137,12 @@ export const PLATFORM: Record<PlatformSlug, PlatformFacts> = {
     href: "/platform/payments",
     name: "Payments",
     definition:
-      "Payments are the rails a caller uses to fund calls: prepaid credits (USDT deposit), keyless x402 (USDC on Base), and — for Trading Intelligence only — a one-time card/UPI Starter Pack via Dodo.",
+      "Payments are the rails a caller uses to fund calls: prepaid credits (USDT deposit), keyless x402 (USDC on Base), and — for metered Trading AI tools only — a one-time card/UPI Starter Pack via Dodo.",
     tagline: "Credits, x402, and the Trading-Intelligence Starter Pack.",
     sections: [
       { title: "Prepaid credits", body: "Deposit USDT once; every metered product draws from the same balance." },
       { title: "x402 (keyless)", body: "Pay per request in USDC on Base with no account." },
-      { title: "Starter Pack (Dodo)", body: "A one-time card/UPI credit purchase — Trading Intelligence only. x402 and USDT are a separate crypto rail Dodo never processes.", status: "Draft" },
+      { title: "Starter Pack (Dodo)", body: "A one-time card/UPI credit purchase — metered Trading AI tools only. x402 and USDT are a separate crypto rail Dodo never processes.", status: "Draft" },
     ],
     controlCost: [
       "Every rail is pay-per-use or prepaid — no subscription.",
