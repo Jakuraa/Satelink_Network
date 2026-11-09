@@ -31,9 +31,10 @@ categories only (R14); details in `docs/build/evidence/private/` on the build ma
   role=tab without tablist; footers and light-theme settle/warn colours below AA; aria-label on a role-less div.
 - My guard test first passed on an EMPTY capability list (registry not seeded): fixed, now requires known ids.
 - **Known gap, founder decision:** Trading Intelligence is `deprecated`/internal on main (#515/#518) but still appears on ~40
-  surfaces: shared footer ("Trading Intelligence API", also "On-Chain Settlement", "Network: Operational"), `/products/
-  trading-intelligence`, `/intelligence`, PRODUCT_ORDER (so llms.txt lists it, unpriced), docs, academy, legal text, checkout.
-  Only the headline surfaces were corrected: removing a product across legal and checkout copy needs a founder decision.
+  surfaces: `/products/trading-intelligence`, `/intelligence`, PRODUCT_ORDER (so llms.txt lists it, unpriced), platform and
+  solutions copy, docs, academy, legal text, checkout. `/v1/intelligence` still serves existing keys and the checkout still sells
+  it, so this copy is not simply false: removal needs a founder decision. Nav and footer links were removed (they contradict
+  #515), and the hard-coded footer "Network: Operational" is now a neutral status link. "On-Chain Settlement" remains in the footer.
   So "remove every claim not true today" is NOT complete. The root JSON-LD product node was replaced; it had been labelled
   the merchant account's primary product, so check this against any payment-provider review.
 - Evidence: web unit 273/273; claims lint 0 on both sites; p5-websites 6/6 (three viewports × two sites) on local production

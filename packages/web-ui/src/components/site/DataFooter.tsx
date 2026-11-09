@@ -74,7 +74,7 @@ export function DataFooter({
               AI-agent assistance and machine-commerce infrastructure for software agents and machines to discover, evaluate, access, use, meter, and pay for supported digital services programmatically.
             </p>
 
-            {/* Live Operational Network Status Indicator */}
+            {/* Link only: this footer has no live measurement, so it must not assert a status. */}
             <div className="mt-6">
               <a
                 href="https://status.satelink.network"
@@ -82,11 +82,7 @@ export function DataFooter({
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2.5 rounded-full border border-white/10 bg-white/5 px-3.5 py-1.5 font-mono text-xs text-stone-200 transition-colors hover:border-white/25 hover:bg-white/10"
               >
-                <span className="relative flex size-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
-                </span>
-                <span className="font-medium">Network: Operational</span>
+                <span className="font-medium">System status</span>
                 <span className="text-stone-400 text-[10px]">↗</span>
               </a>
             </div>
