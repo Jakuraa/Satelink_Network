@@ -71,6 +71,7 @@ jobs:
           (cd apps/web && npx next build)
           (cd apps/corporate && npx next build)
         env:
+          NODE_ENV: production
           NEXT_TELEMETRY_DISABLED: '1'
       - name: Start mock store, preview API and console
         run: |
