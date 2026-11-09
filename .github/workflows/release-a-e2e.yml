@@ -48,6 +48,9 @@ jobs:
         run: npm ci --prefer-offline
       - name: Dependency audit gate (fails on NEW high/critical advisories; known ones = OB-14)
         run: node scripts/security/audit-gate.mjs
+      - name: satelink-mcp unit tests (registry-generated tools; no approve tool)
+        working-directory: apps/mcp-server
+        run: node --test test/*.test.mjs
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: Fresh preview database + migrations
