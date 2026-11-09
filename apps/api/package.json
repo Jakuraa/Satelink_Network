@@ -60,6 +60,9 @@
         "test:baseline": "mocha --no-config --exit --require test/_guard/prod_db_guard.cjs --reporter min --no-colors 'test/**/*.test.js'"
     },
     "overrides": {
-        "vitest": "4.1.11"
+        "vitest": "4.1.11",
+        "@ethersproject/providers": {
+            "ws": "^8.21.0"
+        }
     }
 }
