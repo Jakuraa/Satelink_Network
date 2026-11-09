@@ -74,7 +74,7 @@ export const timeline: { when: string; title: string; body: string }[] = [
   {
     when: "2026",
     title: "Satelink",
-    body: "Began building Satelink, machine-commerce infrastructure where software agents pay per call and settle on-chain.",
+    body: "Began building Satelink, where software agents pay per call for digital services.",
   },
 ];
 

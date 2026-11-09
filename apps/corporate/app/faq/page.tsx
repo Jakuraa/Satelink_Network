@@ -15,7 +15,7 @@ const CORPORATE_FAQS = [
     category: "Corporate Institution",
     question: "What is Jakuraa Commercial Private Limited?",
     answer:
-      "Jakuraa Commercial Private Limited is an Indian corporate technology company incorporated in 2019 in Coimbatore, Tamil Nadu (CIN: U51909TZ2019PTC032488). The company architects autonomous software, computing infrastructure, and machine-commerce platforms across physical and digital domains. Satelink is its flagship technology platform.",
+      "Jakuraa Commercial Private Limited is an Indian corporate technology company incorporated in 2019 in Coimbatore, Tamil Nadu (CIN: U52190TZ2019PTC033093). The company architects autonomous software, computing infrastructure, and machine-commerce platforms across physical and digital domains. Satelink is its flagship technology platform.",
   },
   {
     category: "Corporate Institution",
@@ -27,7 +27,7 @@ const CORPORATE_FAQS = [
     category: "Corporate Institution",
     question: "What is the relationship between Jakuraa and Satelink?",
     answer:
-      "Jakuraa Commercial Private Limited is the parent operating company, technology publisher, and legal entity behind Satelink. Satelink is Jakuraa's flagship product platform for AI-agent assistance and machine-commerce infrastructure.",
+      "Jakuraa Commercial Private Limited is the parent operating company, technology publisher, and legal entity behind Satelink. Satelink AI Assistance is Jakuraa's product: AI assistance and agent commerce for people, developers, AI agents and machines.",
   },
   {
     category: "Satelink Platform",

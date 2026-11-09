@@ -28,15 +28,15 @@ const STEPS = [
     illustrative: false,
   },
   {
-    title: "2 · Read the catalog",
-    body: "The Trading Intelligence catalog returns each metric and its per-call price.",
-    code: `curl ${API}/v1/intelligence`,
+    title: "2 · Read the pricing",
+    body: "The pricing endpoint returns the current rates and payment rails.",
+    code: `curl ${API}/v1/pricing`,
     illustrative: false,
   },
   {
     title: "3 · Make a call with an API key",
     body: "Account callers pass a key. Metered calls draw from your balance.",
-    code: `curl -H "X-API-Key: $SATELINK_KEY" \\\n  ${API}/v1/intelligence/funding-rate-heatmap`,
+    code: `curl -X POST -H "X-API-Key: $SATELINK_KEY" -H "content-type: application/json" \\\n  -d '{"jsonrpc":"2.0","id":1,"method":"eth_blockNumber","params":[]}' \\\n  ${API}/rpc/polygon`,
     illustrative: false,
   },
   {

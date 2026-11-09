@@ -1,6 +1,7 @@
 // F8 (2026-10-20): Trading Intelligence prices are withheld from every
 // machine-readable surface until the founder confirms the price list. This
-// fails if a TI price line, offer or price-catalog link reappears.
+// fails if a TI price line, offer or price-catalog link reappears. D14: TI is
+// also no longer a public product, so it is not listed at all.
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -18,8 +19,7 @@ describe("Trading Intelligence pricing is withheld from machine surfaces (F8)", 
 
   it("llms.txt and llms-full.txt list no TI price and no TI catalog link", () => {
     for (const txt of [generateLlmsTxt(input), generateLlmsFullTxt(input, [])]) {
-      const ti = txt.slice(txt.indexOf("Trading Intelligence ("), txt.indexOf("###", txt.indexOf("Trading Intelligence (") + 1));
-      expect(ti).toContain("(pricing: not published)");
+      expect(txt).not.toContain("Trading Intelligence");
       for (const m of catalog.metrics) expect(txt).not.toContain(`${m.slug}: $`);
       expect(txt).not.toContain("/v1/intelligence");
     }
@@ -27,7 +27,7 @@ describe("Trading Intelligence pricing is withheld from machine surfaces (F8)", 
 
   it("/pricing.json, /products/trading-intelligence.json and /.well-known/satelink.json carry no TI price", () => {
     const pricing = buildPricingJson(catalog);
-    expect(pricing.products.find((p) => p.slug === "trading-intelligence")?.prices).toEqual([]);
+    expect(pricing.products.find((p) => p.slug === "trading-intelligence")).toBeUndefined();
     expect(buildProductJson("trading-intelligence", catalog).pricing).toEqual([]);
     expect(JSON.stringify(buildWellKnown(catalog))).not.toContain("/v1/intelligence");
     expect(JSON.stringify(pricing)).not.toContain("/v1/intelligence");

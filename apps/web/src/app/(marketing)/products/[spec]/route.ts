@@ -5,7 +5,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCatalog } from "@/lib/intelligence";
 import { buildProductJson } from "@/lib/machine";
-import { PRODUCTS, type ProductSlug } from "@/lib/products";
+import { PRODUCT_ORDER, type ProductSlug } from "@/lib/products";
 
 export const revalidate = 300;
 
@@ -15,7 +15,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ spe
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
   const slug = spec.slice(0, -".json".length) as ProductSlug;
-  if (!(slug in PRODUCTS)) {
+  if (!PRODUCT_ORDER.includes(slug)) {
     return NextResponse.json({ error: "unknown_product" }, { status: 404 });
   }
   const { catalog } = await getCatalog();

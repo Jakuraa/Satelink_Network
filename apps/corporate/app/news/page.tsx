@@ -29,7 +29,7 @@ export default function NewsPage() {
               </h1>
               <p className="mt-4 text-base sm:text-lg text-stone-4 font-sans leading-relaxed max-w-xl">
                 Official announcements, technical milestones, and protocol releases
-                from Jakuraa and its flagship machine-commerce platform, Satelink.
+                from Jakuraa and its product, Satelink AI Assistance.
               </p>
             </div>
 

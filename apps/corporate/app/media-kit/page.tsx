@@ -111,7 +111,7 @@ export default function MediaKitPage() {
               </span>
               <h3 className="mt-4 font-serif text-2xl text-ink">About Satelink</h3>
               <p className="mt-3 text-sm leading-relaxed text-stone-4 font-sans">
-                Satelink is the flagship machine-commerce infrastructure platform engineered by Jakuraa.
+                Satelink AI Assistance, built by Jakuraa, is AI assistance and agent commerce for people, developers, AI agents and machines.
                 It provides the economic rails, permissionless vaults, and usage-metered gateways for autonomous
                 software agents to discover, access, and pay for computing resources, data feeds, and APIs
                 per call. Satelink implements the x402 protocol for micro-payments in USDC on Base and the

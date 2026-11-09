@@ -28,7 +28,9 @@ Public endpoints can be queried by agents and automated systems before authentic
 | Asset & Network | USDC on Base (`eip155:8453`) |
 | Auth | Keyless — payment travels in the HTTP request (`X-Payment`) |
 
-## Trading Intelligence
+## Metered Trading AI tools
+
+Trading AI uses metered tools. They are not a standalone product, and existing keys keep working.
 
 | | |
 |---|---|

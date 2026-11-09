@@ -24,11 +24,11 @@ const ibmPlexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL("https://satelink.network"),
   title: {
-    default: "Satelink — AI-Agent & Machine-Commerce Infrastructure",
+    default: "Satelink AI Assistance — AI assistance and agent commerce",
     template: "%s | Satelink",
   },
   description:
-    "Programmatic infrastructure for AI agents and automated systems to discover digital services, evaluate options, and access APIs through controlled, machine-readable workflows.",
+    "AI assistance and agent commerce for people, developers, AI agents and machines. Discover services, evaluate options, and access APIs through controlled, machine-readable workflows.",
   keywords: [
     "Satelink",
     "AI agents",
@@ -60,16 +60,16 @@ export const metadata: Metadata = {
     type: "website",
     url: "https://satelink.network",
     siteName: "Satelink Network",
-    title: "Satelink — AI-Agent & Machine-Commerce Infrastructure",
+    title: "Satelink AI Assistance — AI assistance and agent commerce",
     description:
-      "Programmatic infrastructure for AI agents and automated systems to discover digital services, evaluate options, and access APIs through controlled, machine-readable workflows.",
+      "AI assistance and agent commerce for people, developers, AI agents and machines. Discover services, evaluate options, and access APIs through controlled, machine-readable workflows.",
     images: ["https://satelink.network/og-image.png"],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Satelink — AI-Agent & Machine-Commerce Infrastructure",
+    title: "Satelink AI Assistance — AI assistance and agent commerce",
     description:
-      "Programmatic infrastructure for AI agents and automated systems to discover digital services, evaluate options, and access APIs through controlled, machine-readable workflows.",
+      "AI assistance and agent commerce for people, developers, AI agents and machines. Discover services, evaluate options, and access APIs through controlled, machine-readable workflows.",
   },
 };
 
@@ -78,7 +78,7 @@ const ORG_JSON_LD = {
   "@type": "Organization",
   name: "Satelink Network",
   description:
-    "AI-agent and machine-commerce infrastructure for programmatic service discovery, metering, and settlement. Featuring Satelink Trading AI (controlled beta) and metered Polygon RPC. Operated by Jakuraa Commercial Pvt Ltd.",
+    "Satelink AI Assistance: AI assistance and agent commerce for people, developers, AI agents and machines. Capabilities include Trading AI and metered Polygon RPC. Operated by Jakuraa Commercial Private Limited.",
   url: "https://satelink.network",
   email: "satelinknetwork@gmail.com",
   foundingDate: "2025",

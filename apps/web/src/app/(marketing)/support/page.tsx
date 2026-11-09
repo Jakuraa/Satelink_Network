@@ -9,7 +9,7 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 
 export const metadata: Metadata = buildMetadata({
   title: "Support",
-  description: "Satelink support center: getting started, API, payments, x402, credits, Trading Intelligence, RPC, and security. Real answers from the docs.",
+  description: "Satelink support center: getting started, API, payments, x402, credits, Trading AI tools, RPC, and security. Real answers from the docs.",
   path: "/support",
 });
 

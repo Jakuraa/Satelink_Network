@@ -5,7 +5,7 @@ export async function GET() {
   const body = [
     "# Jakuraa Commercial Private Limited — Corporate Technology Institution",
     "",
-    "Jakuraa Commercial Private Limited (CIN: U52190TZ2019PTC033093, incorporated December 4, 2019 in Coimbatore, Tamil Nadu, India) is an Indian corporate technology institution engineering software infrastructure for AI agents and machine commerce.",
+    "Jakuraa Commercial Private Limited (CIN: U52190TZ2019PTC033093, incorporated December 4, 2019 in Coimbatore, Tamil Nadu, India) is an Indian corporate technology institution and the company behind Satelink AI Assistance: AI assistance and agent commerce for people, developers, AI agents and machines.",
     "",
     "## Flagship Technology Platform",
     "- Satelink (https://satelink.network): AI assistance and agent commerce for people, developers, AI agents and machines. Satelink AI Assistance is in a local preview (simulated, no charges; https://satelink.network/preview). Metered Polygon RPC and x402 payments are running services.",
