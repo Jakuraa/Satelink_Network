@@ -87,7 +87,7 @@ export function DataFooter({
                   <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
                 </span>
                 <span className="font-medium">Network: Operational</span>
-                <span className="text-stone-500 text-[10px]">↗</span>
+                <span className="text-stone-400 text-[10px]">↗</span>
               </a>
             </div>
 
@@ -136,7 +136,7 @@ export function DataFooter({
             </div>
 
             {/* Operator & Statutory Attestation */}
-            <div className="mt-8 rounded-lg border border-white/10 bg-white/[0.02] p-3.5 text-xs text-stone-500 leading-relaxed">
+            <div className="mt-8 rounded-lg border border-white/10 bg-white/[0.02] p-3.5 text-xs text-stone-400 leading-relaxed">
               <span className="font-semibold text-stone-400 block mb-1">Corporate Operator</span>
               Operated by <strong className="text-stone-200 font-medium">Jakuraa Commercial Private Limited</strong> (CIN: U52190TZ2019PTC033093), incorporated in Coimbatore, Tamil Nadu, India.
             </div>
@@ -151,12 +151,12 @@ export function DataFooter({
         </div>
 
         {/* Bottom Bar: Horizontal divider, statutory credentials, verified legal links & theme toggle */}
-        <div className="mt-16 flex flex-col gap-6 border-t border-stone-800 pt-8 text-xs text-stone-500 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-16 flex flex-col gap-6 border-t border-stone-800 pt-8 text-xs text-stone-400 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
             <p>
               &copy; {year} {entity.name}. All rights reserved.
             </p>
-            <p className="font-mono text-[11px] text-stone-500/90">
+            <p className="font-mono text-[11px] text-stone-400">
               Operated by Jakuraa Commercial Private Limited &bull; {entity.addressOneLine}
             </p>
           </div>
@@ -166,7 +166,7 @@ export function DataFooter({
               <Link
                 key={l.href + l.label}
                 href={l.href}
-                className="text-stone-500 transition-colors hover:text-stone-200"
+                className="text-stone-400 transition-colors hover:text-stone-200"
               >
                 {l.label}
               </Link>
@@ -245,7 +245,7 @@ function FooterLinkItem({ link }: { link: FLink }) {
         >
           <span>{link.label}</span>
           <svg
-            className="size-3 text-stone-500 transition-colors group-hover:text-white shrink-0"
+            className="size-3 text-stone-400 transition-colors group-hover:text-white shrink-0"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"

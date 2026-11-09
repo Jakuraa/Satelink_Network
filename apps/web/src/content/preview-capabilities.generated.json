@@ -1,0 +1,92 @@
+{
+  "generated_from": "capability registry",
+  "environment": "preview",
+  "simulated": true,
+  "simulation_label": "SIMULATED — NO MONEY MOVED",
+  "fees_status": "PROPOSED — NOT APPROVED",
+  "availability": "Local preview only; not yet open to the public.",
+  "capabilities": [
+    {
+      "id": "dev.data.extract",
+      "name": "Extract structured data from text (API)",
+      "description": "Send text to a data-extraction API and get emails, dates, amounts and links back as JSON. Procured per call from the provider's OpenAPI.",
+      "category": "developer",
+      "release_status": "SIMULATED",
+      "providers": [
+        "Demo Data API (MOCK)"
+      ]
+    },
+    {
+      "id": "food.order.place",
+      "name": "Order food for delivery",
+      "description": "Find a restaurant, build a cart from your order and place it after you approve the quote. The merchant is paid by you at its checkout.",
+      "category": "food",
+      "release_status": "SIMULATED",
+      "providers": [
+        "Food Delivery (MOCK — not connected to Swiggy)"
+      ]
+    },
+    {
+      "id": "market_data.candles",
+      "name": "Historical market candles",
+      "description": "Closed OHLCV bars used by Strategy Lab backtests.",
+      "category": "Market data",
+      "release_status": "PREVIEW",
+      "providers": []
+    },
+    {
+      "id": "shop.digital_goods.purchase",
+      "name": "Buy a digital product",
+      "description": "Find and buy a digital product (gift code, e-book, software licence) from a store, with a quote and your approval before anything is ordered.",
+      "category": "shopping",
+      "release_status": "SIMULATED",
+      "providers": [
+        "Demo Digital Store (MOCK)"
+      ]
+    },
+    {
+      "id": "token.risk",
+      "name": "Token risk signal",
+      "description": "0–100 risk score for an ERC-20 contract (liquidity, holder concentration, contract flags).",
+      "category": "Crypto intelligence",
+      "release_status": "COMING_SOON",
+      "providers": []
+    },
+    {
+      "id": "token.verdict",
+      "name": "Token verdict",
+      "description": "Categorical verdict for an ERC-20 contract derived from risk indicators.",
+      "category": "Crypto intelligence",
+      "release_status": "COMING_SOON",
+      "providers": []
+    },
+    {
+      "id": "trading.paper.order",
+      "name": "Paper trade a GO strategy (simulation)",
+      "description": "Place a simulated paper order for a strategy whose evaluation is GO. Filled by the internal paper broker on synthetic data — no broker, no real order.",
+      "category": "trading",
+      "release_status": "SIMULATED",
+      "providers": [
+        "Satelink Trading Engine (simulation)"
+      ]
+    },
+    {
+      "id": "trading.strategy.evaluate",
+      "name": "Evaluate a trading strategy (simulation)",
+      "description": "Turn a strategy description into a validated spec and run a walk-forward backtest with fees and slippage on a labelled synthetic dataset; a deterministic risk policy returns GO, WAIT or REJECT with its reasons.",
+      "category": "trading",
+      "release_status": "SIMULATED",
+      "providers": [
+        "Satelink Trading Engine (simulation)"
+      ]
+    },
+    {
+      "id": "wallet.balance",
+      "name": "Wallet balance check",
+      "description": "Native and token balance for a public wallet address.",
+      "category": "On-chain data",
+      "release_status": "PREVIEW",
+      "providers": []
+    }
+  ]
+}

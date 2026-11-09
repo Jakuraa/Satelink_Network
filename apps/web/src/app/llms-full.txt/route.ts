@@ -4,7 +4,7 @@
 import { generateLlmsFullTxt } from "@satelink/seo";
 import { SITES } from "@satelink/content";
 import { getCatalog } from "@/lib/intelligence";
-import { buildLlmsInput } from "@/lib/machine";
+import { buildLlmsInput, previewLlmsSection } from "@/lib/machine";
 import { PRODUCTS, PRODUCT_ORDER } from "@/lib/products";
 
 export const revalidate = 300;
@@ -26,7 +26,7 @@ export async function GET() {
     ].join("\n");
     return { title: p.name, url: `${SITES.satelink.origin}${p.href}`, markdown: md };
   });
-  const body = generateLlmsFullTxt(buildLlmsInput(catalog), pages);
+  const body = generateLlmsFullTxt(buildLlmsInput(catalog), pages) + previewLlmsSection();
   return new Response(body, {
     headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "public, max-age=300, s-maxage=300" },
   });

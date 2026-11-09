@@ -47,7 +47,7 @@
     /* product rails - colour carries meaning */
     --sl-machine:       #5B5BF0; /* agents / x402 / machine rail (indigo) */
     --sl-market:        #F29F38; /* trading intelligence data (amber)    */
-    --sl-settle:        #1FA8E0; /* settlement / on-chain (sky)          */
+    --sl-settle:        #0B6E9E; /* settlement / on-chain (sky); deepened from #1FA8E0 for AA as text */
     /* soft tints of the product rails (backgrounds, badges) */
     --sl-machine-soft:  #5B5BF014;
     --sl-market-soft:   #F29F3818;
@@ -59,7 +59,7 @@
     /* data semantics (charts, deltas) - kept from Signal 1 */
     --sl-up:            #059669;
     --sl-down:          #DC2626;
-    --sl-warn:          #B7791F;
+    --sl-warn:          #8F5E12; /* deepened from #B7791F for AA as text */
     --sl-info:          #2563EB;
     --sl-model:         #7C3AED; /* ONLY marks modelled/proxy data */
     /* elevation (light) */

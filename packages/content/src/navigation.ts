@@ -98,6 +98,7 @@ export const navigationFallback: Navigation = {
       ],
       featureCard: { eyebrow: "Talk to us", title: "Contact sales", description: "Volume, dedicated keys, or custom integrations.", href: "/contact-sales" },
     },
+    { label: "Preview", href: "/preview", groups: [] },
     { label: "Pricing", href: "/pricing", groups: [] },
     {
       label: "Developers",
