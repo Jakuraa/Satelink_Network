@@ -10,10 +10,10 @@
         "@coinbase/x402": "^2.1.0",
         "@openzeppelin/contracts": "^5.4.0",
         "@openzeppelin/defender-sdk": "^1.10.0",
-        "@x402/core": "2.18.0",
-        "@x402/evm": "2.18.0",
-        "@x402/express": "2.18.0",
-        "@x402/extensions": "2.18.0",
+        "@x402/core": "2.30.0",
+        "@x402/evm": "2.30.0",
+        "@x402/express": "2.30.0",
+        "@x402/extensions": "2.30.0",
         "base32.js": "^0.1.0",
         "better-auth": "^1.7.5",
         "bullmq": "^5.80.1",
@@ -60,6 +60,9 @@
         "test:baseline": "mocha --no-config --exit --require test/_guard/prod_db_guard.cjs --reporter min --no-colors 'test/**/*.test.js'"
     },
     "overrides": {
-        "vitest": "4.1.11"
+        "vitest": "4.1.11",
+        "@ethersproject/providers": {
+            "ws": "^8.21.0"
+        }
     }
 }

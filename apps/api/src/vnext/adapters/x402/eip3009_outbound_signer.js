@@ -2,7 +2,7 @@
 // x402 "exact" payment authorization so Satelink can pay a supplier from its
 // dedicated hot wallet. Uses ethers to sign the EIP-712 TransferWithAuthorization
 // with the SDK's canonical `authorizationTypes` and the token's real domain
-// (from @x402/evm DEFAULT_STABLECOINS), so the signature is protocol-correct and
+// (from @x402/evm DEFAULT_ASSETS), so the signature is protocol-correct and
 // the facilitator will accept it.
 //
 // The ethers.Wallet is the injected boundary (a throwaway wallet in tests; a
@@ -20,12 +20,14 @@
 //  - exact amount: signs precisely the quoted supplier cost (never more).
 
 import { ethers } from 'ethers';
-import { authorizationTypes, DEFAULT_STABLECOINS } from '@x402/evm';
+import { authorizationTypes, DEFAULT_ASSETS } from '@x402/evm';
 
 const AUTH_TTL_SECONDS = 300;
 
 function tokenDomainFor(network, override) {
-  const t = override || (DEFAULT_STABLECOINS && DEFAULT_STABLECOINS[network]);
+  // DEFAULT_ASSETS (x402 >= 2.29): per-network array, the default asset first, keyed `asset`.
+  const d = DEFAULT_ASSETS?.[network]?.[0];
+  const t = override || (d && { address: d.asset, name: d.name, version: d.version, decimals: d.decimals });
   if (!t || !t.address) throw new Error(`no stablecoin domain for network '${network}'`);
   const chainId = Number(String(network).split(':')[1]);
   return { name: t.name, version: t.version, chainId, verifyingContract: t.address, decimals: t.decimals };
