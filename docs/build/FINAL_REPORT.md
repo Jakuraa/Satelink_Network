@@ -58,7 +58,8 @@ Latest CI on the full stack (#629 at `c891a0a7`). The P6 PR adds 5 architecture 
 | Architecture guards | 11 | 0 | 0 | same |
 | apps/api baseline guard | no new failures | pre-existing known set | 3 known | [42621806392](https://github.com/Jakuraa/Satelink_Network/actions/runs/42621806392) |
 | Trading engine, type check, lint, secret scan, Vercel builds | pass | 0 | Build Verification job skipped (workflow condition) | same |
-| Local only: satelink-mcp 13/13, apps/web 273/273, console 37/37, Lighthouse accessibility 100 on 11 pages | | 0 | | not CI (mcp joins CI in P6; web and console run in *Tests*) |
+| apps/web unit | 273 | 0 | 0 | *Tests* job, same run |
+| Local only: console unit 37/37, Lighthouse accessibility 100 on 11 pages, satelink-mcp 13/13 | | 0 | | not in CI (the MCP tests join CI in P6) |
 
 Per-slice runs: [S1](https://github.com/Jakuraa/Satelink_Network/actions/runs/41989123709) · [S2](https://github.com/Jakuraa/Satelink_Network/actions/runs/41991327541) · [S3](https://github.com/Jakuraa/Satelink_Network/actions/runs/41996868348) · [S4](https://github.com/Jakuraa/Satelink_Network/actions/runs/41999602588) · [S5](https://github.com/Jakuraa/Satelink_Network/actions/runs/42031491687) · [S6](https://github.com/Jakuraa/Satelink_Network/actions/runs/42033628955) · [P3](https://github.com/Jakuraa/Satelink_Network/actions/runs/42037942104) · [P4](https://github.com/Jakuraa/Satelink_Network/actions/runs/42613150857) · [P5](https://github.com/Jakuraa/Satelink_Network/actions/runs/42621806424)
 
@@ -94,7 +95,7 @@ GitHub MCP server fails auth, so `gh` was used; a Context7 plugin is unnecessary
 4. Egress guard does not resolve DNS, so rebinding must be handled before any real external connector.
 5. Trading data is synthetic; evaluation results say nothing about real markets.
 6. A2A implements 3 methods with an unsigned card; MCP tools are stdio only and on the 2025-11-25 revision.
-7. Lighthouse is not in CI, and axe on marketing sites covers key pages only.
+7. Lighthouse and the console unit tests are not in CI; axe on marketing sites covers key pages only.
 8. Per-slice durability other than S1 uses a simulated crash; the browser drill is not in CI.
 9. Receipt `verification.method` reads `order_status_lookup` for every connector.
 10. A worktree's `node_modules` symlink resolves `@satelink/*` from the main checkout, which silently tested stale packages locally; CI is the reliable check.
