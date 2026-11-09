@@ -51,6 +51,12 @@ const EXTRACT = (s: string) => `Extract the emails from: ${s}`;
 let db: Awaited<ReturnType<typeof freshMigratedDb>>; let pool: Pool; const procs: ChildProcess[] = [];
 let svc: Any; let keys: DeveloperKeys; let conns: Any; let server: Server; let BASE = '';
 const pools: Pool[] = [];
+// Teardown stops the container: an idle client then gets 57P01. Ignore only that (see payments_ingest).
+function mkPool(url: string, max: number) {
+  const p = new Pool({ connectionString: url, max });
+  p.on('error', (e: Error & { code?: string }) => { if (e.code !== '57P01') throw e; });
+  return p;
+}
 
 const realConnectors = (p: Pool, c: Any) => ({
   mock_store: createMockStoreConnector({ baseUrl: URLS.store }),
@@ -77,7 +83,7 @@ async function connectFood(principal: string) {
 
 beforeAll(async () => {
   db = await freshMigratedDb('p4assure', join(ROOT, 'database', 'migrations'));
-  pool = new Pool({ connectionString: db.url, max: 10 });
+  pool = mkPool(db.url, 10);
   const state = mkdtempSync(join(tmpdir(), 'p4-'));
   const run = (file: string, env: Record<string, string>) => procs.push(spawn(process.execPath, [join(ROOT, file)], { env: { ...process.env, ...env }, stdio: 'ignore' }));
   run('tools/mock-digital-store/server.mjs', { MOCK_STORE_PORT: String(PORTS.store), MOCK_STORE_STATE: join(state, 'orders.json') });
@@ -334,7 +340,7 @@ describe('durability: the API dies after the supplier accepted → a new process
       const U = { id: `user:p4-dur-${type}` };
       await prep();
       const keysSeen: string[] = [];
-      const p1 = new Pool({ connectionString: db.url, max: 4 }); pools.push(p1);
+      const p1 = mkPool(db.url, 4); pools.push(p1);
       const real1 = realConnectors(p1, conns) as Any;
       let accepted = 0;
       const hanging = { ...real1[type], executeStep: async (a: Any) => { keysSeen.push(a.idempotencyKey); const r = await real1[type].executeStep(a); accepted++; void r; return new Promise(() => {}); } };
@@ -346,7 +352,7 @@ describe('durability: the API dies after the supplier accepted → a new process
       expect(accepted).toBe(1);
       expect((await svc1.getTask(U, t.id)).state).toBe('EXECUTING'); // "crash": svc1 never records the result
 
-      const p2 = new Pool({ connectionString: db.url, max: 4 }); pools.push(p2);
+      const p2 = mkPool(db.url, 4); pools.push(p2);
       const real2 = realConnectors(p2, conns) as Any;
       const counting = { ...real2[type], executeStep: async (a: Any) => { keysSeen.push(a.idempotencyKey); return real2[type].executeStep(a); } };
       const svc2 = await service(p2, { ...real2, [type]: counting }); // boot → recovery
