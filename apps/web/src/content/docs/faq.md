@@ -2,9 +2,8 @@
 
 ### What is Satelink?
 
-Satelink is AI-agent and machine-commerce infrastructure for discovering,
-evaluating, authorizing, accessing, metering, paying for, and settling
-supported digital services programmatically. Operated by Jakuraa Commercial
+Satelink AI Assistance provides AI assistance and agent commerce for people,
+developers, AI agents and machines. Operated by Jakuraa Commercial
 Private Limited. Supported platform capabilities include metered Polygon PoS
 RPC ($0.00003/call) and keyless x402 micropayments in USDC on Base. Trading
 Intelligence is a metered analytics API, and Satelink Trading AI is a paper-

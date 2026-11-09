@@ -4,7 +4,7 @@ import { ArrowLink, Container, PageHero, SectionHeading } from "@/components/Pag
 
 export const metadata: Metadata = {
   title: "Technology",
-  description: "Satelink, Jakuraa's technology business: machine-commerce infrastructure where agents pay per call and settle on-chain.",
+  description: "Satelink AI Assistance, Jakuraa's technology business: AI assistance and agent commerce for people, developers, AI agents and machines.",
 };
 
 const steps: [string, string][] = [

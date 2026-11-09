@@ -1,6 +1,6 @@
 # Satelink
 
-**AI-agent assistance and machine-commerce infrastructure for software agents and machines to discover, evaluate, access, use, meter, and pay for supported digital services programmatically.**
+**Satelink AI Assistance: AI assistance and agent commerce for people, developers, AI agents and machines.**
 
 Satelink is the flagship technology platform built and operated by [Jakuraa Commercial Private Limited](https://jakuraa.com).
 
@@ -8,7 +8,7 @@ Satelink is the flagship technology platform built and operated by [Jakuraa Comm
 
 ## Strategic Product Hierarchy
 
-1. **Satelink (Platform):** AI-agent assistance and machine-commerce infrastructure enabling software agents and automated systems to discover, evaluate, access, use, meter, and pay for supported digital services programmatically.
+1. **Satelink (Platform):** AI assistance and agent commerce for people, developers, AI agents and machines.
 2. **Platform Capabilities:**
    - **Polygon PoS RPC Gateway:** High-performance JSON-RPC access at a flat $0.00003/call.
    - **x402 Protocol:** HTTP-native keyless pay-per-call micropayments in USDC on Base (`eip155:8453`).
@@ -134,7 +134,7 @@ satelink/
 
 ## Legal & Corporate
 
-Satelink is operated by **Jakuraa Commercial Private Limited** (CIN: U51909TZ2019PTC031777), Coimbatore, Tamil Nadu, India.
+Satelink is operated by **Jakuraa Commercial Private Limited** (CIN: U52190TZ2019PTC033093), Coimbatore, Tamil Nadu, India.
 
 - [Website](https://satelink.network)
 - [Corporate Parent](https://jakuraa.com)

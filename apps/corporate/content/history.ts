@@ -413,7 +413,7 @@ export const historicalChapters: HistoricalChapter[] = [
     status: 'active',
     statusLabel: 'Active flagship production platform',
     summary:
-      'Official launch of Satelink on 1 February 2026: the machine-commerce platform enabling autonomous software agents to purchase market intelligence and metered data services with cryptographic settlement.',
+      'Official launch of Satelink on 1 February 2026: enabling software agents to pay per call for metered digital services.',
     narrative: [
       'On 1 February 2026, Jakuraa officially launched Satelink (satelink.network), the culmination of seven years of engineering, computing experiments, physical commerce, and operating truth.',
       'Satelink solves the critical bottleneck of the autonomous economy: AI agents and autonomous software systems need to pay for live data, compute, and market intelligence programmatically without human corporate cards or slow bank wire transfers. Utilizing the x402 protocol and USDT settlement rails on Polygon, Satelink allows agents to call APIs, verify proofs, and pay per call in USDC on Base (x402) or from prepaid USDT credits on Polygon.',

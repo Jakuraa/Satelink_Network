@@ -11,7 +11,6 @@ export const satelinkFooterConfig: FooterConfig = {
     {
       heading: 'Machine Commerce',
       links: [
-        { href: '/intelligence', label: 'Trading Intelligence' },
         { href: '/corporate', label: 'Corporate Services' },
         { href: '/pricing', label: 'Pricing' },
       ],

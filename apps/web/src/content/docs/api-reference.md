@@ -149,7 +149,7 @@ number).
 
 ### `GET /v1/intelligence/catalog`
 
-Returns the catalogue of active Trading Intelligence analytical metrics, pricing, and schema specifications.
+For keys that already use the metered tools inside Trading AI. These tools are not a standalone product.
 
 ### `GET /health`
 

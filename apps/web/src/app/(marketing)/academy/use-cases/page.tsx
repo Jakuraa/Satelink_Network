@@ -10,7 +10,7 @@ import { Card, CardTitle } from "@/components/ui/Card";
 
 export const metadata: Metadata = buildMetadata({
   title: "Use cases — Academy",
-  description: "Real machine-commerce scenarios: agent purchasing, trading intelligence, M2M payments, usage-based SaaS, API monetization, and enterprise procurement.",
+  description: "Real machine-commerce scenarios: agent purchasing, M2M payments, usage-based SaaS, API monetization, and enterprise procurement.",
   path: "/academy/use-cases",
 });
 

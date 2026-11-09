@@ -7,7 +7,7 @@ import DISCLAIMERS from "@/content/disclaimers.json";
 
 export const metadata: Metadata = {
   title: "Products",
-  description: `Products of ${company.legalName}: Satelink, the flagship AI-agent and machine-commerce platform, and its application rails.`,
+  description: `Products of ${company.legalName}: Satelink AI Assistance and its capabilities.`,
 };
 
 const STATUS = "Paper trading in controlled beta. Live execution is not yet available.";
@@ -15,7 +15,7 @@ const STATUS = "Paper trading in controlled beta. Live execution is not yet avai
 const FLAGSHIP = {
   name: "Satelink Platform",
   href: "https://satelink.network",
-  line: "AI-agent and machine-commerce infrastructure for programmatic service discovery, procurement, metering, and settlement.",
+  line: "AI assistance and agent commerce for people, developers, AI agents and machines.",
   points: [
     "Programmatic service discovery and agent procurement via machine-readable catalogues and HTTP 402 payment specifications.",
     `Satelink Trading AI (Controlled paper-trading beta): First application use case — AI agents propose, deterministic risk and signed mandates decide. Live execution is not yet available.`,

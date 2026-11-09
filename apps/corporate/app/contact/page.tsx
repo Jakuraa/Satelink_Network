@@ -7,7 +7,7 @@ import { Container, PageHero } from "@/components/Page";
 
 export const metadata: Metadata = {
   title: "Contact & Institutional Enquiries | Jakuraa & Satelink",
-  description: `Contact Jakuraa Commercial Private Limited and the Satelink machine-commerce platform. Department communication channels and statutory details.`,
+  description: `Contact Jakuraa Commercial Private Limited and Satelink AI Assistance. Department communication channels and statutory details.`,
 };
 
 const jakuraaDepartments = [
@@ -85,7 +85,7 @@ export default function ContactPage() {
         title="Get in touch."
         lede={
           <p>
-            Department-specific channels for Jakuraa Commercial and the Satelink machine-commerce platform.
+            Department-specific channels for Jakuraa Commercial and Satelink AI Assistance.
             Select the appropriate channel to ensure rapid routing.
           </p>
         }

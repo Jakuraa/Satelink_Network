@@ -75,7 +75,6 @@ export function ExplorePlans({
           price="Pay per call"
           blurb="For machines and agents. No plan, no commitment."
           features={[
-            "Trading Intelligence — $0.01 / call",
             "Polygon RPC — $0.00003 / call",
             "x402 (keyless) or prepaid credits",
             "Public discovery + machine-readable pricing",

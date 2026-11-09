@@ -60,9 +60,9 @@ export default function SdksPage() {
           <div className="mt-6 max-w-2xl">
             <CodeBlock
               tabs={[
-                { label: "curl", code: `curl -H "X-API-Key: $SATELINK_KEY" \\\n  ${SITES.api.origin}/v1/intelligence/funding-rate-heatmap` },
-                { label: "TS", code: `const res = await fetch(\n  "${SITES.api.origin}/v1/intelligence/funding-rate-heatmap",\n  { headers: { "X-API-Key": process.env.SATELINK_KEY! } }\n);` },
-                { label: "Python", code: `import os, requests\nr = requests.get(\n  "${SITES.api.origin}/v1/intelligence/funding-rate-heatmap",\n  headers={"X-API-Key": os.environ["SATELINK_KEY"]},\n)` },
+                { label: "curl", code: `curl -X POST -H "X-API-Key: $SATELINK_KEY" -H "content-type: application/json" \\\n  -d '{"jsonrpc":"2.0","id":1,"method":"eth_blockNumber","params":[]}' \\\n  ${SITES.api.origin}/rpc/polygon` },
+                { label: "TS", code: `const res = await fetch("${SITES.api.origin}/rpc/polygon", {\n  method: "POST",\n  headers: { "X-API-Key": process.env.SATELINK_KEY!, "content-type": "application/json" },\n  body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_blockNumber", params: [] }),\n});` },
+                { label: "Python", code: `import os, requests\nr = requests.post(\n  "${SITES.api.origin}/rpc/polygon",\n  headers={"X-API-Key": os.environ["SATELINK_KEY"]},\n  json={"jsonrpc": "2.0", "id": 1, "method": "eth_blockNumber", "params": []},\n)` },
               ]}
             />
           </div>
