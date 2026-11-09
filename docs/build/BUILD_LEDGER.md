@@ -7,15 +7,38 @@ categories only (R14); details in `docs/build/evidence/private/` on the build ma
 
 ## ▶ RESUME CAPSULE — Release State A (updated after each phase)
 1. Mandate: Release State A master prompt v2026-11-04b + founder conditions 1–6 (2026-11-04).
-2. Worktree: `.claude/worktrees/release-a`; stack `build/p0-safety` (#610) → `build/integration-base` (#611) → `build/p2-foundation` (#612) → `build/s1-primary-journey` (#616) → `build/s2-food-mcp` (#617) → `build/s3-trading` (#618) → `build/s4-developer` (#619) → `build/s5-mcp-server` (#620) → `build/s6-machine` (#621) → `build/p3-quality` (#622) → `build/p4-assurance`.
-3. Last phase done: **P4** (assurance suites) — VERIFIED locally; CI on the draft PR. P3 VERIFIED (CI green #622). Slices S1–S6 VERIFIED (#616–#621).
+2. Worktree: `.claude/worktrees/release-a`; stack `build/p0-safety` (#610) → `build/integration-base` (#611) → `build/p2-foundation` (#612) → `build/s1-primary-journey` (#616) → `build/s2-food-mcp` (#617) → `build/s3-trading` (#618) → `build/s4-developer` (#619) → `build/s5-mcp-server` (#620) → `build/s6-machine` (#621) → `build/p3-quality` (#622) → `build/p4-assurance` (#623) → `build/p5-websites`.
+3. Last phase done: **P5** (websites, PR only) — VERIFIED locally; CI on the draft PR. P4 VERIFIED (CI green #623 after a teardown-listener fix). P3, S1–S6 VERIFIED (#616–#622).
 4. Last SHA: see `git log -1 build/p0-safety`.
-5. Next sub-step: **P5** websites match the preview — PR only, no deploy (branch `build/p5-websites` from `build/p4-assurance`). Remaining spec verbatim: `RELEASE_A_REMAINING_SPEC.md`.
+5. Next sub-step: **P6** acceptance, ARCHITECTURE.md, RELEASE_B_FOUNDER_ACTIONS.md, FINAL_REPORT.md (branch `build/p6-acceptance` from `build/p5-websites`). Remaining spec verbatim: `RELEASE_A_REMAINING_SPEC.md`.
 6. Open risks: E1 JWT secret + webhooks public (OB-1/2); plaintext signer/treasury keys in local stash (OB-3); single-copy backup (OB-5).
 7. Rule: no work touching auth secrets, payment config or production (D-A2); local test credentials only.
 8. Backups: never touch `backups/protected/*.dump`, `docs/release/*.dump` (BACKUP_POSTURE.md).
 9. Blockers: `OPEN_BLOCKERS.md` (OB-1…OB-14; OB-14 = 4 CRITICAL production dependency advisories incl. next RCE + better-auth takeover — founder priority).
 10. Decisions: `DECISION_LOG.md` (D-A1…D-A8, ADR-1…11).
+
+## Release A — P5 websites — 2026-11-09 (PR only, nothing deployed)
+- satelink.network: positioning "AI assistance and agent commerce for people, developers, AI agents and machines"; `/preview`
+  with six journeys and real screenshots from the CI production-build artifact; "Preview — simulated, no charges" and "Local
+  preview only; not yet open to the public" shown; pay-per-use stated as INTENDED, fees PROPOSED, no prices. The live RPC and
+  x402 services stay described as running. `/.well-known/satelink-capabilities.json` + llms section generated from the
+  registry (`scripts/preview/generate-public-capabilities.mjs`, guard test `public_capabilities_sync`); third-party supplier
+  names are not published. llms snapshot committed; JSON-LD, sitemap, nav, search index updated.
+- jakuraa.com: Satelink as the product; removed "cryptographic certainty", "decentralized service registries", "without
+  intermediaries", "decentralized liquidity routing", the Trading Intelligence card. Legal + contact pages verified present.
+- Defects found by `p5-websites`: home overflowed to 578 px at 390 px; corporate to 432/922 px (header now collapses below
+  lg); reduced-motion visitors kept hero content permanently at 0.85 opacity (hydration kept the SSR inline style);
+  role=tab without tablist; footers and light-theme settle/warn colours below AA; aria-label on a role-less div.
+- My guard test first passed on an EMPTY capability list (registry not seeded): fixed, now requires known ids.
+- **Known gap, founder decision:** Trading Intelligence is `deprecated`/internal on main (#515/#518) but still appears on ~40
+  surfaces: `/products/trading-intelligence`, `/intelligence`, PRODUCT_ORDER (so llms.txt lists it, unpriced), platform and
+  solutions copy, docs, academy, legal text, checkout. `/v1/intelligence` still serves existing keys and the checkout still sells
+  it, so this copy is not simply false: removal needs a founder decision. Nav and footer links were removed (they contradict
+  #515), and the hard-coded footer "Network: Operational" is now a neutral status link. "On-Chain Settlement" remains in the footer.
+  So "remove every claim not true today" is NOT complete. The root JSON-LD product node was replaced; it had been labelled
+  the merchant account's primary product, so check this against any payment-provider review.
+- Evidence: web unit 273/273; claims lint 0 on both sites; p5-websites 6/6 (three viewports × two sites) on local production
+  builds; lint 0 errors.
 
 ## Release A — P4 assurance — 2026-11-05
 - Traceability: `docs/build/ASSURANCE_P4.md` (every requirement → test → CI job).

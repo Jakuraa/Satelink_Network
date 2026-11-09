@@ -3,13 +3,13 @@
 // (which was RPC-only) with the machine-commerce IA positioning.
 import { generateLlmsTxt } from "@satelink/seo";
 import { getCatalog } from "@/lib/intelligence";
-import { buildLlmsInput } from "@/lib/machine";
+import { buildLlmsInput, previewLlmsSection } from "@/lib/machine";
 
 export const revalidate = 300;
 
 export async function GET() {
   const { catalog } = await getCatalog();
-  const body = generateLlmsTxt(buildLlmsInput(catalog));
+  const body = generateLlmsTxt(buildLlmsInput(catalog)) + previewLlmsSection();
   return new Response(body, {
     headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "public, max-age=300, s-maxage=300" },
   });

@@ -12,9 +12,9 @@ concurrency:
 
 jobs:
   s1:
-    name: Release A journeys S1–S6 + P3/P4 (390/768/1440) + restart drill + audit gate
+    name: Release A journeys S1–S6 + P3/P4/P5 (390/768/1440) + restart drill + audit gate
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 50
     services:
       postgres:
         image: postgres:16
@@ -63,6 +63,13 @@ jobs:
           # next.config rewrites are computed at BUILD time: the preview-only /api/identity rewrite needs these here.
           SATELINK_PREVIEW: '1'
           SATELINK_API_BASE: http://127.0.0.1:4500
+      - name: Build websites (local builds only; never deployed from here)
+        run: |
+          (cd apps/web && npx next build)
+          (cd apps/corporate && npx next build)
+        env:
+          NODE_ENV: production
+          NEXT_TELEMETRY_DISABLED: '1'
       - name: Start mock store, preview API and console
         run: |
           mkdir -p "$RUNNER_TEMP/preview"
@@ -74,6 +81,9 @@ jobs:
           (cd apps/console && SATELINK_PREVIEW=1 SATELINK_API_BASE=http://127.0.0.1:4500 CONSOLE_ORIGINS=http://localhost:3400 NODE_ENV=production nohup npx next start -p 3400 > "$RUNNER_TEMP/preview/console.log" 2>&1 &)
           for i in $(seq 1 90); do curl -sf http://127.0.0.1:4500/health >/dev/null && curl -sf -o /dev/null http://localhost:3400/sign-in && break; sleep 2; done
           curl -sf http://127.0.0.1:4500/health
+          (cd apps/web && NODE_ENV=production nohup npx next start -p 3000 > "$RUNNER_TEMP/preview/web.log" 2>&1 &)
+          (cd apps/corporate && NODE_ENV=production nohup npx next start -p 3100 > "$RUNNER_TEMP/preview/corporate.log" 2>&1 &)
+          for i in $(seq 1 60); do curl -sf -o /dev/null http://localhost:3000/preview && curl -sf -o /dev/null http://localhost:3100/ && break; sleep 2; done
       - name: Release A Playwright (390 / 768 / 1440)
         run: npx playwright test -c tests/e2e/playwright.config.ts
       - name: Restart drill (kill -9 during EXECUTING)

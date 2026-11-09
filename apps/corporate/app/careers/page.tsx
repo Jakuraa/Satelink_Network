@@ -35,7 +35,7 @@ const satelinkDisciplines = [
   },
   {
     area: "AI Trading Systems & Microstructure",
-    desc: "Building low-latency inference loops, deterministic nonce sequencers, and automated decentralized liquidity routing engines.",
+    desc: "Building the task engine, model routing, deterministic nonce sequencing and payment reconciliation behind Satelink.",
     contact: "careers@satelink.network",
   },
   {

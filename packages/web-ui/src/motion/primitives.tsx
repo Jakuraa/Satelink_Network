@@ -46,10 +46,6 @@ export function ScrollReveal({ children, delay = 0, y = 12, as = "div", classNam
   }, []);
 
   const Comp = m[as];
-  if (reduce) {
-    const Static = as;
-    return <Static className={className}>{children}</Static>;
-  }
 
   const shouldAnimate = inView || !hasMounted;
 
@@ -60,7 +56,9 @@ export function ScrollReveal({ children, delay = 0, y = 12, as = "div", classNam
         className={className}
         initial={{ opacity: 0.85, y: 4 }}
         animate={shouldAnimate ? { opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1], delay: delay / 1000 }}
+        // Reduced motion: same element, instant. Swapping to a plain element after SSR would keep the server's inline
+        // opacity through hydration and leave the content permanently dimmed.
+        transition={reduce ? { duration: 0 } : { duration: 0.35, ease: [0.16, 1, 0.3, 1], delay: delay / 1000 }}
       >
         {children}
       </Comp>

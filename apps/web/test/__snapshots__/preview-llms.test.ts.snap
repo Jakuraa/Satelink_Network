@@ -1,0 +1,71 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`llms.txt with the preview section > matches the committed snapshot 1`] = `
+"# Satelink — AI Assistance & Agent Commerce
+
+Satelink is AI-agent assistance and machine-commerce infrastructure for software agents and machines to discover, evaluate, access, use, meter, and pay for supported digital services programmatically. Satelink is developed and operated by Jakuraa Commercial Private Limited.
+
+Satelink Trading AI is an intelligent algorithmic market-analysis application built on the Satelink platform: reason, validate, score (GO / WAIT / REJECT), authorize, execute, learn. AI proposes; deterministic risk and the user's signed mandate decide; the user keeps custody and withdrawals are never enabled. Currently in controlled paper-trading beta. Live trade execution is not yet enabled. Overview: https://satelink.network/trading-agent
+
+## Canonical concepts
+- machineCommerce: https://satelink.network/products/machine-commerce
+- tradingIntelligence: https://satelink.network/trading-agent/product
+- x402: https://satelink.network/products/x402
+- rpc: https://satelink.network/products/rpc
+- metering: https://satelink.network/products/metering
+- api: https://satelink.network/platform/api
+- pricing: https://satelink.network/pricing
+- enterprise: https://satelink.network/solutions/enterprise
+
+## Products
+### Machine Commerce (https://satelink.network/products/machine-commerce)
+AI-agent assistance and machine-commerce infrastructure for software agents and machines to discover, evaluate, access, use, meter, and pay for supported digital services programmatically.
+  - call: $0.00003 / call (USD)
+
+### Trading Intelligence (https://satelink.network/products/trading-intelligence)
+Trading Intelligence is a metered analytics API returning derived statistics from public market data — funding-rate, open-interest, liquidation-cluster and microstructure metrics. It is a research input, not investment advice.
+  (pricing: not published)
+
+### RPC Infrastructure (https://satelink.network/products/rpc)
+Satelink RPC is a supported blockchain gateway capability providing metered JSON-RPC access on Polygon PoS (chain 137). Software agents and automated services access endpoints programmatically, paying per call via x402 on Base or prepaid Polygon vaults.
+  - call: $0.00003 / call (USD)
+
+### x402 Machine Payments (https://satelink.network/products/x402)
+x402 is an HTTP-native micropayment rail supported by Satelink: unpaid requests return HTTP 402 with machine-readable payment terms, allowing autonomous software agents to pay keylessly in USDC on Base (eip155:8453) without accounts, subscriptions, or credit card checkouts.
+  - rpc-bundle: $0.1 / 1000 calls (USD)
+
+### API Metering (https://satelink.network/products/metering)
+Metering is how Satelink counts and bills usage: every paid call is measured at a flat rate and drawn down from a prepaid balance, so spend is predictable and auditable per key.
+  - call: $0.00003 / call (USD)
+
+## Discovery & payment
+- Discovery: https://rpc.satelink.network/.well-known/satelink.json
+- Auth: API key or x402 (HTTP 402 returns machine-readable payment requirements).
+- After 402: pay per the returned requirements, or buy credits, then retry.
+
+## Docs
+- Documentation: https://docs.satelink.network
+- Quickstart: https://satelink.network/developers/quickstart
+- API surface: https://satelink.network/developers/api
+- Pricing: https://satelink.network/pricing
+- Platform: https://satelink.network/platform
+- Satelink AI Assistance preview: https://satelink.network/preview
+
+## Satelink AI Assistance (preview)
+Universal AI assistance and agent commerce for people, developers, agents and machines: describe an outcome; Satelink plans it, quotes it and acts only after approval, then issues a receipt.
+Status: Local preview only; not yet open to the public. Everything in the preview is simulated: SIMULATED — NO MONEY MOVED. Nothing is charged; fees are PROPOSED — NOT APPROVED. This is separate from the live metered Polygon RPC and x402 rail.
+Details: https://satelink.network/preview
+Capability list (JSON): https://satelink.network/.well-known/satelink-capabilities.json
+
+### Capabilities in the registry
+- dev.data.extract [SIMULATED]: Extract structured data from text (API)
+- food.order.place [SIMULATED]: Order food for delivery
+- market_data.candles [PREVIEW]: Historical market candles
+- shop.digital_goods.purchase [SIMULATED]: Buy a digital product
+- token.risk [COMING_SOON]: Token risk signal
+- token.verdict [COMING_SOON]: Token verdict
+- trading.paper.order [SIMULATED]: Paper trade a GO strategy (simulation)
+- trading.strategy.evaluate [SIMULATED]: Evaluate a trading strategy (simulation)
+- wallet.balance [PREVIEW]: Wallet balance check
+"
+`;

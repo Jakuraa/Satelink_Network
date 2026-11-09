@@ -10,6 +10,7 @@ export const SEARCH_INDEX: Hit[] = [
   { title: "x402 Machine Payments", href: "/products/x402", type: "product" },
   { title: "API Metering", href: "/products/metering", type: "product" },
   { title: "Pricing", href: "/pricing", type: "page" },
+  { title: "Satelink AI Assistance preview", href: "/preview", type: "page" },
   { title: "Platform API", href: "/platform/api", type: "platform" },
   { title: "Enterprise", href: "/solutions/enterprise", type: "solution" },
   { title: "Commerce", href: "/solutions/commerce", type: "solution" },

@@ -110,7 +110,7 @@ export function SiteHeader() {
           {/* Desktop Navigation with Dropdowns (Right-Aligned) */}
           <nav
             ref={menuContainerRef}
-            className="hidden md:flex items-center space-x-1 lg:space-x-2"
+            className="hidden lg:flex items-center space-x-1 lg:space-x-2"
             aria-label="Primary Corporate Navigation"
             onMouseLeave={scheduleClose}
           >
@@ -314,7 +314,7 @@ export function SiteHeader() {
           </nav>
 
           {/* Mobile Menu Hamburger Button */}
-          <div className="flex items-center md:hidden">
+          <div className="flex items-center lg:hidden">
             <button
               type="button"
               className="inline-flex items-center justify-center p-2 rounded-lg text-ink hover:bg-stone-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-green"
@@ -343,7 +343,7 @@ export function SiteHeader() {
       {isMobileMenuOpen && (
         <div
           id="corporate-mobile-menu"
-          className="fixed inset-x-0 bottom-0 top-18 z-40 bg-ivory md:hidden overflow-y-auto border-t border-stone-2"
+          className="fixed inset-x-0 bottom-0 top-18 z-40 bg-ivory lg:hidden overflow-y-auto border-t border-stone-2"
           role="dialog"
           aria-modal="true"
           aria-label="Mobile Navigation"
