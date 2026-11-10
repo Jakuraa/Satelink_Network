@@ -165,6 +165,16 @@ jobs:
           RPC_TRAFFIC_TEST_PG: postgresql://ci:ci@127.0.0.1:5432/ci_test
           REQUIRE_DB_TESTS: '1'
 
+      # Explicitly runs all 26 node:test suites (Routing Kernel, Financial Fee
+      # Redteam Invariants, Outbound Signer) so results are reported in CI output.
+      - name: API node:test suites (Routing Kernel + Financial Invariants)
+        working-directory: apps/api
+        run: node --test --test-concurrency=1 test/vnext_*.test.js test/canonical_json.test.js
+        env:
+          NODE_ENV: test
+          JWT_SECRET: test-secret-for-ci-only
+          DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/ci_test
+
   api-deploy-install:
     name: API deploy install (apps/api lockfile)
     runs-on: ubuntu-latest
