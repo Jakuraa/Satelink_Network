@@ -8,14 +8,19 @@ categories only (R14); details in `docs/build/evidence/private/` on the build ma
 ## ▶ RESUME CAPSULE — Release State A (updated after each phase)
 1. Mandate: Release State A master prompt v2026-11-04b + founder conditions 1–6 (2026-11-04).
 2. Worktree: `.claude/worktrees/release-a`; stack `build/p0-safety` (#610) → `build/integration-base` (#611) → `build/p2-foundation` (#612) → `build/s1-primary-journey` (#616) → `build/s2-food-mcp` (#617) → `build/s3-trading` (#618) → `build/s4-developer` (#619) → `build/s5-mcp-server` (#620) → `build/s6-machine` (#621) → `build/p3-quality` (#622) → `build/p4-assurance` (#623) → `build/p5-websites` (#629) → `build/p6-acceptance`.
-3. Last phase done: **P6** — acceptance written. All phases done; every PR through #629 green in CI. Awaiting founder review.
+3. **HOLD (founder, 2026-11-09): NOT ACCEPTED.** Security PRs #631–#635, AC13 #636, proof #637, this record: all draft.
 4. Last SHA: see `git log -1 build/p0-safety`.
-5. Next: founder reads `FINAL_REPORT.md`, confirms acceptance, acts on `RELEASE_B_FOUNDER_ACTIONS.md` 1–7, merges in order. No agent merges or deploys.
+5. Next: founder reviews those PRs, `RELEASE_A_ACCEPTANCE.md`, `SECURITY_TRIAGE_2026-11-09.md` and `CREDENTIAL_ROTATION_CHECKLIST.md`. No agent merges or deploys.
 6. Open risks: E1 JWT secret + webhooks public (OB-1/2); plaintext signer/treasury keys in local stash (OB-3); single-copy backup (OB-5).
 7. Rule: no work touching auth secrets, payment config or production (D-A2); local test credentials only.
 8. Backups: never touch `backups/protected/*.dump`, `docs/release/*.dump` (BACKUP_POSTURE.md).
 9. Blockers: `OPEN_BLOCKERS.md` (OB-1…OB-14; OB-14 = 4 CRITICAL production dependency advisories incl. next RCE + better-auth takeover — founder priority).
 10. Decisions: `DECISION_LOG.md` (D-A1…D-A8, ADR-1…11).
+
+## Release A — HOLD work — 2026-11-09 (PRs only, nothing merged or deployed)
+- Founder set HOLD. Fresh audit corrected OB-14: production's `better-auth` 1.7.11 and `proxy-addr` 2.0.8 were already patched; the root lock CI installs was not. Web's `next` 15.5.28 still had `sharp` 0.34.5.
+- #631 next + sharp, #632 root lock, #633 MCP SDK, #634 API lock, #635 x402 2.30 (money path, founder review), #636 AC13, #637 test-only integration proof.
+- Traps: `npm audit` inside a workspace package reads the root lock; `npm update` in the API lock rewrote nested `@x402`; `DEFAULT_ASSETS` changed shape, which only `node --test` caught, not mocha; CI only runs for PRs targeting `main` or `build/**`.
 
 ## Release A — P5 websites — 2026-11-09 (PR only, nothing deployed)
 - satelink.network: positioning "AI assistance and agent commerce for people, developers, AI agents and machines"; `/preview`

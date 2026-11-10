@@ -1,7 +1,8 @@
 # Release State A — final report (2026-11-09)
 
 ## 1. Verdict
-**ACCEPTED under the mandate's rule: 13 of 13 VERIFIED, AC2 as VERIFIED (FIXTURE).** One P5 instruction is only partly done, and
+**NOT ACCEPTED / HOLD** (founder decision, 2026-11-09). The earlier "ACCEPTED under the mandate's rule" is withdrawn; see `RELEASE_A_ACCEPTANCE.md`. The rest of this report records the build as of its writing, and `SECURITY_TRIAGE_2026-11-09.md` corrects its dependency claims.
+
 that could change your reading of AC13: see the caveats in [`RELEASE_A_ACCEPTANCE.md`](RELEASE_A_ACCEPTANCE.md).
 
 | AC | Status | AC | Status |
