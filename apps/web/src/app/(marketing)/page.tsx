@@ -1,5 +1,5 @@
-// Home — Satelink: AI-agent and machine-commerce infrastructure.
-// hero (positioning + verbatim status line + docs / beta CTA) → the 7-step lifecycle →
+// Home — Satelink: AI assistance and agent commerce for people, developers, agents and machines.
+// hero (positioning + preview + verbatim status line + docs / beta CTA) → the 7-step lifecycle →
 // GO / WAIT / REJECT → safety boundary → three interfaces → active services →
 // product assistance visuals (402 sequence & rails) → video showcase → FAQ (+ FAQPage JSON-LD) → disclosures.
 // The claims lint (strict tier) runs on this file: no unlabelled numbers, no performance,
@@ -19,9 +19,9 @@ import { FAQView, FAQItem } from "@/components/faq/FAQView";
 import DISCLAIMERS from "@/lib/trading-agent/disclaimers.json";
 
 export const metadata: Metadata = buildMetadata({
-  title: "Satelink — Infrastructure for AI agents that discover and use digital services",
+  title: "Satelink — AI assistance and agent commerce for people, developers, agents and machines",
   description:
-    "Programmatic infrastructure for AI agents and automated systems to discover services, evaluate options, and access APIs through controlled, machine-readable workflows.",
+    "Describe an outcome; Satelink plans it, quotes it and acts only after you approve. Satelink AI Assistance is in preview (simulated, no charges); metered Polygon RPC and x402 payments are running today.",
   path: "/",
 });
 
@@ -35,7 +35,7 @@ const LOOP = [
   { step: "4. Select", icon: KeyRound, body: "A specific service and provider are chosen, verifying operational availability and eligibility before calling." },
   { step: "5. Authorize", icon: ShieldCheck, body: "Access is authorized keylessly via HTTP 402 on Base (USDC), scoped API keys, or user-signed deterministic mandates." },
   { step: "6. Execute", icon: Server, body: "The permitted request routes through authenticated gateways or keyless RPC proxies, returning the workload result." },
-  { step: "7. Meter & Reconcile", icon: LineChart, body: "Usage is metered at flat per-call rates, deducting from prepaid balances or settling on-chain to RevenueVault on Polygon." },
+  { step: "7. Meter & Reconcile", icon: LineChart, body: "Usage is metered at flat per-call rates and drawn from prepaid balances funded on-chain, or paid per call over x402." },
 ];
 
 const DECISIONS = [
@@ -53,7 +53,7 @@ const BOUNDARY = [
 
 const INTERFACES = [
   { name: "Web", icon: Globe, status: "Live", body: "Manage keys, configure spending limits, review transaction receipts, and explore the service catalogue." },
-  { name: "API", icon: Terminal, status: "Live", body: "Programmatic service discovery, metered Polygon JSON-RPC, and Trading Intelligence endpoints over HTTP." },
+  { name: "API", icon: Terminal, status: "Live", body: "Programmatic service discovery and metered Polygon JSON-RPC over HTTP." },
   { name: "MCP", icon: Server, status: "Not public yet", body: "Model Context Protocol tools for AI agents to discover resources, evaluate data, and propose actions." },
 ];
 
@@ -68,7 +68,7 @@ const HOME_FAQS: FAQItem[] = [
     category: "Platform",
     question: "What is Satelink?",
     answer:
-      "Satelink is programmatic infrastructure for AI agents and automated systems to discover digital services, evaluate options, and access APIs through controlled, machine-readable workflows. It is operated by Jakuraa Commercial Private Limited.",
+      "Satelink is AI assistance and agent commerce for people, developers, AI agents and machines: describe an outcome, approve the quote, get a receipt. That product, Satelink AI Assistance, is in a local preview: simulated, with no charges. Metered Polygon RPC and x402 payments are running today. It is operated by Jakuraa Commercial Private Limited.",
   },
   {
     category: "Platform",
@@ -92,7 +92,7 @@ const HOME_FAQS: FAQItem[] = [
     category: "Trading AI Beta",
     question: "Where does Trading AI fit?",
     answer:
-      "Satelink Trading AI is the first intended application built on the platform. It follows a loop where AI agents propose suggestions, while deterministic risk engines and signed mandates decide. It is currently in controlled paper-trading beta; live execution is not yet available.",
+      "Trading AI is one workflow on the platform. It follows a loop where AI agents propose suggestions, while deterministic risk engines and signed mandates decide. It is currently in controlled paper-trading beta; live execution is not yet available.",
   },
   {
     category: "RPC Services",
@@ -104,7 +104,7 @@ const HOME_FAQS: FAQItem[] = [
     category: "Developers",
     question: "What can developers do today?",
     answer:
-      "Developers can query the public machine catalogue (/.well-known/satelink.json), make metered Polygon RPC calls, pay keylessly via x402 on Base, and consume derived market analytics via the Trading Intelligence API.",
+      "Developers can query the public machine catalogue (/.well-known/satelink.json), make metered Polygon RPC calls, and pay keylessly via x402 on Base.",
   },
   {
     category: "Security",
@@ -126,7 +126,7 @@ export default function HomePage() {
         <div className="relative mx-auto max-w-[1200px] px-4 py-20 sm:px-6 md:py-28">
           <ScrollReveal y={8}>
             <p className="mb-4 text-xs font-semibold uppercase tracking-[0.12em] text-sl-accent">
-              AI-Agent &amp; Machine-Commerce Infrastructure
+              AI Assistance &amp; Agent Commerce
             </p>
           </ScrollReveal>
 
@@ -135,18 +135,19 @@ export default function HomePage() {
               className="max-w-4xl font-sl-display text-balance font-normal leading-[1.05] tracking-[-0.02em] text-sl-text"
               style={{ fontSize: "var(--sl-display-1)" }}
             >
-              Infrastructure for AI agents that discover and use digital services.
+              Describe the outcome. Approve the quote. Get a receipt.
             </h1>
           </ScrollReveal>
 
           <ScrollReveal delay={100} y={12}>
             <p className="mt-5 max-w-2xl text-pretty text-lg leading-relaxed text-sl-text-muted">
-              Satelink is programmatic infrastructure for AI agents and automated systems to discover services, evaluate options, and access APIs through controlled, machine-readable workflows. Built by Jakuraa.
+              Satelink is AI assistance and agent commerce for people, developers, AI agents and machines. It plans the work, quotes it, and acts only after approval. Intended pricing is pay per use, with no mandatory subscription. Built by Jakuraa.
             </p>
           </ScrollReveal>
 
           <ScrollReveal delay={150} y={8}>
-            <p className="mt-6">
+            <p className="mt-6 flex flex-wrap gap-2" data-testid="home-status">
+              <Badge variant="planned">Satelink AI Assistance: Preview — simulated, no charges.</Badge>
               <Badge variant="planned">{STATUS_LINE}</Badge>
             </p>
           </ScrollReveal>
@@ -154,12 +155,15 @@ export default function HomePage() {
           <ScrollReveal delay={200} y={8}>
             <div className="mt-8 flex flex-wrap gap-3">
               <Button asChild size="lg">
-                <Link href="https://docs.satelink.network">
-                  Explore documentation <ArrowRight className="size-4" />
+                <Link href="/preview">
+                  See the preview <ArrowRight className="size-4" />
                 </Link>
               </Button>
               <Button asChild variant="secondary" size="lg">
                 <Link href={BETA_HREF}>Request beta access</Link>
+              </Button>
+              <Button asChild variant="secondary" size="lg">
+                <Link href="https://docs.satelink.network">Explore documentation</Link>
               </Button>
             </div>
           </ScrollReveal>
@@ -327,7 +331,7 @@ export default function HomePage() {
               {STATUS_LINE}
             </Badge>
             <h2 className="mx-auto mt-4 max-w-xl text-balance font-sl-display text-3xl font-normal tracking-[-0.02em] text-sl-text sm:text-4xl">
-              Build on Satelink machine-commerce infrastructure.
+              Build on Satelink AI Assistance.
             </h2>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               <Button asChild size="lg">

@@ -69,7 +69,7 @@ export function ContactSalesForm({ defaultUseCase = "" }: { defaultUseCase?: str
           <option value="" disabled>Select…</option>
           <option>{BETA_USE_CASE}</option>
           <option>Machine commerce</option>
-          <option>Trading Intelligence</option>
+          <option>Trading AI</option>
           <option>RPC</option>
           <option>API monetization</option>
           <option>Other</option>

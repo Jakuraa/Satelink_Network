@@ -22,6 +22,7 @@ import { buildPayingFetch } from './src/pay.mjs';
 import { createRpcExecutor } from './src/rpc.mjs';
 import { createIntelligenceExecutor, INTELLIGENCE_ENDPOINTS } from './src/intelligence.mjs';
 import { createSatelinkMcpServer } from './src/server-factory.mjs';
+import { createWorkflowExecutor } from './src/workflows.mjs';
 
 const PORT = parseInt(process.env.PORT || '8402', 10);
 const RPC_URL = process.env.SATELINK_RPC_URL || 'https://rpc.satelink.network/rpc/polygon';
@@ -68,7 +69,7 @@ app.get('/healthz', (_req, res) => {
   res.json({
     ok: true,
     service: 'satelink-mcp',
-    version: '2.1.2',
+    version: '2.2.0',
     rpc_url: RPC_URL,
     payment: canPay ? 'x402-enabled' : 'no-wallet',
     paying_wallet: wallet || null,
@@ -79,7 +80,7 @@ app.get('/healthz', (_req, res) => {
 app.get('/.well-known/mcp.json', (_req, res) => {
   res.json({
     name: 'satelink-mcp',
-    version: '2.1.2',
+    version: '2.2.0',
     description: 'Pay-per-call Polygon (chain 137) JSON-RPC over MCP, settled via x402 (USDC on Base).',
     transport: { streamable_http: '/mcp', rest_execute: '/execute' },
     pricing: { unit: '$0.10 USDC per 1,000 calls', rail: 'x402', network: 'eip155:8453 (Base)' },
@@ -92,7 +93,14 @@ app.get('/.well-known/mcp.json', (_req, res) => {
 // independent (no session handshake required to persist), which is what a
 // per-request server/transport pair needs.
 app.post('/mcp', async (req, res) => {
-  const server = createSatelinkMcpServer({ executeRpc, executeIntelligence, rpcUrl: RPC_URL, wallet, canPay });
+  // Workflow tools act for the CALLER: their own X-API-Key, never the operator's env key.
+  const executeWorkflowTool = createWorkflowExecutor({
+    fetch: globalThis.fetch,
+    apiBase: process.env.SATELINK_API_BASE || 'https://api.satelink.network',
+    apiKey: req.get('x-api-key') || undefined,
+    autoApproveMaxUsd: process.env.SATELINK_MCP_AUTO_APPROVE_MAX_USD || '0',
+  });
+  const server = createSatelinkMcpServer({ executeRpc, executeIntelligence, executeWorkflowTool, rpcUrl: RPC_URL, wallet, canPay });
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
     enableJsonResponse: true,

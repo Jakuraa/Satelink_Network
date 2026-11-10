@@ -1,0 +1,736 @@
+{
+  "version": 1,
+  "note": "Release A preview capability registry. Mock suppliers are named '(MOCK)'. release_status SIMULATED = executes against a local mock; nothing is purchased, no money moves. Supplier-catalog offers (config/supplier_catalog.v1.json) are merged in as additional providers by the registry module.",
+  "capabilities": [
+    {
+      "id": "shop.digital_goods.purchase",
+      "version": 1,
+      "name": "Buy a digital product",
+      "description": "Find and buy a digital product (gift code, e-book, software licence) from a store, with a quote and your approval before anything is ordered.",
+      "category": "shopping",
+      "tags": [
+        "shopping",
+        "digital goods",
+        "gift card",
+        "ebook",
+        "software",
+        "licence",
+        "voucher",
+        "buy",
+        "purchase"
+      ],
+      "intents": [
+        "buy",
+        "purchase",
+        "order",
+        "gift"
+      ],
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "product_query",
+          "max_price_usd_minor"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "product_query": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120,
+            "description": "What to buy"
+          },
+          "max_price_usd_minor": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500000000,
+            "description": "Highest product price you accept, in micro-USD"
+          },
+          "recipient_email": {
+            "type": "string",
+            "maxLength": 200,
+            "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "order_id",
+          "sku",
+          "price_usd_minor",
+          "delivery"
+        ],
+        "properties": {
+          "order_id": {
+            "type": "string"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "price_usd_minor": {
+            "type": "integer"
+          },
+          "delivery": {
+            "type": "string"
+          }
+        }
+      },
+      "providers": [
+        {
+          "id": "demo_digital_store_mock",
+          "name": "Demo Digital Store (MOCK)",
+          "kind": "mock",
+          "connector": "mock_store",
+          "terms_url": null
+        }
+      ],
+      "connector_type": "native",
+      "interface_meta": {
+        "native": {
+          "adapter": "mock_store"
+        }
+      },
+      "skill_refs": [],
+      "credential_requirements": [],
+      "permission_scope": "tasks:purchase",
+      "markets": [
+        "GLOBAL"
+      ],
+      "currencies": [
+        "USD"
+      ],
+      "price_model": {
+        "kind": "merchant_price",
+        "merchant_price_from": "provider_catalog"
+      },
+      "fee_policy_id": "procurement_10pct_min_2000",
+      "commercial_rights": {
+        "resale_allowed": false,
+        "terms_url": null,
+        "evidence": "Mock supplier for the preview; no commercial relationship exists."
+      },
+      "security_class": "standard",
+      "timeout_ms": 10000,
+      "idempotency": {
+        "required": true,
+        "scope": "order"
+      },
+      "retry": {
+        "max_attempts": 2,
+        "on": [
+          "UPSTREAM_TIMEOUT"
+        ]
+      },
+      "verification": {
+        "method": "order_status_lookup",
+        "evidence_fields": [
+          "order_id",
+          "status",
+          "sku",
+          "price_usd_minor"
+        ]
+      },
+      "refund_policy": "Preview: nothing is charged; a failed order releases the simulated hold.",
+      "availability": "local_mock",
+      "release_status": "SIMULATED",
+      "environment": "preview",
+      "internal_only": false,
+      "last_verified_at": null,
+      "last_verified_evidence": "tests/e2e/s1-primary-journey.spec.ts (local mock)"
+    },
+    {
+      "id": "ai.model.inference",
+      "version": 1,
+      "name": "AI model routing",
+      "description": "Satelink selects an allowlisted model through OpenRouter for each assistant turn (fixture model when no live key is configured).",
+      "category": "ai",
+      "tags": [
+        "ai",
+        "model",
+        "inference",
+        "assistant",
+        "chat"
+      ],
+      "intents": [
+        "chat",
+        "explain",
+        "plan"
+      ],
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "messages"
+        ],
+        "properties": {
+          "messages": {
+            "type": "array",
+            "maxItems": 50
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "text",
+          "served_by"
+        ],
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "served_by": {
+            "type": "string"
+          }
+        }
+      },
+      "providers": [
+        {
+          "id": "openrouter",
+          "name": "OpenRouter",
+          "kind": "model_router",
+          "connector": "openrouter",
+          "terms_url": "https://openrouter.ai/terms"
+        }
+      ],
+      "connector_type": "rest",
+      "interface_meta": {
+        "rest": {
+          "base": "https://openrouter.ai/api/v1",
+          "auth": "OPENROUTER_API_KEY (optional; fixture without it)"
+        }
+      },
+      "skill_refs": [],
+      "credential_requirements": [
+        "OPENROUTER_API_KEY (optional)"
+      ],
+      "permission_scope": "assistant:chat",
+      "markets": [
+        "GLOBAL"
+      ],
+      "currencies": [
+        "USD"
+      ],
+      "price_model": {
+        "kind": "metered_tokens",
+        "source": "upstream usage.cost"
+      },
+      "fee_policy_id": "inference_markup_20pct",
+      "commercial_rights": {
+        "resale_allowed": null,
+        "terms_url": "https://openrouter.ai/terms",
+        "evidence": "Not reviewed — founder action before live use."
+      },
+      "security_class": "untrusted_output",
+      "timeout_ms": 30000,
+      "idempotency": {
+        "required": false
+      },
+      "retry": {
+        "max_attempts": 1,
+        "on": []
+      },
+      "verification": {
+        "method": "response_contract",
+        "evidence_fields": [
+          "served_by",
+          "generation_id"
+        ]
+      },
+      "refund_policy": "Preview: inference cost is simulated and never charged.",
+      "availability": "fixture_without_key",
+      "release_status": "PREVIEW",
+      "environment": "preview",
+      "internal_only": true,
+      "last_verified_at": null,
+      "last_verified_evidence": "apps/api/test/model_router.test.js (fixture)"
+    },
+    {
+      "id": "food.order.place",
+      "version": 1,
+      "name": "Order food for delivery",
+      "description": "Find a restaurant, build a cart from your order and place it after you approve the quote. The merchant is paid by you at its checkout.",
+      "category": "food",
+      "tags": [
+        "food",
+        "meal",
+        "restaurant",
+        "delivery",
+        "lunch",
+        "dinner",
+        "dosa",
+        "pizza",
+        "salad",
+        "coffee",
+        "order"
+      ],
+      "intents": [
+        "order",
+        "eat"
+      ],
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "order_description",
+          "max_total_usd_minor"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "order_description": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 300,
+            "description": "What you want to eat (dishes, quantities, area)"
+          },
+          "max_total_usd_minor": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200000000,
+            "description": "Highest cart total you accept, in micro-USD"
+          },
+          "delivery_city": {
+            "type": "string",
+            "maxLength": 60
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "order_id",
+          "status"
+        ],
+        "properties": {
+          "order_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "total_usd_minor": {
+            "type": "integer"
+          }
+        }
+      },
+      "providers": [
+        {
+          "id": "food_delivery_mock",
+          "name": "Food Delivery (MOCK — not connected to Swiggy)",
+          "kind": "mock",
+          "connector": "mcp_food",
+          "terms_url": null
+        }
+      ],
+      "connector_type": "mcp",
+      "interface_meta": {
+        "mcp": {
+          "transport": "streamable-http",
+          "auth": "oauth2.1+pkce(S256)",
+          "tools": [
+            "search_restaurants",
+            "get_menu",
+            "build_cart",
+            "place_order",
+            "order_status"
+          ]
+        }
+      },
+      "skill_refs": [],
+      "credential_requirements": [
+        "OAuth 2.1 connection to Food Delivery (MOCK)"
+      ],
+      "permission_scope": "tasks:purchase",
+      "markets": [
+        "GLOBAL"
+      ],
+      "currencies": [
+        "USD"
+      ],
+      "price_model": {
+        "kind": "merchant_price",
+        "merchant_price_from": "provider_catalog"
+      },
+      "fee_policy_id": "procurement_10pct_min_2000",
+      "commercial_rights": {
+        "resale_allowed": false,
+        "terms_url": null,
+        "evidence": "Local mock. No relationship with Swiggy, Zomato or any food platform; see docs/build/SWIGGY_PRODUCTION_APPLICATION.md."
+      },
+      "security_class": "standard",
+      "timeout_ms": 10000,
+      "idempotency": {
+        "required": true,
+        "scope": "order"
+      },
+      "retry": {
+        "max_attempts": 2,
+        "on": [
+          "UPSTREAM_TIMEOUT"
+        ]
+      },
+      "verification": {
+        "method": "order_status_lookup",
+        "evidence_fields": [
+          "order_id",
+          "status",
+          "price_usd_minor"
+        ]
+      },
+      "refund_policy": "Preview: nothing is charged; a failed order releases the simulated hold.",
+      "availability": "local_mock",
+      "release_status": "SIMULATED",
+      "environment": "preview",
+      "internal_only": false,
+      "last_verified_at": null,
+      "last_verified_evidence": "tests/e2e/s2-food.spec.ts (local mock MCP)"
+    },
+    {
+      "id": "trading.strategy.evaluate",
+      "version": 1,
+      "name": "Evaluate a trading strategy (simulation)",
+      "description": "Turn a strategy description into a validated spec and run a walk-forward backtest with fees and slippage on a labelled synthetic dataset; a deterministic risk policy returns GO, WAIT or REJECT with its reasons.",
+      "category": "trading",
+      "tags": [
+        "trading",
+        "strategy",
+        "backtest",
+        "evaluate",
+        "sma",
+        "crossover",
+        "donchian",
+        "breakout",
+        "btc",
+        "eth",
+        "crypto",
+        "walk-forward",
+        "bitcoin",
+        "ethereum",
+        "moving",
+        "average",
+        "crosses",
+        "trend",
+        "channel"
+      ],
+      "intents": [
+        "backtest",
+        "evaluate"
+      ],
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "strategy_description"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "strategy_description": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 600,
+            "description": "The strategy in plain words"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "evaluation_id",
+          "risk"
+        ],
+        "properties": {
+          "evaluation_id": {
+            "type": "string"
+          },
+          "risk": {
+            "type": "object"
+          }
+        }
+      },
+      "providers": [
+        {
+          "id": "internal_paper_engine",
+          "name": "Satelink Trading Engine (simulation)",
+          "kind": "first_party",
+          "connector": "trading_engine",
+          "terms_url": null
+        }
+      ],
+      "connector_type": "native",
+      "interface_meta": {
+        "native": {
+          "adapter": "trading_engine",
+          "data": "synthetic recorded dataset (labelled)"
+        }
+      },
+      "skill_refs": [],
+      "credential_requirements": [],
+      "permission_scope": "tasks:procure",
+      "markets": [
+        "GLOBAL"
+      ],
+      "currencies": [
+        "USD"
+      ],
+      "price_model": {
+        "kind": "satelink_service"
+      },
+      "fee_policy_id": "strategy_eval_flat_100000",
+      "commercial_rights": {
+        "resale_allowed": null,
+        "terms_url": null,
+        "evidence": "First-party simulation on synthetic data; no market-data licence needed."
+      },
+      "security_class": "standard",
+      "timeout_ms": 60000,
+      "idempotency": {
+        "required": true
+      },
+      "retry": {
+        "max_attempts": 1,
+        "on": []
+      },
+      "verification": {
+        "method": "evaluation_record_check",
+        "evidence_fields": [
+          "evaluation_id",
+          "result_hash",
+          "decision"
+        ]
+      },
+      "refund_policy": "Preview: nothing is charged.",
+      "availability": "local",
+      "release_status": "SIMULATED",
+      "environment": "preview",
+      "internal_only": false,
+      "last_verified_at": null,
+      "last_verified_evidence": "database/__tests__/trading_s3.integration.test.ts",
+      "disclaimer": "Education and simulation only. Not investment advice. SIMULATED_PAPER_EXECUTION: NOT_ACTUAL_RETURNS."
+    },
+    {
+      "id": "trading.paper.order",
+      "version": 1,
+      "name": "Paper trade a GO strategy (simulation)",
+      "description": "Place a simulated paper order for a strategy whose evaluation is GO. Filled by the internal paper broker on synthetic data — no broker, no real order.",
+      "category": "trading",
+      "tags": [
+        "paper",
+        "trade",
+        "trading",
+        "simulated",
+        "order"
+      ],
+      "intents": [
+        "paper"
+      ],
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "evaluation_id",
+          "side"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "evaluation_id": {
+            "type": "string",
+            "pattern": "^eval_[0-9a-f]{32}$",
+            "description": "The GO evaluation to paper trade"
+          },
+          "side": {
+            "type": "string",
+            "enum": [
+              "buy",
+              "sell"
+            ],
+            "description": "Buy or sell"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "fill"
+        ],
+        "properties": {
+          "fill": {
+            "type": "object"
+          }
+        }
+      },
+      "providers": [
+        {
+          "id": "internal_paper_engine",
+          "name": "Satelink Trading Engine (simulation)",
+          "kind": "first_party",
+          "connector": "trading_engine",
+          "terms_url": null
+        }
+      ],
+      "connector_type": "native",
+      "interface_meta": {
+        "native": {
+          "adapter": "trading_engine",
+          "data": "synthetic recorded dataset (labelled)"
+        }
+      },
+      "skill_refs": [],
+      "credential_requirements": [],
+      "permission_scope": "tasks:procure",
+      "markets": [
+        "GLOBAL"
+      ],
+      "currencies": [
+        "USD"
+      ],
+      "price_model": {
+        "kind": "satelink_service"
+      },
+      "fee_policy_id": "paper_sim_flat_50000",
+      "commercial_rights": {
+        "resale_allowed": null,
+        "terms_url": null,
+        "evidence": "First-party simulation on synthetic data; no market-data licence needed."
+      },
+      "security_class": "standard",
+      "timeout_ms": 60000,
+      "idempotency": {
+        "required": true
+      },
+      "retry": {
+        "max_attempts": 1,
+        "on": []
+      },
+      "verification": {
+        "method": "deterministic_fill_recompute",
+        "evidence_fields": [
+          "order_id",
+          "status"
+        ]
+      },
+      "refund_policy": "Preview: nothing is charged.",
+      "availability": "local",
+      "release_status": "SIMULATED",
+      "environment": "preview",
+      "internal_only": false,
+      "last_verified_at": null,
+      "last_verified_evidence": "database/__tests__/trading_s3.integration.test.ts",
+      "disclaimer": "Education and simulation only. Not investment advice. SIMULATED_PAPER_EXECUTION: NOT_ACTUAL_RETURNS."
+    },
+    {
+      "id": "dev.data.extract",
+      "version": 1,
+      "name": "Extract structured data from text (API)",
+      "description": "Send text to a data-extraction API and get emails, dates, amounts and links back as JSON. Procured per call from the provider's OpenAPI.",
+      "category": "developer",
+      "tags": [
+        "developer",
+        "api",
+        "extract",
+        "extraction",
+        "data",
+        "emails",
+        "dates",
+        "parse",
+        "json",
+        "openapi"
+      ],
+      "intents": [
+        "extract",
+        "parse"
+      ],
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "source_text"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "source_text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 5000,
+            "description": "The text to extract from"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "job_id",
+          "result"
+        ],
+        "properties": {
+          "job_id": {
+            "type": "string"
+          },
+          "result": {
+            "type": "object"
+          }
+        }
+      },
+      "providers": [
+        {
+          "id": "demo_data_api_mock",
+          "name": "Demo Data API (MOCK)",
+          "kind": "mock",
+          "connector": "rest_openapi_data",
+          "terms_url": null
+        }
+      ],
+      "connector_type": "rest",
+      "interface_meta": {
+        "rest": {
+          "openapi": "/openapi.json",
+          "operations": [
+            "getPricing",
+            "createExtraction",
+            "getExtraction"
+          ]
+        }
+      },
+      "skill_refs": [],
+      "credential_requirements": [],
+      "permission_scope": "tasks:procure",
+      "markets": [
+        "GLOBAL"
+      ],
+      "currencies": [
+        "USD"
+      ],
+      "price_model": {
+        "kind": "provider_price_per_call",
+        "source": "getPricing"
+      },
+      "fee_policy_id": "procurement_10pct_min_2000",
+      "commercial_rights": {
+        "resale_allowed": false,
+        "terms_url": null,
+        "evidence": "Local mock provider; no commercial relationship."
+      },
+      "security_class": "standard",
+      "timeout_ms": 10000,
+      "idempotency": {
+        "required": true,
+        "scope": "order"
+      },
+      "retry": {
+        "max_attempts": 2,
+        "on": [
+          "UPSTREAM_TIMEOUT"
+        ]
+      },
+      "verification": {
+        "method": "job_status_lookup",
+        "evidence_fields": [
+          "job_id",
+          "status",
+          "price_usd_minor"
+        ]
+      },
+      "refund_policy": "Preview: nothing is charged; a failed order releases the simulated hold.",
+      "availability": "local_mock",
+      "release_status": "SIMULATED",
+      "environment": "preview",
+      "internal_only": false,
+      "last_verified_at": null,
+      "last_verified_evidence": "tests/e2e/s4-developer.spec.ts (local mock)"
+    }
+  ]
+}

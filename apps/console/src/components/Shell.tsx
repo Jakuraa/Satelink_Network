@@ -5,7 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity, BarChart3, Bell, BookOpen, Code2, CreditCard, KeyRound, LayoutDashboard, Menu, MoreHorizontal, Moon, PlayCircle, Search,
-  Server, Settings, Sun, Wallet, X, Zap,
+  Server, Settings, Sun, Wallet, X, Zap, FlaskConical, Store, Workflow, Plug, MessageSquare, ListChecks, Compass, Receipt,
+  Home, LineChart, ShieldCheck,
 } from "lucide-react";
 
 type NavItem = { href: string; label: string; key: string; icon: React.ComponentType<{ className?: string }>; group?: string };
@@ -48,6 +49,38 @@ export const ADVANCED_NAV: NavItem[] = [
   { href: "/alerts", label: "Alerts", key: "l", icon: Bell, group: "Account" },
   { href: "/settings", label: "Settings", key: "e", icon: Settings, group: "Account" },
 ];
+// Customer workflows beta — shown only where WORKFLOWS_BETA_ENABLED is on.
+const BETA_NAV: NavItem[] = [
+  { href: "/strategy-lab", label: "Strategy Lab", key: "t", icon: FlaskConical },
+  { href: "/marketplace", label: "Agent Marketplace", key: "a", icon: Store },
+  { href: "/workflows", label: "Workflows", key: "w", icon: Workflow },
+  { href: "/api-mcp", label: "API & MCP", key: "i", icon: Plug },
+];
+const withBeta = (items: NavItem[]) => [items[0], ...BETA_NAV, ...items.slice(1)];
+// Release A local preview (SATELINK_PREVIEW=1 only): the Satelink AI Assistance product on the one task engine.
+// Exactly the approved P3 navigation. The live RPC product's pages are not listed: they need production endpoints the
+// local preview API does not serve, so they would only show errors here.
+export const PREVIEW_NAV: NavItem[] = [
+  { href: "/home", label: "Home", key: "f", icon: Home },
+  { href: "/assistant", label: "Assistant", key: "y", icon: MessageSquare },
+  { href: "/tasks", label: "My Tasks", key: "j", icon: ListChecks },
+  { href: "/explore", label: "Explore", key: "g", icon: Compass },
+  { href: "/agent-marketplace", label: "Agent Marketplace", key: "a", icon: Store },
+  { href: "/trading-ai", label: "Trading AI", key: "t", icon: LineChart },
+  { href: "/connections", label: "Connections", key: "n", icon: Plug },
+  { href: "/wallet", label: "Wallet & Usage", key: "v", icon: Receipt },
+  { href: "/developer-hub", label: "Developer & Agent Hub", key: "h", icon: KeyRound },
+  { href: "/activity", label: "Activity & Security", key: "w", icon: ShieldCheck },
+  { href: "/settings", label: "Settings", key: "e", icon: Settings },
+];
+// Workflows-beta pages (#609) are a separate surface and are not shown in the preview either (one engine, R1).
+const PREVIEW_TABS = [
+  { href: "/home", label: "Home", icon: Home },
+  { href: "/assistant", label: "Assistant", icon: MessageSquare },
+  { href: "/tasks", label: "Tasks", icon: ListChecks },
+  { href: "/wallet", label: "Wallet", icon: Receipt },
+];
+
 const TABS = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
   { href: "/paper-trading", label: "Paper", icon: PlayCircle },
@@ -61,11 +94,15 @@ type Props = {
   keys: { fp: string; label: string }[];
   activeFp: string | null;
   theme: "dark" | "light";
+  beta?: boolean;
+  preview?: boolean;
   children: React.ReactNode;
 };
 
-export function Shell({ mode = null, user, keys, activeFp, theme: initialTheme, children }: Props) {
-  const nav = mode === "simple" ? SIMPLE_NAV : mode === "advanced" ? ADVANCED_NAV : NAV;
+export function Shell({ mode = null, user, keys, activeFp, theme: initialTheme, beta = false, preview = false, children }: Props) {
+  const base = mode === "simple" ? SIMPLE_NAV : mode === "advanced" ? ADVANCED_NAV : NAV;
+  const nav = useMemo(() => (preview ? PREVIEW_NAV : beta ? withBeta(base) : base), [beta, preview, base]);
+  const tabs = preview ? PREVIEW_TABS : TABS;
   const pathname = usePathname();
   const router = useRouter();
   const [theme, setTheme] = useState(initialTheme);
@@ -125,7 +162,7 @@ export function Shell({ mode = null, user, keys, activeFp, theme: initialTheme, 
   }, [router, nav]);
 
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(href + "/"));
-  const groups = ["", "Products", "Account"];
+  const groups = ["", "Preview", "Products", "Account"];
 
   const sidebar = (
     <nav aria-label="Console" className="flex h-full flex-col gap-4 overflow-y-auto p-2">
@@ -160,7 +197,7 @@ export function Shell({ mode = null, user, keys, activeFp, theme: initialTheme, 
         <button type="button" className="inline-flex size-8 items-center justify-center rounded md:hidden" aria-label={drawer ? "Close navigation" : "Open navigation"} aria-expanded={drawer} onClick={() => setDrawer((d) => !d)}>
           {drawer ? <X className="size-4" /> : <Menu className="size-4" />}
         </button>
-        <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
+        <Link href={preview ? "/home" : "/"} className="flex items-center gap-2 font-semibold tracking-tight">
           <span aria-hidden className="inline-block size-2.5 rounded-sm bg-sl-accent" />
           Satelink <span className="font-normal text-sl-text-subtle">Console</span>
         </Link>
@@ -203,7 +240,7 @@ export function Shell({ mode = null, user, keys, activeFp, theme: initialTheme, 
 
       {mode && (
         <nav aria-label="Tabs" className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-sl-border bg-sl-bg-raised pb-[env(safe-area-inset-bottom)] md:hidden">
-          {TABS.map((t) => (
+          {tabs.map((t) => (
             <Link key={t.href} href={t.href} aria-current={isActive(t.href) ? "page" : undefined}
               className={`flex min-h-14 flex-col items-center justify-center gap-0.5 text-[11px] ${isActive(t.href) ? "text-sl-accent" : "text-sl-text-muted"}`}>
               <t.icon aria-hidden className="size-5" />{t.label}

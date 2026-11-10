@@ -57,7 +57,7 @@ export default function CorporatePage() {
           <SectionHeader
             eyebrow="Corporate Services"
             title="Market data services for teams that build on them"
-            lede="For funds' research desks, fintechs, exchanges, and trading-tool companies: dedicated access, custom derived metrics, and consolidated billing — on the same public-data pipeline that powers Satelink Trading Intelligence."
+            lede="For funds' research desks, fintechs, exchanges, and trading-tool companies: dedicated access, custom derived metrics, and consolidated billing — on the same public-data pipeline behind the metered tools in Satelink Trading AI."
             align="left"
           />
           <div className="mt-8 flex flex-wrap gap-3">

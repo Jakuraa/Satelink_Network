@@ -28,12 +28,12 @@ export const businesses: Business[] = [
     status: "Operating",
     basis: "MOA object 3(b)(6): to develop, publish and license software and websites.",
     summary:
-      "AI-agent and machine-commerce infrastructure: software agents and automated systems discover, evaluate, access, meter, pay for, and settle digital services programmatically.",
+      "AI assistance and agent commerce for people, developers, AI agents and machines.",
     body: [
-      "Satelink is Jakuraa's flagship technology platform. It provides programmatic infrastructure for AI agents and automated systems to discover digital services, evaluate options, and access APIs through controlled machine-readable workflows.",
-      "Supported platform capabilities include metered Polygon PoS RPC at flat $0.00003/call, keyless x402 micropayments in USDC on Base, prepaid USDT credit vaults on Polygon PoS, and the Trading Intelligence analytics API. Satelink Trading AI is an application built on the platform in controlled paper-trading beta.",
+      "Satelink AI Assistance is Jakuraa's product. It helps people, developers, AI agents and machines discover digital services, evaluate options, and access APIs through controlled machine-readable workflows.",
+      "Supported platform capabilities include metered Polygon PoS RPC at flat $0.00003/call, keyless x402 micropayments in USDC on Base, and prepaid USDT credit vaults on Polygon PoS. Satelink AI Assistance, for people, developers, AI agents and machines, is in a local preview: simulated, with no charges. Satelink Trading AI is an application built on the platform in controlled paper-trading beta.",
     ],
-    scope: ["Agent procurement & machine commerce", "Polygon PoS RPC gateway", "Keyless x402 micropayments (Base)", "Usage metering and on-chain settlement"],
+    scope: ["Agent procurement & machine commerce", "Polygon PoS RPC gateway", "Keyless x402 micropayments (Base)", "Usage metering"],
     illustration: "network",
     externalUrl: "https://satelink.network",
   },

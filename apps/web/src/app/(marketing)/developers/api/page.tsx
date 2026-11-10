@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/Button";
 export const metadata: Metadata = buildMetadata({
   title: "API surface — Developers",
   description:
-    "The Satelink API surface: discovery, Trading Intelligence, RPC, credits, and the x402 rail. Authentication, errors, and rate limits — with the full reference on the docs.",
+    "The Satelink API surface: discovery, RPC, credits, and the x402 rail. Authentication, errors, and rate limits — with the full reference on the docs.",
   path: "/developers/api",
 });
 
@@ -20,8 +20,6 @@ const API = SITES.api.origin;
 
 const ENDPOINTS = [
   { method: "GET", path: "/.well-known/satelink.json", note: "Public discovery — services + pricing." },
-  { method: "GET", path: "/v1/intelligence", note: "Trading Intelligence catalog (metrics + prices)." },
-  { method: "GET", path: "/v1/intelligence/{metric}", note: "One derived metric (metered)." },
   { method: "POST", path: "/rpc/polygon", note: `Polygon JSON-RPC (metered, $${FLAT_RATE_USD}/call).` },
   { method: "GET", path: "/credits/deposit/initiate", note: "Begin a USDT deposit to fund a balance." },
 ];

@@ -4,20 +4,83 @@
     "allow": [
       "Read",
       "Glob",
-      "Grep"
+      "Grep",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git add *)",
+      "Bash(git commit -m *)",
+      "Bash(git push -u origin build/*)",
+      "Bash(gh pr create --draft*)",
+      "Bash(gh pr view*)",
+      "Bash(npm run *)",
+      "Bash(npm test*)",
+      "Bash(npx mocha*)",
+      "Bash(npx vitest*)",
+      "Bash(npx playwright*)",
+      "Bash(docker compose*)",
+      "Bash(node *)",
+      "Bash(gh pr merge * --merge)",
+      "Bash(railway status*)",
+      "Bash(railway logs*)",
+      "Bash(railway variables --service Satelink-api --kv*)",
+      "Bash(railway variables --service Satelink-api --set *)",
+      "Bash(railway variables delete --service Satelink-api *)",
+      "Bash(railway run --service Postgres-iQeW *)"
     ],
     "deny": [
-      "Bash(git add -A:*)",
-      "Bash(git push --force:*)",
-      "Bash(git push -f:*)",
-      "Bash(git push origin main:*)",
-      "Bash(railway variables --set:*)",
-      "Bash(railway up:*)",
-      "Bash(npm publish:*)",
+      "Bash(git add -A*)",
+      "Bash(git add .)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git push origin main*)",
+      "Bash(git push * main)",
+      "Bash(git commit --no-verify*)",
+      "Bash(gh pr merge 635*)",
+      "Bash(gh pr merge * --squash*)",
+      "Bash(gh pr merge * --rebase*)",
+      "Bash(gh pr merge * --admin*)",
+      "Bash(npm publish*)",
+      "Bash(pnpm publish*)",
+      "Bash(vercel*)",
+      "Bash(railway up*)",
+      "Bash(railway down*)",
+      "Bash(railway delete*)",
+      "Bash(railway *SETTLEMENT_DRY_RUN*)",
+      "Bash(railway *FEATURE_REAL_SETTLEMENT*)",
+      "Bash(railway *SIGNER*)",
       "Read(./.env)",
+      "Read(./.env.*)",
       "Read(./apps/*/.env)",
-      "Read(./.env.local)",
-      "Read(./.env.production)"
+      "Read(./apps/*/.env.*)",
+      "Read(**/*.dump)",
+      "Read(**/*.pgdump)"
     ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      { "matcher": "Bash", "hooks": [{ "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard-bash.sh" }] },
+      { "matcher": "Edit|Write|MultiEdit", "hooks": [{ "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard-files.sh" }] }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/lint-typecheck.sh", "timeout": 60 },
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/money-path-warn.sh" },
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/secret-scan.sh", "timeout": 30 }
+        ]
+      }
+    ],
+    "SessionStart": [
+      { "matcher": "compact|resume", "hooks": [{ "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/resume-capsule.sh" }] }
+    ],
+    "Stop": [
+      { "hooks": [{ "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/continue-if-unfinished.sh" }] }
+    ]
+  },
+  "enabledPlugins": {
+    "feature-dev@claude-plugins-official": true,
+    "claude-md-management@claude-plugins-official": true
   }
 }

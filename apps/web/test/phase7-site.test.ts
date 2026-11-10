@@ -91,7 +91,10 @@ describe("internal surfaces: 404 in production, noindex, not in the sitemap", ()
 describe("homepage and metadata", () => {
   const home = read("src/app/(marketing)/page.tsx");
   it("positioning, verbatim status line, beta CTA, loop, safety boundary, three interfaces", () => {
-    expect(home).toMatch(/Infrastructure for AI agents that discover and use digital services\./);
+    expect(home).toMatch(/Describe the outcome\. Approve the quote\. Get a receipt\./);
+    expect(home).toMatch(/Preview — simulated, no charges\./);
+    expect(home).toMatch(/no mandatory subscription/);
+    expect(home).not.toMatch(/Trading Intelligence/);
     expect(home).toMatch(/Discover, evaluate, authorize, access, meter, pay, settle/);
     expect(home).toContain(`"${STATUS}"`);
     expect(home).toMatch(/Request beta access/);
@@ -100,9 +103,9 @@ describe("homepage and metadata", () => {
     expect(home).toMatch(/withdrawals are never enabled/);
     for (const i of ["Web", "API", "MCP"]) expect(home).toContain(`name: "${i}"`);
   });
-  it("root metadata reflects Satelink infrastructure positioning and nothing says DePIN", () => {
+  it("root metadata reflects the D14 positioning and nothing says DePIN", () => {
     const layout = read("src/app/layout.tsx");
-    expect(layout).toMatch(/default: "Satelink — AI-Agent & Machine-Commerce Infrastructure"/);
+    expect(layout).toMatch(/default: "Satelink AI Assistance — AI assistance and agent commerce"/);
     expect(layout).not.toMatch(/DePIN/i);
     for (const f of ["src/app/docs/layout.tsx", "src/app/docs/page.tsx", "src/app/feed.xml/route.ts", "src/content/docs/glossary.md"]) expect(read(f), f).not.toMatch(/DePIN/i);
   });

@@ -1,0 +1,16 @@
+# Release A phase status (read by .claude/hooks/continue-if-unfinished.sh). ID STATUS [note]
+# STATUS: DONE | TODO | IN_PROGRESS | BLOCKED(FOUNDER|EXTERNAL)
+P0 DONE
+PT DONE
+P1 DONE
+P2 DONE
+S1 DONE
+S2 DONE
+S3 DONE
+S4 DONE
+S5 DONE
+S6 DONE
+P3 DONE
+P4 DONE
+P5 DONE
+P6 DONE

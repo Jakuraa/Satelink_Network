@@ -6,12 +6,12 @@ import { docsByCategory } from "@/lib/docs";
 export const metadata: Metadata = {
   title: "Satelink Documentation",
   description:
-    "Technical documentation for the Satelink AI-agent & machine-commerce platform, including HTTP 402 machine payments, API reference, Polygon PoS RPC gateway, and Trading AI paper beta docs.",
+    "Technical documentation for Satelink AI Assistance, including HTTP 402 machine payments, API reference, Polygon PoS RPC gateway, and Trading AI paper beta docs.",
   alternates: { canonical: "https://docs.satelink.network" },
   openGraph: {
     title: "Satelink Documentation",
     description:
-      "Technical documentation for the Satelink AI-agent & machine-commerce platform, Polygon PoS RPC gateway, and Trading AI paper beta docs.",
+      "Technical documentation for Satelink AI Assistance, Polygon PoS RPC gateway, and Trading AI paper beta docs.",
     url: "https://docs.satelink.network",
     siteName: "Satelink Docs",
     type: "website",
@@ -26,7 +26,7 @@ export default function DocsIndexPage() {
     name: "Satelink Documentation",
     url: "https://docs.satelink.network",
     description:
-      "Technical documentation for the Satelink AI-agent & machine-commerce platform, Polygon PoS RPC gateway, and Trading AI paper beta docs.",
+      "Technical documentation for Satelink AI Assistance, Polygon PoS RPC gateway, and Trading AI paper beta docs.",
     publisher: {
       "@type": "Organization",
       name: "Satelink Network",
@@ -42,8 +42,8 @@ export default function DocsIndexPage() {
       />
       <h1>Satelink Documentation</h1>
       <p className="docs-lede">
-        Satelink provides software infrastructure for AI agents and automated
-        systems to programmatically discover, procure, and settle digital services.
+        Satelink AI Assistance provides AI assistance and agent commerce for people,
+        developers, AI agents and machines.
         Trading AI documentation (in paper-trading beta) is available at{" "}
         <a href="/trading-agent/docs">/trading-agent/docs</a>. The pages below
         document the Satelink RPC gateway on Polygon PoS, where developers

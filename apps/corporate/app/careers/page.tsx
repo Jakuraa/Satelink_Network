@@ -6,7 +6,7 @@ import { Container, PageHero, SectionHeading } from "@/components/Page";
 export const metadata: Metadata = {
   title: "Careers & Engineering Disciplines | Jakuraa & Satelink",
   description:
-    "Engineering, research, and operating roles across Jakuraa Commercial and the Satelink machine-commerce platform.",
+    "Engineering, research, and operating roles across Jakuraa Commercial and Satelink AI Assistance.",
 };
 
 const jakuraaDisciplines = [
@@ -35,7 +35,7 @@ const satelinkDisciplines = [
   },
   {
     area: "AI Trading Systems & Microstructure",
-    desc: "Building low-latency inference loops, deterministic nonce sequencers, and automated decentralized liquidity routing engines.",
+    desc: "Building the task engine, model routing, deterministic nonce sequencing and payment reconciliation behind Satelink.",
     contact: "careers@satelink.network",
   },
   {
@@ -150,7 +150,7 @@ export default function CareersPage() {
             </h2>
             <p className="mt-3 text-base text-stone-4 font-sans leading-relaxed">
               Understand the distinction between working on Jakuraa corporate and operational systems
-              versus engineering the Satelink machine-commerce platform.
+              versus engineering Satelink AI Assistance.
             </p>
           </div>
 

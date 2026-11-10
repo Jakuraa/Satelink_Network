@@ -95,7 +95,7 @@ export default function MediaKitPage() {
                 Jakuraa is a corporate technology institution established in 2019 in Coimbatore, India.
                 The company engineers and operates systems across autonomous software, distributed infrastructure,
                 and machine commerce. Jakuraa operates Satelink, its flagship platform enabling AI agents to
-                negotiate, meter, and settle transactions on-chain with cryptographic certainty.
+                negotiate, meter, and pay for digital services programmatically.
               </p>
               <div className="mt-6 border-t border-stone-1 pt-4 text-xs font-mono text-stone-3">
                 <span>CIN: {company.cin}</span>
@@ -111,7 +111,7 @@ export default function MediaKitPage() {
               </span>
               <h3 className="mt-4 font-serif text-2xl text-ink">About Satelink</h3>
               <p className="mt-3 text-sm leading-relaxed text-stone-4 font-sans">
-                Satelink is the flagship machine-commerce infrastructure platform engineered by Jakuraa.
+                Satelink AI Assistance, built by Jakuraa, is AI assistance and agent commerce for people, developers, AI agents and machines.
                 It provides the economic rails, permissionless vaults, and usage-metered gateways for autonomous
                 software agents to discover, access, and pay for computing resources, data feeds, and APIs
                 per call. Satelink implements the x402 protocol for micro-payments in USDC on Base and the

@@ -9,6 +9,72 @@ Evidence keys: **P** = production probe 2026-10-20 (curl transcript in the ledge
 **R** = `evidence/REPO_MAP.md` · **RT/MP/DU** = private ROUTES / MONEY_PATHS / DUPLICATES sweeps ·
 **RW** = Railway variable *names* (values never read, except the flags listed in the ledger).
 
+## Release State A (2026-11-04) — one status per item, evidence required
+
+| Item | Status | Evidence |
+|---|---|---|
+| Production DB data exposure | VERIFIED (not exposed) | §P0 `SECURITY_AND_FINANCIAL_PATH_AUDIT.md` |
+| Credential exposure in public history | BLOCKED (FOUNDER) | `SECURITY_INCIDENT_2026-11-04.md`, OB-1..4 |
+| Dump/env publication guards | VERIFIED | `check-no-dumps.test.sh` 9/9; PR #610 CI 13/13 green |
+| Claude Code hooks | VERIFIED | `.claude/hooks/tests/run.sh` 50/50 |
+| Integration base (#609+#582+#583) | VERIFIED | PR #611; api baseline guard no new failures (933/940, 4 known); integration 214/214; libs 300/300 |
+| #583 migration conflict | VERIFIED (fixed on base) | `5bc1073a`; reservation-kind test 1/3 → 3/3 |
+| Local runtime (Postgres) | VERIFIED | `scripts/preview/local-db.sh` (Homebrew :5432 and Docker :55432) |
+| Workflow engine (mandate state set) | VERIFIED | task_state_machine 8/8; task_engine 12/12; restart drill PASS ×2 |
+| Unified capability registry | VERIFIED | capability_registry_unified 9/9; R9 on Postgres (task_engine) |
+| Model routing (OpenRouter) | VERIFIED (FIXTURE) | model_router 7/7 (fake fetch); no live key (OB-10) |
+| Planner / quote / approval / simulated money / receipts | VERIFIED | planner 8/8, pricing 8/8, sim_ledger 13/13, task_engine 12/12, tasks_http 7/7 |
+| Postgres reservation store | VERIFIED (preview, JS writer — ADR-5) | sim_ledger parity 13/13; mutation killed |
+| S1 primary journey (browser) | VERIFIED | s1 E2E 15/15 @390/768/1440; axe clean; browser restart drill PASS; CI green ×2 consecutive on de142340 (runs 41898308212/300/215 attempts 1+2); PR #616 |
+| S2 food procurement via MCP | VERIFIED | food_mcp.integration 8/8; s2-food E2E ×3 viewports; injection + PKCE negative tests; CI all green on 3e7ca49e; PR #617 |
+| Zomato connector | BLOCKED (EXTERNAL) | terms for automated ordering unverified |
+| Swiggy production integration | BLOCKED (FOUNDER) | no relationship/access; preparation pack SWIGGY_PRODUCTION_APPLICATION.md |
+| S3 Trading AI (evaluate → risk → paper) | VERIFIED | trading_s3.integration 9/9; s3-trading E2E ×3 viewports; live-host refusal test; CI all green on c3cb8ef3; PR #618 |
+| Alpaca paper adapter (live) | BLOCKED (FOUNDER) | needs ALPACA_PAPER_* keys; host pinned to paper-api |
+| S4 Developer procurement (keys + REST/OpenAPI) | VERIFIED | developer_s4.integration 10/10; s4-developer E2E ×3; procure.sh; CI all green on PR #619 |
+| S5 Agent commerce (MCP tools + A2A card/binding) | VERIFIED | agent_s5.integration 6/6; mcp-server node tests 13/13; s5-agent E2E ×3 (official SDK client over stdio); CI all green on PR #620 |
+| MCP protocol 2026-07-28 | BLOCKED (EXTERNAL) | official SDK latest 1.32.2 negotiates ≤ 2025-11-25; server negotiates 2025-11-25 (OB-13) |
+| A2A Agent Card JWS signature | NOT STARTED | needs a KeyProvider-held signing key; card ships unsigned (field omitted, not faked) |
+| S6 Machine commerce (x402 V2 preview) | VERIFIED | machine_s6.integration 8/8 (incl. import-graph proof: no live x402/vault module reachable); s6-machine E2E ×3; mock facilitator saw only /verify; CI all green on PR #621 |
+| P3 Product quality (preview console) | VERIFIED | approved 10-item nav; Home pending approvals + six-domain suggestions; Trading AI + Activity & Security real pages; Agent Marketplace honest Coming soon; p3-quality E2E ×3 (axe, overflow, hydration, headings); Lighthouse a11y 100 on 11 pages (artifacts/lighthouse/p3-a11y.json, local); CI all green on PR #622 |
+| P4 Assurance suites | VERIFIED | traceability: docs/build/ASSURANCE_P4.md; assurance_p4.integration 17/17 (authz matrix, rate limit, CSRF, SSRF redirect, oversize, headers, injection, concurrency, ledger invariants, determinism, per-slice durability); p4-adversarial E2E (XSS/CSRF); egress_guard unit; no-float-money arch rule; npm audit gate in CI; found+fixed 7 defects; CI all green on PR #623 (f9eece3f) |
+| P5 Websites match the preview (PR only) | VERIFIED | satelink.network: new positioning, /preview (6 real CI screenshots), registry-generated capability JSON + llms section (snapshot), JSON-LD, sitemap, nav; jakuraa.com: Satelink as product, overclaims removed, legal + contact checked; p5-websites E2E ×3 (link check, axe, overflow); claims lint both sites 0; not deployed; CI all green on PR #629 (c891a0a7) |
+| Release A acceptance | NOT ACCEPTED / HOLD (founder, 2026-11-09) | docs/build/RELEASE_A_ACCEPTANCE.md, FINAL_REPORT.md |
+| Remaining stale site claims | OPEN (founder decision) | see the P5 entry in BUILD_LEDGER: Trading Intelligence is deprecated/internal on main but still appears on ~40 surfaces, incl. footer, product page, docs, legal |
+| Production dependency advisories | BLOCKED (FOUNDER) | 4 critical / 36 high in production deps (next RCE, better-auth account takeover, proxy-addr, dompurify) — OB-14 |
+| x402 live rail for task capabilities | NOT STARTED | preview uses a LOCAL mock facilitator, testnet id, placeholder payTo; live = Release B founder decision |
+
+### Release A tech debt
+- Docker Desktop testcontainers port-mapping failures on this machine after long uptime; new suites support LEDGER_TEST_DB.
+- Trading data is synthetic only; a licensed recorded dataset is a founder decision (F32).
+- Console preview uses `/wallet`; mandate path `/usage` is the existing RPC analytics page (rename decision for P3).
+- Turnstile (Cloudflare test keys) not wired on preview sign-up (OB-11).
+- `apps/console/CLAUDE.md` names `packages/ui` for tokens; actual Signal tokens are `packages/web-ui/src/styles/tokens.css`.
+- Timing-sensitive apps/api tests flake under high machine load (api_keys limiter, identity rate limits, SEC-5, x402 r7); testcontainers port-mapping flake under parallel load.
+- Two OpenRouter adapters once #579 lands (workflows/model_router.js vs trading_agent/providers/openrouter.mjs) → consolidate.
+- Task engine executes single-step plans (multi-step quoting supported; execution uses step 1) → extend before multi-step slices.
+- TS integration tests import JS modules without .d.ts (editor-only warnings; CI does not typecheck database/__tests__).
+- `/v1` task API mounted only by the preview server; production mount is a Release B decision.
+- `workflows/supplier_catalog.js:190` and `workload_adapters.js:80,92` convert money to JS numbers (fix on touched paths).
+- Workflow recovery runs lazily on first request, not at boot.
+- `libs/CLAUDE.md` 316 lines (over the 150 target; founder-owned).
+- `apps/api/migrations` runner UNKNOWN.
+- Receipt `verification.method` is the generic `order_status_lookup` for every connector (S4).
+- A2A binding implements SendMessage/GetTask/CancelTask only; streaming, ListTasks, push notifications, extended card → -32004.
+- satelink-mcp task tools are stdio-only; the Streamable HTTP transport (`http.mjs`) does not expose them.
+- `satelink_discover` is read-only and creates no run (quote/request_approval create/advance runs; status/receipt read them).
+- Task-page quote countdown caused a hydration mismatch since S1 (fixed in S5; E2E now fails on hydration pageerrors).
+- x402 preview: if a paid task then FAILS, the simulated x402 deposit stays as customer credit (a real rail needs a refund path).
+- x402 preview keyless machines are scoped by their Idempotency-Key (it doubles as the bearer for that task's result).
+- Receipt `payment.payer` is a mock address from the scripted client; no signature verification beyond the mock scheme.
+- Lighthouse runs locally only (`scripts/preview/lighthouse-a11y.mjs`, pinned npx lighthouse@12.8.2); not wired into CI.
+- The Shell renders only a fixed list of nav groups; live-console groups "Activity & Logs", "Developer Tools", "Protocols" are therefore hidden in production (pre-existing; not changed by Release A).
+- Preview nav omits the live RPC product pages (they need production endpoints the preview API does not serve).
+- Egress guard does not resolve DNS: a public hostname rebinding to a private IP must be checked at connect time before any beta/live connector.
+- Dependency audit gate compares against a baseline of 40 known advisories (OB-14); the baseline must only shrink.
+- This worktree's node_modules symlinks to the main checkout, so local builds resolve `@satelink/*` from main unless linked via `apps/web/node_modules/@satelink` (gitignored). CI is unaffected. Local console E2E therefore ran against main's shared packages; CI runs prove the branch's.
+- Axe covers home, /preview and corporate home + company information; other marketing pages are not yet swept.
+
 ## M1 Identity, tenancy, access
 
 | Capability | Status | Evidence | Code / docs / prod disagreement → resolution |

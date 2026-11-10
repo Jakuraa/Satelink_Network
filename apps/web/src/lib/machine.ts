@@ -5,6 +5,7 @@ import type { ProductJson, PricingJson, PriceLine } from "@satelink/content";
 import { SITES, DISCOVERY } from "@satelink/content";
 import type { Catalog } from "@/lib/intelligence";
 import { PRODUCTS, PRODUCT_ORDER, FLAT_RATE_USD, X402_BUNDLE, type ProductSlug } from "@/lib/products";
+import PREVIEW from "@/content/preview-capabilities.generated.json";
 
 const SITE = SITES.satelink.origin;
 
@@ -64,7 +65,7 @@ export function buildPricingJson(catalog: Catalog): PricingJson {
 export function buildWellKnown(catalog: Catalog) {
   return {
     name: "Satelink",
-    description: "AI-agent assistance and machine-commerce infrastructure for software agents and machines to discover, evaluate, access, use, meter, and pay for supported digital services programmatically.",
+    description: "AI assistance and agent commerce for people, developers, AI agents and machines.",
     site: SITE,
     services: PRODUCT_ORDER.map((slug) => ({ product: slug, url: `${SITE}${PRODUCTS[slug].href}`, spec: `${SITE}/products/${slug}.json` })),
     discovery: DISCOVERY.wellKnown,
@@ -72,6 +73,23 @@ export function buildWellKnown(catalog: Catalog) {
     payments: ["x402", "usdt", "credits"],
     generatedAt: new Date().toISOString(),
   };
+}
+
+/** llms.txt section for Satelink AI Assistance, generated from the capability registry (see the generated JSON's source). */
+export function previewLlmsSection(): string {
+  const lines = [
+    "",
+    "## Satelink AI Assistance (preview)",
+    "Universal AI assistance and agent commerce for people, developers, agents and machines: describe an outcome; Satelink plans it, quotes it and acts only after approval, then issues a receipt.",
+    `Status: ${PREVIEW.availability} Everything in the preview is simulated: ${PREVIEW.simulation_label}. Nothing is charged; fees are ${PREVIEW.fees_status}. This is separate from the live metered Polygon RPC and x402 rail.`,
+    `Details: ${SITE}/preview`,
+    `Capability list (JSON): ${SITE}/.well-known/satelink-capabilities.json`,
+    "",
+    "### Capabilities in the registry",
+    ...PREVIEW.capabilities.map((c) => `- ${c.id} [${c.release_status}]: ${c.name}`),
+    "",
+  ];
+  return lines.join("\n");
 }
 
 /** Input for the llms.txt generators. */
@@ -89,6 +107,7 @@ export function buildLlmsInput(catalog: Catalog) {
       { title: "API surface", url: `${SITE}/developers/api` },
       { title: "Pricing", url: `${SITE}/pricing` },
       { title: "Platform", url: `${SITE}/platform` },
+      { title: "Satelink AI Assistance preview", url: `${SITE}/preview` },
     ],
   };
 }

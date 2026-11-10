@@ -5,6 +5,264 @@ categories only (R14); details in `docs/build/evidence/private/` on the build ma
 
 ---
 
+## ▶ RESUME CAPSULE — Release State A (updated after each phase)
+1. Mandate: Release State A master prompt v2026-11-04b + founder conditions 1–6 (2026-11-04).
+2. Worktree: `.claude/worktrees/release-a`; stack `build/p0-safety` (#610) → `build/integration-base` (#611) → `build/p2-foundation` (#612) → `build/s1-primary-journey` (#616) → `build/s2-food-mcp` (#617) → `build/s3-trading` (#618) → `build/s4-developer` (#619) → `build/s5-mcp-server` (#620) → `build/s6-machine` (#621) → `build/p3-quality` (#622) → `build/p4-assurance` (#623) → `build/p5-websites` (#629) → `build/p6-acceptance`.
+3. **HOLD (founder, 2026-11-09): NOT ACCEPTED.** Security PRs #631–#635, AC13 #636, proof #637, this record: all draft.
+4. Last SHA: see `git log -1 build/p0-safety`.
+5. Next: founder reviews those PRs, `RELEASE_A_ACCEPTANCE.md`, `SECURITY_TRIAGE_2026-11-09.md` and `CREDENTIAL_ROTATION_CHECKLIST.md`. No agent merges or deploys.
+6. Open risks: E1 JWT secret + webhooks public (OB-1/2); plaintext signer/treasury keys in local stash (OB-3); single-copy backup (OB-5).
+7. Rule: no work touching auth secrets, payment config or production (D-A2); local test credentials only.
+8. Backups: never touch `backups/protected/*.dump`, `docs/release/*.dump` (BACKUP_POSTURE.md).
+9. Blockers: `OPEN_BLOCKERS.md` (OB-1…OB-14; OB-14 = 4 CRITICAL production dependency advisories incl. next RCE + better-auth takeover — founder priority).
+10. Decisions: `DECISION_LOG.md` (D-A1…D-A8, ADR-1…11).
+
+## Release A — HOLD work — 2026-11-09 (PRs only, nothing merged or deployed)
+- Founder set HOLD. Fresh audit corrected OB-14: production's `better-auth` 1.7.11 and `proxy-addr` 2.0.8 were already patched; the root lock CI installs was not. Web's `next` 15.5.28 still had `sharp` 0.34.5.
+- #631 next + sharp, #632 root lock, #633 MCP SDK, #634 API lock, #635 x402 2.30 (money path, founder review), #636 AC13, #637 test-only integration proof.
+- Traps: `npm audit` inside a workspace package reads the root lock; `npm update` in the API lock rewrote nested `@x402`; `DEFAULT_ASSETS` changed shape, which only `node --test` caught, not mocha; CI only runs for PRs targeting `main` or `build/**`.
+
+## Release A — P5 websites — 2026-11-09 (PR only, nothing deployed)
+- satelink.network: positioning "AI assistance and agent commerce for people, developers, AI agents and machines"; `/preview`
+  with six journeys and real screenshots from the CI production-build artifact; "Preview — simulated, no charges" and "Local
+  preview only; not yet open to the public" shown; pay-per-use stated as INTENDED, fees PROPOSED, no prices. The live RPC and
+  x402 services stay described as running. `/.well-known/satelink-capabilities.json` + llms section generated from the
+  registry (`scripts/preview/generate-public-capabilities.mjs`, guard test `public_capabilities_sync`); third-party supplier
+  names are not published. llms snapshot committed; JSON-LD, sitemap, nav, search index updated.
+- jakuraa.com: Satelink as the product; removed "cryptographic certainty", "decentralized service registries", "without
+  intermediaries", "decentralized liquidity routing", the Trading Intelligence card. Legal + contact pages verified present.
+- Defects found by `p5-websites`: home overflowed to 578 px at 390 px; corporate to 432/922 px (header now collapses below
+  lg); reduced-motion visitors kept hero content permanently at 0.85 opacity (hydration kept the SSR inline style);
+  role=tab without tablist; footers and light-theme settle/warn colours below AA; aria-label on a role-less div.
+- My guard test first passed on an EMPTY capability list (registry not seeded): fixed, now requires known ids.
+- **Known gap, founder decision:** Trading Intelligence is `deprecated`/internal on main (#515/#518) but still appears on ~40
+  surfaces: `/products/trading-intelligence`, `/intelligence`, PRODUCT_ORDER (so llms.txt lists it, unpriced), platform and
+  solutions copy, docs, academy, legal text, checkout. `/v1/intelligence` still serves existing keys and the checkout still sells
+  it, so this copy is not simply false: removal needs a founder decision. Nav and footer links were removed (they contradict
+  #515), and the hard-coded footer "Network: Operational" is now a neutral status link. "On-Chain Settlement" remains in the footer.
+  So "remove every claim not true today" is NOT complete. The root JSON-LD product node was replaced; it had been labelled
+  the merchant account's primary product, so check this against any payment-provider review.
+- Evidence: web unit 273/273; claims lint 0 on both sites; p5-websites 6/6 (three viewports × two sites) on local production
+  builds; lint 0 errors.
+
+## Release A — P4 assurance — 2026-11-05
+- Traceability: `docs/build/ASSURANCE_P4.md` (every requirement → test → CI job).
+- New: `assurance_p4.integration` 17/17 (authz matrix 30 cases, rate limit, CSRF, SSRF redirect, oversize, headers,
+  prompt injection ×3 channels, concurrent approvals, racing x402 payments, ledger-wide Σdebits=Σcredits + origin tags +
+  no leaked holds + receipt hashes + reconcile, trading determinism, crash-after-supplier durability for S1/S2/S3/S4–S6);
+  `p4-adversarial` E2E (XSS/CSRF); `egress_guard` unit; `no-float-money` arch rule (tripwire); npm audit gate in CI.
+- Defects found and fixed: IPv4-mapped IPv6 SSRF bypass; redirects followed by all connectors; racing x402 double
+  deposit; trading crash recovery → reconciliation; deliverable lost after recovery; chat could not start extract tasks
+  (S4 gap; P3 suggestion was dead — sweep now proves every suggestion); preview API without security headers.
+- Surfaced, founder-only: 4 critical production advisories (next RCE, better-auth takeover, proxy-addr, dompurify) → OB-14.
+- Evidence: unit 96; mcp-server 13/13; all non-Docker integration suites green (assurance 17/17); all 13 E2E green
+  (desktop) locally; restart drill PASS; arch 11/11.
+
+## Release A — P3 product quality — 2026-11-05
+- Preview navigation = exactly the approved list (Home · Assistant · My Tasks · Explore · Agent Marketplace · Trading AI ·
+  Connections · Wallet & Usage · Developer & Agent Hub · Activity & Security · Settings); #609 beta pages and live RPC
+  pages are not listed in preview mode. Mobile tabs: Home/Assistant/Tasks/Wallet.
+- New pages: Home (pending approvals widget, six-domain suggestions, recent tasks), Trading AI (labels, strategy
+  prompts, the user's trading tasks), Activity & Security (task activity, active keys, connections), Agent Marketplace
+  (honest "Coming soon", nothing listed). Assistant: six-domain suggestion chips + `?prompt=` prefill (never auto-sent).
+  Hub: Agents (MCP config, A2A card) and Machines (x402 client) sections.
+- Found by the sweep: scrollable code blocks not keyboard-focusable (axe scrollable-region-focusable) → fixed; scope
+  checkboxes below target size (Lighthouse target-size) → fixed.
+- Evidence: p3-quality E2E ×3 viewports (11 pages: 200, h1, axe serious/critical = 0, no horizontal overflow, no
+  hydration error; nav order; pending widget with a real task); Lighthouse accessibility 100 on all 11 pages (local,
+  pinned 12.8.2); console unit 37/37; all E2E S1–S6 + P3 green locally (desktop); lint 0 errors.
+- PR #621 (S6) CI all green → S6 VERIFIED. 🏁 Slices layer finished.
+
+## Release A — Slice S6 — 2026-11-05
+- New piece: x402 V2 preview (`apps/api/src/routes/x402_preview_route.js`, `apps/api/config/x402.preview.json`), LOCAL
+  mock facilitator (`tools/mock-x402-facilitator`, /verify only), scripted machine client
+  (`scripts/preview/x402-machine-client.mjs`). Official `@x402/core` 2.18.0 header codecs; no dependency change.
+- Payment = approval of the exact quote; amount = Satelink credit charge only; booked as a simulated deposit
+  (origin `simulated`); no promo credit for paid tasks; receipt carries `payment` (rail, network, payer, mock verifier,
+  "no /settle"). Console receipt page shows it.
+- Evidence: machine_s6.integration 8/8 (402 shape, happy path + replay with one capture, tamper/expiry/wrong amount/
+  reused nonce → new 402 and no reservation, facilitator down → 503, key path → owner usage, import-graph proof of no
+  live x402/vault module); s6-machine E2E ×3 viewports (key from the hub, client script, receipt in usage, keyless run,
+  facilitator log = only POST /verify); all Release A E2E S1–S6 green locally; restart drill PASS; sim-ledger parity 13/13.
+- PR #620 (S5) CI all green → S5 VERIFIED.
+
+## Release A — Slice S5 — 2026-11-05
+- New piece: Satelink MCP task tools generated from the registry (`apps/mcp-server/src/task-tools.mjs`, satelink-mcp
+  2.2.0, `npm pack` only) + A2A v1.0 Agent Card / JSON-RPC binding (`apps/api/src/routes/a2a_route.js`) +
+  `/.well-known/satelink-capabilities.json`. Both drive the ONE task engine (actor_type `agent`).
+- Agent spend pre-authorization $0 (migration 046, per key): agent tasks are approvable by a key only up to it →
+  HUMAN_APPROVAL_REQUIRED; `POST /v1/tasks/:id/approval-request` records `APPROVAL_REQUESTED` (console banner + timeline).
+- Protocol facts checked against the official A2A spec (a2a.proto `lf.a2a.v1`, docs/specification.md) and the installed
+  MCP SDK: official SDK 1.32.2 negotiates ≤ 2025-11-25 → OB-13 (EXTERNAL); card unsigned (no KeyProvider key).
+- Found + fixed a real defect present since S1: the quote countdown read the clock during SSR → hydration mismatch on
+  every task page. The S4 guard had listened to console errors only; React reports it as a pageerror. S4/S5 E2E now fail
+  on any hydration pageerror (negative control: reverting the fix fails S5).
+- Evidence: agent_s5.integration 6/6; mcp-server node tests 13/13; apps/api unit 93; all non-Docker integration suites
+  green (Docker daemon returns 500 locally; CI covers testcontainers); s5-agent E2E ×3 viewports (official SDK client,
+  stdio `index.js`, approval in the browser, receipt fetched by the agent); S1+S2+S3+S4 E2E re-run green with CI env.
+- Local gotcha: the preview API must run with CI env (`AUTH_PREVIEW_RATE_LIMIT=off`, `PREVIEW_QUOTE_TTL_MS=25000`) or S1
+  expiry/S2 sign-up fail spuriously.
+
+## Release A — Slice S4 — 2026-11-05
+- New piece: REST/OpenAPI driver — loads the provider's OpenAPI 3.x, calls only declared operationIds, validates request
+  before sending and response after (R7). Provider: local "Demo Data API (MOCK)" (`tools/mock-data-api`, :4430).
+- Developer keys (migration 045, ADR-8): `slk_preview_…`, sha256 hash only, shown once, 5 scopes, revocable, per-key
+  fixed-window rate limit (60/min) + durable per-day usage + last-used. Keys cannot mint/list keys or use connections.
+  The live RPC key system (`/api/keys`, money path) is untouched; the hub lives at `/developer-hub`.
+- Task API: per-route scopes; API-key approvals REQUIRE `Idempotency-Key` (400 otherwise); generated `/v1/openapi.json`
+  (routes + scopes + registry capabilities). Restart drill and the P2 CSV test updated for this contract.
+- `tests/dev/procure.sh` (curl+jq): capabilities → task → quote → approve (+replay) → output → receipt → usage. Loopback only.
+- Evidence: unit 49/49; integration S4 10/10 + all non-Docker suites green (Docker-only suites run in CI — local
+  testcontainers still broken); E2E `s4-developer` ×3 viewports green (key created in UI, script run, usage + receipt
+  visible, revoke → 401); restart drill PASS. Credits charge only the PROPOSED Satelink fee ($0.002 min); the supplier
+  amount shows as paid by the user at the provider (simulated).
+- Known gap (tech debt): receipt `verification.method` is the generic `order_status_lookup` for every connector.
+
+## Release A — Slice S3 — 2026-11-05
+- New piece: recorded/synthetic market adapter. Evaluate (walk-forward, costs, look-ahead) → deterministic GO/WAIT/REJECT
+  with rule trace → paper order (GO only) → InternalPaperBroker deterministic fill → receipt; all labelled
+  `SIMULATED_PAPER_EXECUTION: NOT_ACTUAL_RETURNS`; Alpaca live host refused; no Indian broker orders.
+- Bug found in E2E: fill verification compared JSONB-round-tripped JSON with `JSON.stringify` → reconciliation;
+  fixed (canonical JSON) and the integration test now covers GO → paper (it previously only reached WAIT).
+- Docker Desktop testcontainers port mapping broke mid-session ("No host port found"); restart did not recover in time →
+  added `fresh-db.ts` (local-server path via LEDGER_TEST_DB; CI keeps testcontainers). New suites 49/49 locally.
+- E2E S1+S2+S3 green ×3 viewports. Draft PR #618 (stacked on #617). Skill `satelink-trading-ai` created.
+
+## Release A — Slice S2 — 2026-11-05
+- One new infrastructure piece: MCP client driver (official SDK client; lazy, ADR-7 — apps/api lockfile untouched, OB-12).
+- `tools/mock-food-mcp`: "Food Delivery (MOCK — not connected to Swiggy)" MCP tools + local OAuth 2.1 AS (PKCE S256 only).
+- Migration 044 (server-held PKCE verifiers, encrypted revocable tokens); `food.order.place` (connector_type mcp).
+- Console: Connections page, connect step + auto-resume, mandated approval wording; Zomato BLOCKED (EXTERNAL).
+- Tests: food_mcp.integration 8/8 (PKCE negative cases, encryption at rest, SDK discovery, injection, revoke);
+  s2-food E2E green; S1+S2 E2E 18 passed ×3 viewports. Docs: `SWIGGY_PRODUCTION_APPLICATION.md`.
+- CI: E2E job green on first S2 run; Financial OS suite red only from a pre-existing teardown race (57P01 on idle pool
+  clients in part11_acceptance / trading_append_only) — fixed test-only on the integration base and merged up the stack.
+- Draft PR #617 (stacked on #616).
+
+## Release A — Slice S1 — 2026-11-04
+- Console (SATELINK_PREVIEW=1 only): /signup → /onboarding → /assistant → /tasks/[id] (SSE) → /receipts/[id] (JSON/CSV) →
+  /wallet (Wallet & Usage) → /explore; SimulationBadge; origin-guarded proxy; Shell "Preview" group; styled 404.
+- Auth: the existing Better Auth (magic link) on the local DB with preview-only switches (dev mail sink, host-only cookies,
+  per-IP limit off for E2E) — each refused in production (unit test 3/3).
+- E2E `tests/e2e/s1-primary-journey.spec.ts` **15/15** at 390/768/1440: journey, supplier failure (no charge), expired quote
+  (UI + server), tenant isolation (HTTP 404), axe zero serious/critical on every page. Screenshots `artifacts/screenshots/s1/`.
+- Browser restart drill `scripts/preview/restart-drill-browser.sh`: **PASS** (1 order, 1 capture, unknown-outcome recovery).
+- Bugs found and fixed: pre-hydration native form submit; cross-tenant 404 served as HTTP 200 (loading boundary; no data
+  leaked); axe definition-list; auth rate limit vs E2E; "Satelink Trading AI" branding on preview sign-in.
+- Deviations: /wallet (not /usage — existing RPC page); Turnstile not wired (OB-11); stack runs `next dev` locally, `next start` in CI.
+- Draft PR #616 (stacked on #612); CI workflow `release-a-e2e.yml`.
+- CI on `de142340`: run 1 **all green** (S1 E2E job incl. restart drill: run 41898308212; CI 41898308300; architecture
+  41898308215); run 2 (re-run, attempt 2 of each) **all green** → two consecutive green CI runs. First E2E CI attempt failed for a build-time reason (preview rewrite missing from `next build`) — fixed.
+
+## Release A — Phase P2 — 2026-11-04
+- Extends #609 (one kernel/journal/run table): 18-state machine (`task_state_machine.js`), migration 043, unified registry
+  (`capability_registry.js` + `capabilities.preview.json`), model router (`model_router.js`, **VERIFIED (FIXTURE)**), planner,
+  pricing (PROPOSED — NOT APPROVED), sim ledger (ADR-5, parity vs TS), task service/store/step adapter, `/v1` task API
+  (preview server only; `app_factory.mjs` untouched), Demo Digital Store (MOCK) as a separate local process.
+- Tests: P2 unit 40/40 (mocha); integration 246/246 incl. sim_ledger parity 13/13, task_engine 12/12, tasks_http 7/7
+  (one testcontainers port flake, passes on rerun); #609 workflows suites green; API baseline guard 980/973/4 known/3 known
+  skips (two earlier guard runs at load avg ~40 showed different timing flakes — each passes in isolation; clean at low load).
+- Restart drill `scripts/preview/restart-drill.sh`: kill -9 during EXECUTING → UNKNOWN_EXECUTION_OUTCOME → VERIFYING →
+  SUCCEEDED; 1 supplier order, 1 capture, receipt hold+capture, reconcile [] — **PASS ×2**.
+- Bugs found by tests and fixed: reconciliation could declare success without verification (state table); BigInt in quote
+  lines; task stuck in PLANNING on quote error; supplier error code lost through kernel; unlabelled usage receipt summaries.
+
+## Release A — Phase P1 — 2026-11-04
+- Inspected #609 (`83763dab`), #582 (`c6e3556d`), #583 (`4bd3a740`): independent; file overlap only `migrations.integration.test.ts`. Local unpushed `50fe4e24` excluded (D-A6).
+- Merged on `build/integration-base` (PR #611). **Semantic conflict**: #583 020 vs main 038 both replace the ledger kind CHECK → renumbered 042 with union (D-A7, `5bc1073a`); proven 1/3 → 3/3.
+- Tests (local PG16 + Docker 29.6.2): api baseline guard 940/933/4 known/3 known-pending; integration 214/214; libs 300/300; arch 9/9; depcruise 0; console tsc clean; mcp 8/8.
+- Docs: `CURRENT_STATE_AUDIT.md`, STATUS_MATRIX Release A section, ADR-5 (money bridge), OB-8..10. Runtime: `docker-compose.preview.yml`, `scripts/preview/local-db.sh`.
+
+## Release A — Phase PT — 2026-11-04
+- Plugins: feature-dev + claude-md-management installed (project); others pre-existing; Superpowers pre-existing from official marketplace; context7 via claude.ai connector. `.mcp.json` not created (Postgres reference server deprecated).
+- `.claude/settings.json` deny/allow + 7 hooks, tests `bash .claude/hooks/tests/run.sh` 50/50. CLAUDE.md: root trimmed to 152 + 7 new. 2 skills, 7 agents. Inventory: `TOOLCHAIN_INVENTORY.md`.
+
+## Release A — Phase P0 — 2026-11-04 (Opus 5.5, background job)
+- Scanned every object (11,764 blobs) across 1,111 refs incl. 586 PR heads: **no dump content anywhere**; 0 releases / artifacts / Pages.
+- Credentials in public history (categories): JWT secret, Slack + Discord webhooks, admin password hash → `SECURITY_INCIDENT_2026-11-04.md`.
+- Local-only: stash with plaintext production signer/treasury keys (GitHub 404).
+- Guards: ignore files (git/docker/vercel/railway), `check-no-dumps.sh` (9/9 tests), `.gitleaks.toml` (positive-control tested), pre-commit + CI gitleaks on new commits.
+- Docs: `SECURITY_AND_FINANCIAL_PATH_AUDIT.md` §P0, `BACKUP_POSTURE.md`, `DECISION_LOG.md`, `OPEN_BLOCKERS.md`.
+
+## Session B2 — 2026-11-03 Beta: persistence, independent review, MCP, suppliers (Opus 5.5, background job)
+
+Scope: founder briefs "B2 — Stabilize, Persist, Review and Complete" + "PR #609 release readiness". Branch
+`feat/beta-unified-workflow`, PR #609 (draft). No merge, deploy, env change, paid call, publish or message sent.
+
+### Privacy incident (commit `5f08020a`, public repo)
+Third-party business email addresses (a dRPC staff member, another company that wrote to dRPC) and the fact that a
+reply was misaddressed were committed; redacted in `aa6435df`, still in branch history. **No credentials, tokens or
+secrets → no rotation needed.** Severity low/low-medium. Cleanup plan (needs approval): squash-merge #609 so main
+never contains it, delete the branch; full purge = rebase + force-push + GitHub Support for cached PR refs.
+
+### Delivered
+| Commit | What |
+|---|---|
+| `d0b2bdca` | Migration 041 (`wf_*` kernel store + owner-scoped read model; usage never revenue; append-only receipts/journal) + `PgDurableStore` prefix |
+| `a617b16f` | `run_store.js` (Memory/Pg), Postgres wiring, boot `recover()`, receipts/strategies endpoints; **all HIGH/MED review fixes** (except M8) with regression tests that fail on the pre-fix commit |
+| `13269b5e` | MCP workflow tools (8, opt-in, caller-scoped, approval cap), OpenAPI 3.1 + drift test, saved strategies + `/api-mcp` console page |
+| `6dcb4b17` | Browser E2E (journeys A–D, mobile, auth) + after-restart phase |
+| (this) | Supplier catalog evidence, docs |
+
+### Tests
+- API workflows: 40/40 memory + 8/8 Postgres (mutation-checked: SQL CAS, recovery). MCP: 8/8.
+- Full apps/api suite, same local DB: branch 916/867/50 vs pristine main 868/818/51 — zero failures unique to the branch.
+- Console: tsc + eslint clean. Browser E2E phase 1: 8/8; API restarted on the same DB → phase 2: 1/1.
+- Not run locally: migration integration tests (testcontainers; no Docker, F19) — CI.
+
+### Findings
+- Railway: only `satelink-reconciler` is in `europe-west4`; API/Postgres/Redis remain `us-west2`.
+- Space Command Kits previews fail because their workers' free Base RPC (`mainnet.base.org`) returns 429 to Cloudflare egress (200 from Satelink's network). Not a Satelink defect.
+- FreeTier: public catalogue 83 paths / 74 MCP tools; two free calls 200, balance matched on-chain. Same operator signal. 0.5% share not accepted.
+- dRPC: corrected enquiry saved as a Gmail **draft** to dRPC (unsent).
+
+### Founder actions added
+- F30 Apply migrations 040 + 041 in production when the beta goes to staging/production (review first).
+- F31 Send (or edit) the dRPC draft; reply to Space Command (test keys, 120 s vs 300 s timeout, Base RPC dependency).
+- F32 Choose the Strategy Lab data licence (CoinGecko paid tier first) and approve/adjust the pricing proposal.
+- F33 Decide MCP publication scope (BETA_RELEASE_CHECKLIST).
+- F34 Approve the privacy cleanup plan above (or accept squash-merge-only).
+
+---
+
+## Session B1 — 2026-11-03 Customer beta: one workflow foundation for trading + procurement (Opus 5.5, background job)
+
+Scope: founder mandate "MASTER PRODUCT RECOVERY, UNIFICATION & BETA LAUNCH". Branch `feat/beta-unified-workflow`
+(worktree `.claude/worktrees/beta-unified`), base `origin/main` `dd279db4` = production `/health.commit` (verified).
+Customer-journey matrix: `BETA_READINESS_MATRIX.md`. Suppliers: `SUPPLIER_INTEGRATION_STATUS.md`.
+
+### Verified state (read-only)
+- Railway: Satelink-api, Postgres, Redis, reconciler all deployed in **`us-west2`** (manifests 2026-11-02 23:18 UTC). The brief's "moved to Europe" is not reflected; Binance 451 from the API still applies.
+- Prod: `/health` ok @ `dd279db4`; anon `/rpc/polygon` → JSON-RPC `-32005` with x402 + deposit instructions.
+- Supplier mail (read-only): Space Command Kits and FreeTier share sender domain `mail.grokbot.com`; the founder's dRPC answer did not reach dRPC (misaddressed; detail in `evidence/private/`).
+- Space Command Kits zero-cost probes: manifests 200; unpaid → 402 v2 (Base+Polygon USDC, $0.005, timeout 300 s ≠ claimed 120 s); Polygon → 503 paused; free previews 503/502 (their Base RPC 429). No paid call.
+
+### Delivered
+| Commit | What |
+|---|---|
+| `d13fab1a` | `apps/api/src/workflows/*`: supplier catalog → vNext SupplierRegistry; NL strategy compiler (`satelink.strategy/v1`); kernel workloads `trading.strategy_evaluation` (real walk-forward engine) and `procurement:<capability>`; quote → approval → execute → verify → receipt; `WithheldSettlement` (charge 0, no money moved, not revenue); `/v1` router inert unless `WORKFLOWS_BETA_ENABLED=true` |
+| `7bdbb129` | Console `/strategy-lab`, `/marketplace`, `/marketplace/[id]`, `/workflows`, `/workflows/[id]` (flag-gated nav); console-session principal with existing `csrfGuard`; local preview (`scripts/preview/beta-preview.sh`) |
+| (docs) | BETA_READINESS_MATRIX, SUPPLIER_INTEGRATION_STATUS, REVENUE_EXPERIMENT_PLAN, BETA_RELEASE_CHECKLIST, ACCEPTANCE_TESTS §Customer journeys |
+
+### Tests
+- `workflows_beta.test.js` 31/31; mutation checks: removing the result verifier → 2 fail; removing the journal-payload clone → 2 fail (chain breaks on restart).
+- Full apps/api suite, local PG, branch vs pristine `origin/main` worktree with identical env: main 868/819 pass/50 fail; branch 898/848/51. Only diff = `identity rate limits … same Vercel IP` (known flake; 17/17 ×3 on rerun). The ~50 local failures exist on main too (local DB env), CI uses its own Postgres.
+- Console: `tsc --noEmit` 0 errors, `eslint` clean, `next build` exit 0.
+- Browser walkthrough (Playwright, desktop + 390 px): Journey A real BTC data, 20/50 SMA → **FAIL** (1/4 windows; +4.02% vs buy-and-hold +49.39%); Journey B real Polygon balance of `0x966E…` (0.2287 POL), receipt charge $0 withheld; token-risk on Base blocked (evaluation). `evidence/beta-preview/`.
+
+### Not done / next (in order)
+1. Independent code review of `d13fab1a`/`7bdbb129`; open PR (draft) → founder review.
+2. Durable store for workflows (`PgDurableStore` + reviewed migration of `vnext/reliability/schema.sql`) and staging (F3) before any flag-on deploy.
+3. Expose the same workflow service as MCP tools; OpenAPI for `/v1/workflows|marketplace|strategy-lab`.
+
+### Founder actions added
+- F26 Resend the 2026-11-02 dRPC answer to dRPC's contact (it went only to a third party copied on the thread).
+- F27 Reply to Space Command Kits accepting the free test keys (token-risk, bal-check) for a capped 40-call evaluation.
+- F28 Decide Strategy Lab data path: licensed vendor vs F22 worker outside the US; until then Strategy Lab is non-commercial preview.
+- F29 Approve (or change) list prices before any workflow meter charges (catalog `pricing.approved`).
+
+---
+
 ## Session T1 — 2026-10-31 Trading AI: Eulerpool + evaluation harness + go/no-go (Opus 5.5, background job)
 
 Scope: founder prompt "TRADING AI: EULERPOOL DATA + DECISION API GO/NO-GO + BINANCE DEMO EXECUTION".

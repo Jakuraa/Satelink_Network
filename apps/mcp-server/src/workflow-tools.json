@@ -1,0 +1,57 @@
+{
+  "version": "1",
+  "status": "beta — not published; listed only when SATELINK_MCP_WORKFLOW_TOOLS=1",
+  "auth": "SATELINK_API_KEY (customer API key). Every call is scoped to that customer.",
+  "spending": "Purchases always pause for approval. approve_purchase only auto-approves when the quoted charge is at or below SATELINK_MCP_AUTO_APPROVE_MAX_USD (default 0); anything higher must be approved in the Satelink console.",
+  "idempotency": "Mutating tools take idempotency_key; if omitted, a key is derived from the tool name and arguments, so a retried call never creates a second run.",
+  "tools": [
+    {
+      "name": "list_capabilities",
+      "mutating": false,
+      "description": "Search the Satelink Agent Marketplace. Returns each capability with its suppliers, real status (live / preview / evaluation / paused), supported networks, price and last verification. Only offers marked purchasable can execute.",
+      "inputSchema": { "type": "object", "properties": { "query": { "type": "string", "description": "Free text, e.g. 'wallet balance', 'token risk'." }, "network": { "type": "string", "description": "Optional network filter, e.g. polygon, base." } } }
+    },
+    {
+      "name": "quote_capability",
+      "mutating": false,
+      "description": "Compare suppliers for a capability on a network and return the supplier Satelink would use, the customer charge, list price and supplier cost. Returns available=false with per-supplier reasons when nothing can execute.",
+      "inputSchema": { "type": "object", "properties": { "capability": { "type": "string", "description": "Capability id, e.g. wallet.balance" }, "network": { "type": "string", "description": "e.g. polygon" } }, "required": ["capability", "network"] }
+    },
+    {
+      "name": "request_capability_purchase",
+      "mutating": true,
+      "description": "Create a capped purchase of one capability call. The run pauses at awaiting_approval; nothing executes or is charged until it is approved. Failed or unverified calls are never charged.",
+      "inputSchema": { "type": "object", "properties": { "capability": { "type": "string" }, "network": { "type": "string" }, "address": { "type": "string", "description": "Public 0x address (wallet or token contract)." }, "budget_usd": { "type": "string", "description": "Maximum USD for this call, e.g. '0.01'." }, "idempotency_key": { "type": "string" } }, "required": ["capability", "network", "address", "budget_usd"] }
+    },
+    {
+      "name": "approve_purchase",
+      "mutating": true,
+      "description": "Approve a purchase that is awaiting approval, then execute, verify and return the result and receipt. Refused (with a console link) when the quoted charge exceeds the operator's auto-approve limit.",
+      "inputSchema": { "type": "object", "properties": { "run_id": { "type": "string" } }, "required": ["run_id"] }
+    },
+    {
+      "name": "compile_strategy",
+      "mutating": false,
+      "description": "Turn a plain-language trading idea into a validated Satelink strategy spec, or return clarification questions, or reasons it cannot be evaluated. Supported: moving-average crossover and Donchian breakout, long-only, Binance spot BTC/USDT and ETH/USDT daily bars.",
+      "inputSchema": { "type": "object", "properties": { "prompt": { "type": "string" }, "answers": { "type": "object", "description": "Answers to earlier questions, e.g. {\"market\":\"BTCUSDT\"}." } }, "required": ["prompt"] }
+    },
+    {
+      "name": "run_backtest",
+      "mutating": true,
+      "description": "Run a walk-forward backtest of a strategy (from a prompt or a spec) and return the evidence scorecard. SIMULATED / BACKTEST — NOT ACTUAL RETURNS. Never places orders.",
+      "inputSchema": { "type": "object", "properties": { "prompt": { "type": "string" }, "answers": { "type": "object" }, "spec": { "type": "object" }, "idempotency_key": { "type": "string" } } }
+    },
+    {
+      "name": "get_run",
+      "mutating": false,
+      "description": "Get one workflow run: status, step graph, result, receipt and execution trace.",
+      "inputSchema": { "type": "object", "properties": { "run_id": { "type": "string" } }, "required": ["run_id"] }
+    },
+    {
+      "name": "list_runs",
+      "mutating": false,
+      "description": "List this customer's recent workflow runs (backtests and purchases).",
+      "inputSchema": { "type": "object", "properties": { "limit": { "type": "integer", "minimum": 1, "maximum": 200 } } }
+    }
+  ]
+}

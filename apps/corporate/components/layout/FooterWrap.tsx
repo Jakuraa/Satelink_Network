@@ -61,12 +61,12 @@ export function FooterWrap({ config, className = '', theme = 'dark' }: FooterWra
     : 'border-t border-stone-1 bg-ivory-2 text-ink';
 
   const brandColor = isDark ? 'text-white hover:text-ivory' : 'text-ink hover:opacity-90';
-  const taglineColor = isDark ? 'text-stone-3' : 'text-stone-4';
-  const descColor = isDark ? 'text-stone-3' : 'text-stone-4';
+  const taglineColor = isDark ? 'text-stone-2' : 'text-stone-2';
+  const descColor = isDark ? 'text-stone-2' : 'text-stone-2';
   const headingColor = isDark ? 'text-ivory' : 'text-ink';
-  const linkColor = isDark ? 'text-stone-2 hover:text-white' : 'text-stone-4 hover:text-ink';
+  const linkColor = isDark ? 'text-stone-2 hover:text-white' : 'text-stone-2 hover:text-ink';
   const ruleColor = isDark ? 'border-white/10' : 'border-stone-1';
-  const metaTextColor = isDark ? 'text-stone-4' : 'text-stone-3';
+  const metaTextColor = isDark ? 'text-stone-2' : 'text-stone-2';
   const metaBadgeBorder = isDark ? 'border-white/10 bg-white/5' : 'border-stone-1 bg-ivory';
   const metaValColor = isDark ? 'text-ivory' : 'text-ink';
 
@@ -106,7 +106,7 @@ export function FooterWrap({ config, className = '', theme = 'dark' }: FooterWra
               >
                 <span className="size-2 rounded-full bg-green animate-pulse" />
                 <span>Network Status: Operational</span>
-                <span className="text-stone-4 text-[10px]">↗</span>
+                <span className="text-stone-2 text-[10px]">↗</span>
               </a>
             </div>
 
@@ -125,8 +125,8 @@ export function FooterWrap({ config, className = '', theme = 'dark' }: FooterWra
                       aria-label={s.label}
                       className={`inline-flex size-9 items-center justify-center rounded-full border transition-colors ${
                         isDark
-                          ? 'border-white/15 text-stone-3 hover:border-ivory hover:text-white bg-white/5'
-                          : 'border-stone-2 text-stone-4 hover:border-ink hover:text-ink'
+                          ? 'border-white/15 text-stone-2 hover:border-ivory hover:text-white bg-white/5'
+                          : 'border-stone-2 text-stone-2 hover:border-ink hover:text-ink'
                       }`}
                     >
                       <Icon className="size-4" />
@@ -183,7 +183,7 @@ export function FooterWrap({ config, className = '', theme = 'dark' }: FooterWra
                   key={badge.label}
                   className={`rounded-lg border px-3.5 py-2.5 font-mono text-xs ${metaBadgeBorder}`}
                 >
-                  <span className="block text-[10px] text-stone-4 uppercase tracking-wider">
+                  <span className="block text-[10px] text-stone-2 uppercase tracking-wider">
                     {badge.label}
                   </span>
                   <span className={`font-semibold mt-0.5 block ${metaValColor}`}>
@@ -197,17 +197,17 @@ export function FooterWrap({ config, className = '', theme = 'dark' }: FooterWra
 
         {/* Bottom Legal, Statutory & Copyright Strip */}
         <div className="mt-12 pt-8 border-t border-white/10 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between text-xs">
-          <div className="space-y-1.5 font-sans text-stone-3">
+          <div className="space-y-1.5 font-sans text-stone-2">
             <p>
               &copy; {currentYear} {config.copyrightText || 'Jakuraa Commercial Private Limited. All rights reserved.'}
             </p>
             {config.entityNotice && (
-              <p className="font-mono text-[11px] text-stone-4">
+              <p className="font-mono text-[11px] text-stone-2">
                 {config.entityNotice}
               </p>
             )}
             {config.addressLines && config.addressLines.length > 0 && (
-              <p className="font-sans text-[11px] text-stone-4">
+              <p className="font-sans text-[11px] text-stone-2">
                 {config.addressLines.join(' | ')}
               </p>
             )}
@@ -219,7 +219,7 @@ export function FooterWrap({ config, className = '', theme = 'dark' }: FooterWra
               <Link
                 key={ll.href + ll.label}
                 href={ll.href}
-                className="text-stone-3 hover:text-white transition-colors"
+                className="text-stone-2 hover:text-white transition-colors"
               >
                 {ll.label}
               </Link>
@@ -243,7 +243,7 @@ function FooterLinkRow({ link, linkColor }: { link: FooterLinkItem; linkColor: s
         >
           <span>{link.label}</span>
           <svg
-            className="size-3 text-stone-4 transition-colors group-hover:text-white opacity-80"
+            className="size-3 text-stone-2 transition-colors group-hover:text-white opacity-80"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"

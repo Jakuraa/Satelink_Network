@@ -71,11 +71,10 @@ export const navigationFallback: Navigation = {
           { label: "API Metering", href: "/products/metering", description: "Usage, caps, and receipts per agent" },
         ] },
         { title: "Applications", items: [
-          { label: "Trading Intelligence", href: "/products/trading-intelligence/funding-rate-heatmap", description: "Derived market analytics bought per call" },
           { label: "Satelink Trading AI", href: "/trading-agent", description: "AI proposes, deterministic risk and signed mandates decide", badge: "Beta" },
         ] },
       ],
-      featureCard: { eyebrow: "Agent procurement", title: "Machine Commerce", description: "Programmatic infrastructure for AI agents to discover, access, and pay for services.", href: "/products/machine-commerce" },
+      featureCard: { eyebrow: "Agent procurement", title: "Machine Commerce", description: "Let AI agents discover, access, and pay for services.", href: "/products/machine-commerce" },
     },
     {
       label: "Solutions",
@@ -98,6 +97,7 @@ export const navigationFallback: Navigation = {
       ],
       featureCard: { eyebrow: "Talk to us", title: "Contact sales", description: "Volume, dedicated keys, or custom integrations.", href: "/contact-sales" },
     },
+    { label: "Preview", href: "/preview", groups: [] },
     { label: "Pricing", href: "/pricing", groups: [] },
     {
       label: "Developers",
@@ -158,7 +158,6 @@ const col1Sections = [
   {
     title: "Applications & AI",
     links: [
-      { label: "Trading Intelligence API", href: "/products/trading-intelligence/funding-rate-heatmap" },
       { label: "Satelink Trading AI", href: "/trading-agent", badge: "Beta" },
       { label: "Risk Engine & Controls", href: "/trading-agent/risk" },
       { label: "Mandate Protocol", href: "/trading-agent/how-it-works" },

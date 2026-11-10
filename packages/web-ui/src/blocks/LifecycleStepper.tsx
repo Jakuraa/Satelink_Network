@@ -15,9 +15,9 @@ export type LifecycleStep = {
 };
 
 export const DEFAULT_LIFECYCLE: LifecycleStep[] = [
-  { key: "DISCOVER", plain: "A machine finds a service it can buy.", mechanism: "Discovery via /.well-known/satelink.json and the /v1/intelligence catalog.", reveal: `GET https://rpc.satelink.network/.well-known/satelink.json\n{\n  "services": ["/v1/intelligence", "/rpc/polygon"],\n  "pricing": "https://satelink.network/pricing.json"\n}` },
+  { key: "DISCOVER", plain: "A machine finds a service it can buy.", mechanism: "Discovery via /.well-known/satelink.json.", reveal: `GET https://rpc.satelink.network/.well-known/satelink.json\n{\n  "services": ["/rpc/polygon"],\n  "pricing": "https://satelink.network/pricing.json"\n}` },
   { key: "IDENTIFY", plain: "It presents who it is.", mechanism: "An API key, or a wallet for the keyless x402 rail.", reveal: `Authorization: Bearer <your-api-key>\n# or, keyless:\nX-Payment: x402 <signed-authorization>` },
-  { key: "REQUEST", plain: "It calls the endpoint.", mechanism: "A normal HTTPS request to the product endpoint.", reveal: `curl https://rpc.satelink.network/v1/intelligence/funding-rate-heatmap` },
+  { key: "REQUEST", plain: "It calls the endpoint.", mechanism: "A normal HTTPS request to the product endpoint.", reveal: `curl -X POST https://rpc.satelink.network/rpc/polygon` },
   { key: "PRICE", plain: "The service quotes a price the machine can read.", mechanism: "HTTP 402 Payment Required with machine-readable requirements.", reveal: `HTTP/1.1 402 Payment Required\n{\n  "accepts": [{ "scheme": "x402", "network": "eip155:8453",\n    "maxAmountRequired": "0.01", "asset": "USDC" }]\n}` },
   { key: "PAY", plain: "The machine pays — no human, no checkout.", mechanism: "x402 (USDC on Base), a USDT deposit, or a prepaid credit balance.", reveal: `X-Payment: x402 network=eip155:8453 amount=0.01 asset=USDC\n  payTo=0x966E…7Ad4 signature=…` },
   { key: "EXECUTE", plain: "The service runs the work.", mechanism: "The gateway executes the RPC / intelligence query.", reveal: `HTTP/1.1 200 OK\n{ "metric": "funding-rate-heatmap", "data": [ … ] }` },

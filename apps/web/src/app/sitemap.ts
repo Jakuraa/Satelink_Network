@@ -5,7 +5,6 @@
 // node-operator program (/network*) and the builder/distributor/design surfaces (404 in production).
 import type { MetadataRoute } from "next";
 import { DOCS } from "@/lib/docs";
-import { getFallbackCatalog } from "@/lib/intelligence";
 import { PRODUCT_ORDER, PRODUCTS } from "@/lib/products";
 import { PLATFORM_ORDER, PLATFORM } from "@/lib/platform";
 import { SOLUTIONS_BY_COMPANY, SOLUTIONS_BY_USECASE, INDUSTRY_ORDER } from "@/lib/solutions";
@@ -24,6 +23,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const core = [
     e("/", 1, "weekly"),
+    e("/preview", 0.95, "weekly"),
     e("/trading-agent", 0.95, "weekly"),
     e("/product/overview", 0.9, "weekly"),
     e("/pricing", 0.9, "weekly"),
@@ -58,7 +58,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     e(PRODUCTS[slug].href, 0.9, "weekly"),
     e(`/products/${slug}.json`, 0.4),
   ]);
-  const metrics = getFallbackCatalog().metrics.map((m) => e(`/products/trading-intelligence/${m.slug}`, 0.8, "weekly"));
   const platform = PLATFORM_ORDER.map((slug) => e(PLATFORM[slug].href, 0.75));
   const solutions = [...SOLUTIONS_BY_COMPANY, ...SOLUTIONS_BY_USECASE].map((s) => e(`/solutions/${s}`, 0.75));
   const industries = INDUSTRY_ORDER.map((s) => e(`/solutions/industries/${s}`, 0.65));
@@ -76,7 +75,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...core,
     ...tradingAi,
     ...products,
-    ...metrics,
     ...platform,
     ...solutions,
     ...industries,
