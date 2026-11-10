@@ -14,7 +14,7 @@ Working tree: `.claude/worktrees/beta-launch`, branch `beta/launch`, created fro
 | B0 Ground truth sync | VERIFIED (prod), read-only | this file, §B0 |
 | B1 Security train | VERIFIED (prod) | §B1 |
 | B2 Credential minimum bar | B2.1, B2.2, B2.4 VERIFIED (prod); B2.3 re-sequenced after B4; B2.5 pending | §B2 |
-| B3 Backup + migrations | backup + rehearsal VERIFIED (local); production apply pending | §B3 |
+| B3 Backup + migrations | VERIFIED (prod) | §B3, `evidence/beta-migrations-2026-11-10.md` |
 | B4 Release merge | NOT STARTED | |
 | B5 Beta controls | NOT STARTED | |
 | B6 UI/UX polish | NOT STARTED | |
@@ -196,7 +196,7 @@ statements, 0 guards), `console_accounts/schema.mjs` (17, 0), `analytics/rpc_tra
 `billing/legacy_sub_entitlement.mjs` (2, 1). Under `satelink_app` those paths fail. The fix is code, so it ships with
 the release and the switch is rehearsed on the local restore first.
 
-## B3 — backup + migrations (F5) — in progress
+## B3 — backup + migrations (F5) — COMPLETE
 
 ### B3.1 Fresh backup — VERIFIED (local restore)
 - `pg_dump -Fc` (client 18.4, server 18.6), full dump with ownership and grants, read from the public endpoint.
@@ -218,4 +218,11 @@ since production applied them). After: 28 migration rows; 23 new tables; `ledger
 payment, subscription, commission, rebate, provider_fee, hold, capture, release; `ledger_txns_reservation_tagged`
 validated; append-only triggers present on `wf_journal`, `workflow_receipts`, `workflow_quotes`, `trading_decisions`,
 `trading_strategy_evaluations`; `satelink_app` holds INSERT and SELECT only on `ledger_entries`; no pre-existing
-table's row count changed. Production apply: not yet done.
+table's row count changed.
+
+### B3.3 Production apply — VERIFIED (prod)
+Applied 038→046 on 2026-11-10 17:51:03Z–17:51:15Z with `lock_timeout=5s`, runner exit 0, `verify` passed. Production
+post-state is line-for-line identical to the rehearsed post-state. Pre-existing tables: only the five live-append
+tables and `schema_migrations` (19→28) changed count; ledger tables unchanged; 23 new tables, all empty.
+Deployed API (`885826d6`) healthy; 12-route smoke identical to baseline; no database errors in logs.
+Evidence: `docs/build/evidence/beta-migrations-2026-11-10.md`.
