@@ -7,19 +7,21 @@ Nothing below is merged or deployed. A row saying PR open means prepared, not re
 
 | AC | Criterion | Status | Evidence | Still open |
 |---|---|---|---|---|
-| AC1 | Signup + onboarding complete | Evidence holds | `s1-primary-journey` | Re-confirmed on patched deps by #637 |
+| AC1 | Signup + onboarding complete | Evidence holds | `s1-primary-journey` | Re-confirmed on patched deps (#637) |
 | AC2 | Assistant selects a model automatically | **OPEN** | `model_router.test.js`: fixture only | **Never run against a live model** (founder action 16) |
-| AC3 | Capabilities from the unified registry | Evidence holds | `capability_registry_unified`, S1, `agent_s5` | #637 |
-| AC4 | User generates and approves a quote | Evidence holds | S1, `task_engine.integration`, `assurance_p4` | #637 |
-| AC5 | All six demos through the shared engine | Evidence holds, **simulated** | `s1`–`s6`, `one-engine` | #637. No live model, supplier, broker, payment or facilitator |
+| AC3 | Capabilities from the unified registry | Evidence holds | `capability_registry_unified`, S1, `agent_s5` | none |
+| AC4 | User generates and approves a quote | Evidence holds | S1, `task_engine.integration`, `assurance_p4` | none |
+| AC5 | All six demos through the shared engine | Evidence holds, **simulated** | `s1`–`s6`, `one-engine` | No live model, supplier, broker, payment or facilitator |
 | AC6 | Workflow state survives restarts | Evidence holds, with limits | `restart-drill.sh`, `assurance_p4` | Only S1 has a real SIGKILL; S2–S6 are a simulated crash. The S1 browser drill is skipped in CI |
-| AC7 | Idempotency + failure recovery | Evidence holds | `task_engine.integration`, `developer_s4`, `machine_s6`, `assurance_p4` | #637 |
-| AC8 | Receipts and usage history correct | Evidence holds | `assurance_p4`, `sim_ledger_parity` | #637 |
+| AC7 | Idempotency + failure recovery | Evidence holds | `task_engine.integration`, `developer_s4`, `machine_s6`, `assurance_p4` | none |
+| AC8 | Receipts and usage history correct | Evidence holds | `assurance_p4`, `sim_ledger_parity` | none |
 | AC9 | Responsive, professional UI | Evidence holds, with limits | `p3-quality`, `p5-websites` | Lighthouse is local only. Axe on marketing sites covers key pages only |
-| AC10 | Playwright proves complete journeys | Evidence holds | Run 42621806424 | Must be re-run on the integrated, patched tree: #637 |
+| AC10 | Playwright proves complete journeys | Evidence holds | Run 42621806424 | Re-run green on the integrated, patched tree (#637) |
 | AC11 | Security, tenant isolation, financial simulation | **OPEN** | `ASSURANCE_P4.md` for isolation and simulation | Critical advisories unpatched in production; exposed credentials unrotated. See below |
-| AC12 | Simulated revenue excluded from reporting | Evidence holds | `revenue_truth`, asserted $0 | #637 |
+| AC12 | Simulated revenue excluded from reporting | Evidence holds | `revenue_truth`, asserted $0 | none |
 | AC13 | Websites accurately describe the product | **OPEN** | #636: `AC13_PUBLIC_CLAIMS_2026-11-09.md` | PR unmerged and undeployed; checkout, legal and other decisions outstanding |
+
+**Integration proof (#637, `af3b1dbf`):** the stack plus #631–#634 and #636. Release A journeys run [42636453167](https://github.com/Jakuraa/Satelink_Network/actions/runs/42636453167): 45 passed, 3 skipped, the same as the original baseline. Audit gate, API baseline, Financial OS integration, architecture and type checks: all green. #635 is excluded (money path). Three earlier CI failures were infrastructure (a Postgres admin shutdown and a Google Fonts fetch during the build) and passed on rerun.
 
 "Evidence holds" means the proof from the stack still stands. It does not mean accepted, since the stack is unmerged.
 
