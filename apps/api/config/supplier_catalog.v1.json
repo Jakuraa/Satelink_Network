@@ -1,0 +1,553 @@
+{
+  "version": "1",
+  "updated_at": "2026-11-03",
+  "note": "Buy-side supplier capability definitions. Loaded into the vNext SupplierRegistry (apps/api/src/vnext/registry). Sell-side prices live in plan_catalog.v2.json / Capability Registry v3 (#582). Every offer carries its evidence and last verification; nothing here is purchasable unless status is 'live' or 'preview' AND the requested network/market is 'live'. customer_price_usd is a proposal until pricing.approved is true; while false the customer charge is withheld (0).",
+  "statuses": {
+    "live": "Verified working and commercially authorized for customer use.",
+    "preview": "Working in the beta preview. No customer charge (pricing not approved).",
+    "evaluation": "Supplier under capped technical evaluation. Visible and quotable, not purchasable.",
+    "paused": "Supplier reports the network/market unavailable.",
+    "not_authorized": "Commercial rights or spend authorization not in place."
+  },
+  "capabilities": [
+    {
+      "id": "wallet.balance",
+      "name": "Wallet balance check",
+      "category": "On-chain data",
+      "summary": "Native and token balance for a public wallet address.",
+      "input": {
+        "address": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$",
+          "required": true
+        },
+        "network": {
+          "type": "string",
+          "required": true
+        }
+      },
+      "disclaimer": null
+    },
+    {
+      "id": "token.risk",
+      "name": "Token risk signal",
+      "category": "Crypto intelligence",
+      "summary": "0–100 risk score for an ERC-20 contract (liquidity, holder concentration, contract flags).",
+      "input": {
+        "address": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$",
+          "required": true
+        },
+        "network": {
+          "type": "string",
+          "required": true
+        }
+      },
+      "disclaimer": "Informational risk signal from automated on-chain data. It can be incomplete or wrong. Not investment advice."
+    },
+    {
+      "id": "token.verdict",
+      "name": "Token verdict",
+      "category": "Crypto intelligence",
+      "summary": "Categorical verdict for an ERC-20 contract derived from risk indicators.",
+      "input": {
+        "address": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$",
+          "required": true
+        },
+        "network": {
+          "type": "string",
+          "required": true
+        }
+      },
+      "disclaimer": "Informational risk signal from automated on-chain data. Not investment advice."
+    },
+    {
+      "id": "market_data.candles",
+      "name": "Historical market candles",
+      "category": "Market data",
+      "summary": "Closed OHLCV bars used by Strategy Lab backtests.",
+      "input": {
+        "market": {
+          "type": "string",
+          "required": true
+        },
+        "timeframe": {
+          "type": "string",
+          "required": true
+        }
+      },
+      "disclaimer": null
+    }
+  ],
+  "offers": [
+    {
+      "id": "satelink.polygon-rpc.balance",
+      "capability": "wallet.balance",
+      "provider": {
+        "id": "satelink",
+        "name": "Satelink Polygon RPC",
+        "kind": "first_party"
+      },
+      "connector": {
+        "type": "jsonrpc_balance",
+        "url_env": "WORKFLOWS_POLYGON_RPC_URL"
+      },
+      "networks": {
+        "polygon": "live"
+      },
+      "pricing": {
+        "supplier_cost_usd": "0",
+        "customer_price_usd": "0.00003",
+        "approved": false,
+        "basis": "RPC list rate $0.00003/call (plan_catalog.v2.json)"
+      },
+      "payment": {
+        "method": "internal"
+      },
+      "sla": null,
+      "rate_limit": null,
+      "license": {
+        "resale": true,
+        "caching": true,
+        "evidence": "first-party"
+      },
+      "status": "preview",
+      "last_verified": {
+        "at": null,
+        "result": "verified per run (live eth_getBalance)"
+      }
+    },
+    {
+      "id": "sck.bal-check.balance-lite",
+      "capability": "wallet.balance",
+      "provider": {
+        "id": "space-command-kits",
+        "name": "Space Command Kits — bal-check",
+        "kind": "external"
+      },
+      "connector": {
+        "type": "x402_http",
+        "url": "https://bal-check.restockalarm.workers.dev/v1/balance-lite",
+        "query": [
+          "address"
+        ]
+      },
+      "networks": {
+        "base": "evaluation",
+        "polygon": "paused",
+        "ethereum": "paused"
+      },
+      "pricing": {
+        "supplier_cost_usd": "0.002",
+        "customer_price_usd": null,
+        "approved": false,
+        "basis": "supplier email 2026-10-30"
+      },
+      "payment": {
+        "method": "x402",
+        "x402_version": 2,
+        "scheme": "exact",
+        "facilitator": "https://x402.dexter.cash",
+        "pay_to": "0x7B97303d62517eA9E26D1E1b199Eac42a487F430",
+        "assets": [
+          "USDC eip155:8453",
+          "USDC eip155:137"
+        ]
+      },
+      "sla": null,
+      "rate_limit": null,
+      "license": {
+        "resale": true,
+        "caching": true,
+        "evidence": "supplier email 2026-10-30 (resale, own pricing, dashboard display, caching permitted)"
+      },
+      "status": "evaluation",
+      "last_verified": {
+        "at": "2026-11-03",
+        "result": "free /v1/preview → 502 rpc_failed (upstream RPC 429) twice, charged:false"
+      }
+    },
+    {
+      "id": "sck.bal-check.balance",
+      "capability": "wallet.balance",
+      "provider": {
+        "id": "space-command-kits",
+        "name": "Space Command Kits — bal-check",
+        "kind": "external"
+      },
+      "connector": {
+        "type": "x402_http",
+        "url": "https://bal-check.restockalarm.workers.dev/v1/balance",
+        "query": [
+          "address"
+        ]
+      },
+      "networks": {
+        "base": "evaluation",
+        "polygon": "paused",
+        "ethereum": "paused"
+      },
+      "pricing": {
+        "supplier_cost_usd": "0.003",
+        "customer_price_usd": null,
+        "approved": false,
+        "basis": "supplier email 2026-10-30"
+      },
+      "payment": {
+        "method": "x402",
+        "x402_version": 2,
+        "scheme": "exact",
+        "facilitator": "https://x402.dexter.cash",
+        "pay_to": "0x7B97303d62517eA9E26D1E1b199Eac42a487F430",
+        "assets": [
+          "USDC eip155:8453",
+          "USDC eip155:137"
+        ]
+      },
+      "sla": null,
+      "rate_limit": null,
+      "license": {
+        "resale": true,
+        "caching": true,
+        "evidence": "supplier email 2026-10-30"
+      },
+      "status": "evaluation",
+      "last_verified": {
+        "at": "2026-11-03",
+        "result": "OpenAPI + /.well-known/x402.json HTTP 200; no paid call made"
+      }
+    },
+    {
+      "id": "freetier.wallet-profile",
+      "capability": "wallet.balance",
+      "provider": {
+        "id": "freetier-agent-api",
+        "name": "FreeTier Agent API — wallet-profile",
+        "kind": "external"
+      },
+      "connector": {
+        "type": "x402_http",
+        "url": "https://freetier-agent-api.pages.dev/api/wallet-profile",
+        "query": [
+          "address",
+          "chain"
+        ]
+      },
+      "networks": {
+        "base": "evaluation",
+        "ethereum": "evaluation"
+      },
+      "pricing": {
+        "supplier_cost_usd": "0.005",
+        "customer_price_usd": null,
+        "approved": false,
+        "basis": "public llms.txt / openapi.json 2026-11-03 (supplier claim)"
+      },
+      "payment": {
+        "method": "x402",
+        "x402_version": 2,
+        "scheme": "exact",
+        "facilitator": null,
+        "pay_to": null,
+        "assets": [
+          "USDC eip155:8453"
+        ]
+      },
+      "sla": null,
+      "rate_limit": null,
+      "license": {
+        "resale": true,
+        "caching": true,
+        "evidence": "supplier email 2026-10-30 ('resell our calls with your own margin'); 0.5% profit-share offer NOT accepted; same sender domain as Space Command Kits"
+      },
+      "status": "evaluation",
+      "last_verified": {
+        "at": "2026-11-03",
+        "result": "1 free call (Base) → 200 in 1.4 s; USDC balance 0.502 matched an independent on-chain balanceOf read"
+      }
+    },
+    {
+      "id": "sck.token-risk.risk-lite",
+      "capability": "token.risk",
+      "provider": {
+        "id": "space-command-kits",
+        "name": "Space Command Kits — token-risk",
+        "kind": "external"
+      },
+      "connector": {
+        "type": "x402_http",
+        "url": "https://token-risk.restockalarm.workers.dev/v1/risk-lite",
+        "query": [
+          "address"
+        ]
+      },
+      "networks": {
+        "base": "evaluation",
+        "polygon": "paused",
+        "ethereum": "paused"
+      },
+      "pricing": {
+        "supplier_cost_usd": "0.005",
+        "customer_price_usd": null,
+        "approved": false,
+        "basis": "supplier email 2026-10-30; live 402 challenge 2026-11-03 = 5000 units USDC"
+      },
+      "payment": {
+        "method": "x402",
+        "x402_version": 2,
+        "scheme": "exact",
+        "facilitator": "https://x402.dexter.cash",
+        "pay_to": "0x7B97303d62517eA9E26D1E1b199Eac42a487F430",
+        "assets": [
+          "USDC eip155:8453",
+          "USDC eip155:137"
+        ]
+      },
+      "sla": null,
+      "rate_limit": null,
+      "license": {
+        "resale": true,
+        "caching": true,
+        "evidence": "supplier email 2026-10-30; present as risk signal, not investment advice"
+      },
+      "status": "evaluation",
+      "last_verified": {
+        "at": "2026-11-03",
+        "result": "unpaid → 402 v2 (Base+Polygon USDC, $0.005, maxTimeoutSeconds 300 vs 120 s claimed); chain=polygon → 503 paused; free /v1/preview → 503 twice (their Base RPC mainnet.base.org 429 ×5 from Cloudflare egress; same RPC answers 200 from Satelink's network), charged:false"
+      }
+    },
+    {
+      "id": "sck.token-risk.risk",
+      "capability": "token.risk",
+      "provider": {
+        "id": "space-command-kits",
+        "name": "Space Command Kits — token-risk",
+        "kind": "external"
+      },
+      "connector": {
+        "type": "x402_http",
+        "url": "https://token-risk.restockalarm.workers.dev/v1/risk",
+        "query": [
+          "address"
+        ]
+      },
+      "networks": {
+        "base": "evaluation",
+        "polygon": "paused",
+        "ethereum": "paused"
+      },
+      "pricing": {
+        "supplier_cost_usd": "0.01",
+        "customer_price_usd": null,
+        "approved": false,
+        "basis": "supplier email 2026-10-30"
+      },
+      "payment": {
+        "method": "x402",
+        "x402_version": 2,
+        "scheme": "exact",
+        "facilitator": "https://x402.dexter.cash",
+        "pay_to": "0x7B97303d62517eA9E26D1E1b199Eac42a487F430",
+        "assets": [
+          "USDC eip155:8453",
+          "USDC eip155:137"
+        ]
+      },
+      "sla": null,
+      "rate_limit": null,
+      "license": {
+        "resale": true,
+        "caching": true,
+        "evidence": "supplier email 2026-10-30"
+      },
+      "status": "evaluation",
+      "last_verified": {
+        "at": "2026-11-03",
+        "result": "OpenAPI HTTP 200; no paid call made"
+      }
+    },
+    {
+      "id": "freetier.token-risk",
+      "capability": "token.risk",
+      "provider": {
+        "id": "freetier-agent-api",
+        "name": "FreeTier Agent API — token-risk",
+        "kind": "external"
+      },
+      "connector": {
+        "type": "x402_http",
+        "url": "https://freetier-agent-api.pages.dev/api/token-risk",
+        "query": [
+          "address",
+          "chain"
+        ]
+      },
+      "networks": {
+        "base": "evaluation",
+        "ethereum": "evaluation"
+      },
+      "pricing": {
+        "supplier_cost_usd": "0.005",
+        "customer_price_usd": null,
+        "approved": false,
+        "basis": "public llms.txt / openapi.json 2026-11-03 (supplier claim)"
+      },
+      "payment": {
+        "method": "x402",
+        "x402_version": 2,
+        "scheme": "exact",
+        "facilitator": null,
+        "pay_to": null,
+        "assets": [
+          "USDC eip155:8453"
+        ]
+      },
+      "sla": null,
+      "rate_limit": null,
+      "license": {
+        "resale": true,
+        "caching": true,
+        "evidence": "supplier email 2026-10-30; present as risk signal, not investment advice"
+      },
+      "status": "evaluation",
+      "last_verified": {
+        "at": "2026-11-03",
+        "result": "1 free call (Base, AERO) → 200 in 2.6 s with liquidity pools; not yet cross-checked"
+      }
+    },
+    {
+      "id": "sck.token-verdict.verdict",
+      "capability": "token.verdict",
+      "provider": {
+        "id": "space-command-kits",
+        "name": "Space Command Kits — token-verdict",
+        "kind": "external"
+      },
+      "connector": {
+        "type": "x402_http",
+        "url": "https://token-verdict.restockalarm.workers.dev/v1/verdict",
+        "query": [
+          "address"
+        ]
+      },
+      "networks": {
+        "base": "evaluation",
+        "polygon": "paused",
+        "ethereum": "paused"
+      },
+      "pricing": {
+        "supplier_cost_usd": "0.01",
+        "customer_price_usd": null,
+        "approved": false,
+        "basis": "supplier email 2026-10-30"
+      },
+      "payment": {
+        "method": "x402",
+        "x402_version": 2,
+        "scheme": "exact",
+        "facilitator": "https://x402.dexter.cash",
+        "pay_to": "0x7B97303d62517eA9E26D1E1b199Eac42a487F430",
+        "assets": [
+          "USDC eip155:8453",
+          "USDC eip155:137"
+        ]
+      },
+      "sla": null,
+      "rate_limit": null,
+      "license": {
+        "resale": true,
+        "caching": true,
+        "evidence": "supplier email 2026-10-30"
+      },
+      "status": "evaluation",
+      "last_verified": {
+        "at": "2026-11-03",
+        "result": "OpenAPI + x402 manifest HTTP 200; no paid call made"
+      }
+    },
+    {
+      "id": "binance.public-klines",
+      "capability": "market_data.candles",
+      "provider": {
+        "id": "binance-public",
+        "name": "Binance public spot klines",
+        "kind": "external"
+      },
+      "connector": {
+        "type": "candles"
+      },
+      "networks": {
+        "BINANCE:BTCUSDT@1d": "live",
+        "BINANCE:ETHUSDT@1d": "live"
+      },
+      "pricing": {
+        "supplier_cost_usd": "0",
+        "customer_price_usd": null,
+        "approved": false,
+        "basis": "public data, no fee"
+      },
+      "payment": {
+        "method": "none"
+      },
+      "sla": null,
+      "rate_limit": "Binance REST weight limits",
+      "license": {
+        "resale": false,
+        "caching": true,
+        "evidence": "public market data; display permitted on Binance terms; no commercial data licence (services/trading binance-data-provider)"
+      },
+      "status": "preview",
+      "last_verified": {
+        "at": "2026-11-03",
+        "result": "HTTP 200 from build machine; Railway us-west2 → HTTP 451 (2026-10-31)"
+      }
+    },
+    {
+      "id": "eulerpool.eod",
+      "capability": "market_data.candles",
+      "provider": {
+        "id": "eulerpool",
+        "name": "Eulerpool EOD",
+        "kind": "external"
+      },
+      "connector": {
+        "type": "candles"
+      },
+      "networks": {},
+      "pricing": {
+        "supplier_cost_usd": "0",
+        "customer_price_usd": null,
+        "approved": false,
+        "basis": "Free plan"
+      },
+      "payment": {
+        "method": "subscription"
+      },
+      "sla": null,
+      "rate_limit": "plan quota",
+      "license": {
+        "resale": false,
+        "caching": true,
+        "evidence": "docs/build/evidence/licences/eulerpool.json — Free plan is internal R&D only; Builder plan needed for customer use (F25)"
+      },
+      "status": "not_authorized",
+      "last_verified": {
+        "at": "2026-10-31",
+        "result": "HTTP 502 at Eulerpool edge from Railway; auth path unverified"
+      }
+    }
+  ],
+  "candidates_not_listed": [
+    {
+      "provider": "FreeTier Agent API (other routes)",
+      "reason": "Public catalogue: 83 paths / 74 MCP tools (supplier said 64). Only wallet-profile and token-risk are under evaluation; contact/email-scraping routes excluded (personal-data risk). Demo key not received; 0.5% profit-share not accepted."
+    },
+    {
+      "provider": "dRPC",
+      "reason": "RPC upstream candidate, not a customer capability. Written resale authorization not received; paid routing stays off."
+    }
+  ]
+}

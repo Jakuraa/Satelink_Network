@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Wordmark } from "@satelink/web-ui/site/Wordmark";
 import { getSession } from "@/lib/session";
 import { SignInForm } from "./SignInForm";
+import { previewEnabled } from "@/lib/preview";
 
 export const metadata: Metadata = {
   title: "Sign in · Satelink Trading AI",
@@ -16,6 +17,7 @@ export default async function SignInPage({ searchParams }: { searchParams: Promi
   const safeNext = next && next.startsWith("/") && !next.startsWith("//") ? next : "/";
   if (await getSession()) redirect(safeNext);
   const signup = mode === "signup";
+  const preview = previewEnabled();
 
   return (
     <main className="flex min-h-screen flex-col bg-sl-bg px-4 text-[14px]">
@@ -27,19 +29,20 @@ export default async function SignInPage({ searchParams }: { searchParams: Promi
         <div className="mt-8 text-center">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-sl-border bg-sl-surface px-3 py-1 font-mono text-[11px] font-medium text-sl-accent">
             <span className="size-1.5 rounded-full bg-sl-accent" />
-            Satelink Trading AI
+            {preview ? "Satelink AI Assistance · Preview" : "Satelink Trading AI"}
           </span>
           <h1 className="mt-4 text-balance font-sl-display text-[2.25rem] font-normal leading-[1.1] tracking-[-0.015em] text-sl-text">
-            Build. Simulate. Evaluate.
+            {preview ? (signup ? "Create your account" : "Ask. Approve. Done.") : "Build. Simulate. Evaluate."}
           </h1>
           <p className="mt-3 text-balance text-[14px] leading-relaxed text-sl-text-muted">
-            Run algorithmic trading simulations through a developer-first API built for trading applications and AI agents.
-            Inspect execution results, understand your costs, and integrate programmatic simulations into your workflow.
+            {preview
+              ? "Describe the outcome you want. Satelink plans it, quotes it and acts only after you approve. Preview — simulated, no charges."
+              : "Run algorithmic trading simulations through a developer-first API built for trading applications and AI agents. Inspect execution results, understand your costs, and integrate programmatic simulations into your workflow."}
           </p>
         </div>
 
         <div className="mt-8 rounded-[var(--sl-radius-lg)] border border-sl-border bg-sl-surface p-5 shadow-sm">
-          <SignInForm next={safeNext} signup={signup} />
+          <SignInForm next={safeNext} signup={signup} preview={preview} />
         </div>
 
         <div className="mt-6 space-y-2 text-center text-[12px] text-sl-text-subtle">

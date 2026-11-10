@@ -1,0 +1,21 @@
+# Release A local preview database. Local-only throwaway credentials; never used outside this machine/CI.
+# Usage: docker compose -f docker-compose.preview.yml up -d   then   bash scripts/preview/local-db.sh --docker
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: satelink-preview-pg
+    environment:
+      POSTGRES_USER: preview
+      POSTGRES_PASSWORD: preview_local_only
+      POSTGRES_DB: postgres
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - preview_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U preview"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+volumes:
+  preview_pgdata:

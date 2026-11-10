@@ -13,6 +13,8 @@ import {
   ListPromptsRequestSchema,
   GetPromptRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
+import { workflowToolDefs, WORKFLOW_TOOL_NAMES } from './workflows.mjs';
+import { TASK_TOOL_NAMES } from './task-tools.mjs';
 
 export const POLYGON_RPC_TOOL = {
   name: 'polygon_rpc',
@@ -89,14 +91,17 @@ export const TOOL_PRODUCTS = Object.freeze({
   ...Object.fromEntries(INTELLIGENCE_TOOL_DEFS.map((t) => [t.name, 'trading_intelligence'])),
 });
 
-/** The tool list a server advertises; internal products only on explicit opt-in. */
-export function advertisedTools({ includeInternal = process.env.SATELINK_MCP_INTERNAL_TOOLS === '1' } = {}) {
-  return [POLYGON_RPC_TOOL, ...(includeInternal ? INTELLIGENCE_TOOL_DEFS : [])];
+/** The tool list a server advertises; internal products and beta workflow tools only on explicit opt-in. */
+export function advertisedTools({
+  includeInternal = process.env.SATELINK_MCP_INTERNAL_TOOLS === '1',
+  includeWorkflows = process.env.SATELINK_MCP_WORKFLOW_TOOLS === '1',
+} = {}) {
+  return [POLYGON_RPC_TOOL, ...(includeInternal ? INTELLIGENCE_TOOL_DEFS : []), ...(includeWorkflows ? workflowToolDefs() : [])];
 }
 
-export function createSatelinkMcpServer({ executeRpc, executeIntelligence, rpcUrl, wallet, canPay, includeInternal }) {
+export function createSatelinkMcpServer({ executeRpc, executeIntelligence, executeWorkflowTool, taskTools = null, rpcUrl, wallet, canPay, includeInternal, includeWorkflows }) {
   const server = new Server(
-    { name: 'satelink-mcp', version: '2.1.2' },
+    { name: 'satelink-mcp', version: '2.2.0' },
     { capabilities: { tools: {}, resources: {}, prompts: {} } },
   );
 
@@ -104,12 +109,25 @@ export function createSatelinkMcpServer({ executeRpc, executeIntelligence, rpcUr
   // `products`; enforced by apps/api/test/product_registry.test.js). Trading
   // Intelligence is INTERNAL since its delisting (#515) — its tools are listed
   // only when the operator opts in with SATELINK_MCP_INTERNAL_TOOLS=1.
-  const tools = advertisedTools({ includeInternal });
+  const tools = advertisedTools({ includeInternal, includeWorkflows });
 
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools }));
+  // Release A task tools (S5) are generated from the live capability registry on every listing.
+  server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: taskTools ? [...tools, ...(await taskTools.list())] : tools }));
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
+
+    if (TASK_TOOL_NAMES.has(name)) {
+      if (!taskTools) throw new Error(`Unknown tool: ${name}`);
+      const out = await taskTools.call(name, args || {});
+      return { content: [{ type: 'text', text: JSON.stringify(out.ok ? out.result : out, null, 2) + (out.note ? `\n\n${out.note}` : '') }], isError: !out.ok };
+    }
+
+    if (WORKFLOW_TOOL_NAMES.has(name)) {
+      if (!tools.some((t) => t.name === name) || !executeWorkflowTool) throw new Error(`Unknown tool: ${name}`);
+      const out = await executeWorkflowTool(name, args || {});
+      return { content: [{ type: 'text', text: JSON.stringify(out.ok ? out.result ?? out : out, null, 2) + (out.note ? `\n\n${out.note}` : '') }], isError: !out.ok };
+    }
 
     if (INTELLIGENCE_TOOL_NAMES.has(name) && !tools.some((t) => t.name === name)) {
       throw new Error(`Unknown tool: ${name}`);

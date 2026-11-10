@@ -2,7 +2,7 @@ import React from 'react';
 
 export function SystemsCompass({ className = '' }: { className?: string }) {
   return (
-    <div className={`relative w-full max-w-lg mx-auto aspect-square ${className}`} aria-label="Jakuraa systems topology diagram">
+    <div className={`relative w-full max-w-lg mx-auto aspect-square overflow-hidden ${className}`} role="img" aria-label="Jakuraa systems topology diagram">
       <svg viewBox="0 0 400 400" className="w-full h-full overflow-visible font-sans text-[11px]" aria-hidden="true">
         <defs>
           <radialGradient id="compass-center-glow" cx="50%" cy="50%" r="50%">

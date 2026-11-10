@@ -78,6 +78,24 @@ Response (paid call):
 
 Other routes: `GET /healthz`, `GET /.well-known/mcp.json`, `POST /mcp` (MCP Streamable HTTP).
 
+## Release A preview — agent-commerce tools (local only)
+
+Opt-in with `SATELINK_MCP_TASK_TOOLS=1`. The tools are generated from the Satelink capability registry of the **local
+preview** task API (`SATELINK_API_BASE`, loopback only) and use a Developer Hub key (`SATELINK_API_KEY=slk_preview_…`,
+scopes `tasks:create tasks:read receipts:read`):
+
+| Tool | What it does |
+|---|---|
+| `satelink_discover` | search the registry (read-only) |
+| `satelink_quote` | create a task for one capability → plan + quote (nothing runs before approval) |
+| `satelink_request_approval` | ask the account owner; returns the console link |
+| `satelink_task_status` | state, question, result, receipt id |
+| `satelink_receipt` | the immutable receipt |
+
+There is no approve tool: agent spend pre-authorization is **$0**, so a person approves every spend in the console.
+Everything is simulated (`SIMULATED — NO MONEY MOVED`); fees are PROPOSED — NOT APPROVED. stdio transport only; the
+server negotiates MCP 2025-11-25 (the newest revision the official SDK supports).
+
 ## Configuration
 
 | Env var | Default |

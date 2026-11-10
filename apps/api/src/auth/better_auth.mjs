@@ -94,11 +94,42 @@ export function trustedOrigins() {
   return raw.split(',').map(s => s.trim()).filter(Boolean);
 }
 
+// Release A local preview only: AUTH_DEV_MAIL_SINK=<file> appends outgoing auth emails to a local JSONL
+// file instead of sending them. Refused in production (the process exits rather than silently sinking mail).
+export function devMailSink() {
+  const sink = process.env.AUTH_DEV_MAIL_SINK;
+  if (!sink) return null;
+  if (process.env.NODE_ENV === 'production') throw new Error('AUTH_DEV_MAIL_SINK is not allowed in production');
+  return sink;
+}
+
 async function sendEmailViaResend(to, subject, html) {
+  const sink = devMailSink();
+  if (sink) {
+    const { appendFileSync } = await import('node:fs');
+    const url = (/href="([^"]+)"/.exec(html) || [])[1] || null;
+    appendFileSync(sink, JSON.stringify({ to, subject, url, at: new Date().toISOString() }) + '\n', { mode: 0o600 });
+    return;
+  }
   if (!emailEnabled()) throw new Error('email_disabled: RESEND_API_KEY not set');
   const { Resend } = await import('resend');
   const resend = new Resend(process.env.RESEND_API_KEY);
   await resend.emails.send({ from: process.env.AUTH_EMAIL_FROM || 'no-reply@satelink.network', to, subject, html });
+}
+
+/** Local preview E2E only: AUTH_PREVIEW_RATE_LIMIT=off disables Better Auth's per-IP limits (many test sign-ups
+ *  from one IP). Refused in production; production always uses RATE_LIMIT. */
+export function previewRateLimitOff() {
+  const off = process.env.AUTH_PREVIEW_RATE_LIMIT === 'off';
+  if (off && process.env.NODE_ENV === 'production') throw new Error('AUTH_PREVIEW_RATE_LIMIT is not allowed in production');
+  return off;
+}
+
+/** Local preview cookie mode (host-only, non-secure). Refused in production. */
+export function previewCookies() {
+  const on = process.env.AUTH_COOKIE_DOMAIN === 'none' && process.env.AUTH_SECURE_COOKIES === 'false';
+  if (on && process.env.NODE_ENV === 'production') throw new Error('preview cookie mode is not allowed in production');
+  return on;
 }
 
 /** Build (and cache) the Better Auth instance. Returns null when disabled. */
@@ -175,13 +206,16 @@ export async function getBetterAuth(pool) {
     },
     advanced: {
       cookiePrefix: 'satelink',
-      // Sessions shared across *.satelink.network.
-      crossSubDomainCookies: { enabled: true, domain: '.satelink.network' },
-      defaultCookieAttributes: { sameSite: 'lax', secure: true },
+      // Sessions shared across *.satelink.network. AUTH_COOKIE_DOMAIN=none (local preview only) keeps
+      // host-only cookies on localhost; AUTH_SECURE_COOKIES=false allows http://localhost. Defaults unchanged.
+      crossSubDomainCookies: previewCookies()
+        ? { enabled: false }
+        : { enabled: true, domain: '.satelink.network' },
+      defaultCookieAttributes: { sameSite: 'lax', secure: !previewCookies() },
       // Only the header identityClientIp writes; never raw X-Forwarded-For.
       ipAddress: { ipAddressHeaders: [CLIENT_IP_HEADER] },
     },
-    rateLimit: RATE_LIMIT,
+    rateLimit: previewRateLimitOff() ? { enabled: false } : RATE_LIMIT,
   });
 
   return _authInstance;

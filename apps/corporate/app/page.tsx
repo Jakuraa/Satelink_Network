@@ -30,14 +30,14 @@ const steps: { step: number; title: string; desc: string }[] = [
   {
     step: 4,
     title: "Receive",
-    desc: "The request is served and metered. The payment and the usage record reconcile on-chain with cryptographic certainty.",
+    desc: "The request is served and metered. The payment and the usage record are kept for reconciliation.",
   },
 ];
 
 const lifecyclePhases = [
   {
     phase: "DISCOVER",
-    desc: "Agent queries decentralized service registries or MCP endpoints to identify required capabilities.",
+    desc: "Agent queries machine-readable service catalogues to identify required capabilities.",
   },
   {
     phase: "ACCESS",
@@ -53,7 +53,7 @@ const lifecyclePhases = [
   },
   {
     phase: "SETTLE",
-    desc: "Cryptographic reconciliation executed on-chain via smart contracts without intermediaries.",
+    desc: "Payment settles on-chain; usage and payment records are reconciled against it.",
   },
   {
     phase: "OPERATE",
@@ -231,7 +231,7 @@ export default function HomePage() {
                   </div>
                 </div>
                 <div className="mt-3 flex items-center justify-between text-xs font-mono text-stone-3">
-                  <span>Fig. 01: Satelink Autonomous Settlement Loop</span>
+                  <span>Fig. 01: Satelink Payment Loop</span>
                   <span>Non-Custodial Architecture</span>
                 </div>
               </MotionReveal>
@@ -387,14 +387,14 @@ export default function HomePage() {
             <MotionReveal delay={50}>
               <div className="flex h-full flex-col justify-between rounded-2xl border border-stone-1 bg-ivory p-6 shadow-sm">
                 <div>
-                  <span className="font-mono text-xs text-stone-3 uppercase">01 / SIGNAL INGESTION</span>
-                  <h3 className="mt-3 font-serif text-xl text-ink">Trading Intelligence</h3>
+                  <span className="font-mono text-xs text-stone-3 uppercase">01 / PREVIEW — SIMULATED, NO CHARGES</span>
+                  <h3 className="mt-3 font-serif text-xl text-ink">Satelink AI Assistance</h3>
                   <p className="mt-2 text-sm leading-relaxed text-stone-4 font-sans">
-                    Orderbook depth, liquidity flow, and on-chain telemetry consumed and paid for on a per-query basis without recurring subscriptions.
+                    Describe an outcome; Satelink plans it, quotes it and acts only after you approve, for people, developers, AI agents and machines. In local preview.
                   </p>
                 </div>
                 <div className="mt-6 border-t border-stone-1 pt-3 text-xs font-mono text-stone-3">
-                  Scope: Real-Time Feeds
+                  Scope: Local preview
                 </div>
               </div>
             </MotionReveal>
@@ -476,7 +476,7 @@ export default function HomePage() {
                   </p>
                 </div>
                 <div>
-                  <span className="inline-block rounded bg-stone-2 px-2.5 py-0.5 font-mono text-[10px] font-semibold uppercase text-stone-4">
+                  <span className="inline-block rounded bg-stone-2 px-2.5 py-0.5 font-mono text-[10px] font-semibold uppercase text-ink">
                     ROADMAP
                   </span>
                   <h4 className="mt-2 font-serif text-base text-ink">Multi-Agent Portfolio Meshes</h4>
@@ -672,7 +672,7 @@ export default function HomePage() {
                 <span className="font-mono text-xs uppercase tracking-wider text-green font-semibold">
                   LONG-TERM PLATFORM DIRECTION
                 </span>
-                <span className="rounded-full bg-stone-2 px-2.5 py-0.5 font-mono text-[10px] font-semibold uppercase text-stone-4">
+                <span className="rounded-full bg-stone-2 px-2.5 py-0.5 font-mono text-[10px] font-semibold uppercase text-ink">
                   Future Roadmap
                 </span>
               </div>
@@ -750,12 +750,12 @@ export default function HomePage() {
             <ArrowLink href="/research">All working papers</ArrowLink>
           </div>
 
-          <div className="mt-14 grid gap-8 lg:grid-cols-2">
+          <div className="mt-14 grid grid-cols-1 gap-8 lg:grid-cols-2">
             {researchItems.slice(0, 4).map((item, idx) => (
               <MotionReveal key={item.slug} delay={idx * 70}>
-                <article className="group flex h-full flex-col justify-between rounded-2xl border border-stone-1 bg-ivory p-8 shadow-sm transition-all hover:border-green hover:shadow-md">
+                <article className="group flex h-full min-w-0 flex-col justify-between rounded-2xl border border-stone-1 bg-ivory p-8 shadow-sm transition-all hover:border-green hover:shadow-md">
                   <div>
-                    <div className="flex items-center justify-between text-xs font-mono">
+                    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs font-mono">
                       <span className="rounded bg-green-soft px-2.5 py-1 text-green font-semibold uppercase">
                         {item.category}
                       </span>
@@ -764,11 +764,11 @@ export default function HomePage() {
                       </span>
                     </div>
 
-                    <h3 className="mt-4 font-serif text-2xl text-ink group-hover:text-green transition-colors">
+                    <h3 className="mt-4 break-words font-serif text-2xl text-ink group-hover:text-green transition-colors">
                       {item.title}
                     </h3>
 
-                    <p className="mt-3 text-sm leading-relaxed text-stone-4 font-sans">
+                    <p className="mt-3 break-words text-sm leading-relaxed text-stone-4 font-sans">
                       {item.summary}
                     </p>
                   </div>

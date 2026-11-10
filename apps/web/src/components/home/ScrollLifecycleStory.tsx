@@ -247,7 +247,7 @@ export function ScrollLifecycleStory() {
       {/* Top Segmented Navigation Tabs (Sticky Step Bar) */}
       <div className="sticky top-[var(--header-height)] z-20 border-y border-sl-border bg-sl-bg/95 backdrop-blur-md px-4 py-3 sm:px-6">
         <div className="mx-auto flex max-w-[1240px] items-center justify-between gap-2 overflow-x-auto no-scrollbar">
-          <div className="flex items-center gap-1.5 sm:gap-2">
+          <div role="tablist" aria-label="Lifecycle steps" className="flex items-center gap-1.5 sm:gap-2">
             {LIFECYCLE_STAGES.map((stage, idx) => {
               const isSelected = activeStageIndex === idx;
               return (
@@ -266,7 +266,7 @@ export function ScrollLifecycleStory() {
                   aria-selected={isSelected}
                   role="tab"
                 >
-                  <span className="opacity-75">{stage.number}</span>
+                  <span>{stage.number}</span>
                   <span className="hidden md:inline">{stage.step.split(". ")[1]}</span>
                 </button>
               );
@@ -282,10 +282,10 @@ export function ScrollLifecycleStory() {
 
       {/* Main Narrative & Sticky Inspection Panel Grid */}
       <div className="mx-auto max-w-[1240px] px-4 py-12 sm:px-6 lg:py-16">
-        <div className="grid gap-12 lg:grid-cols-12 lg:gap-10 items-start">
+        <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-10 items-start">
           
           {/* Left Column: Sequential Narrative Stages (Scrollable) */}
-          <div className="lg:col-span-6 space-y-20 sm:space-y-28 py-6">
+          <div className="min-w-0 lg:col-span-6 space-y-20 sm:space-y-28 py-6">
             {LIFECYCLE_STAGES.map((stage, index) => {
               const isCurrent = activeStageIndex === index;
               const IconComp = stage.icon;
@@ -300,7 +300,7 @@ export function ScrollLifecycleStory() {
                   className={`scroll-mt-44 rounded-2xl transition-all duration-300 p-6 sm:p-8 ${
                     isCurrent 
                       ? "bg-sl-surface/70 border border-sl-border-strong shadow-lg ring-1 ring-sl-accent/15" 
-                      : "opacity-45 hover:opacity-80 border border-transparent"
+                      : "border border-transparent"
                   }`}
                 >
                   <div className="flex items-center justify-between">
@@ -348,15 +348,15 @@ export function ScrollLifecycleStory() {
                   <div className="mt-6 block lg:hidden overflow-hidden rounded-xl border border-sl-border bg-[#0C0B09] text-[#FAF9F5]">
                     <div className="flex items-center justify-between border-b border-white/10 bg-white/5 px-3.5 py-2 font-sl-mono text-xs">
                       <span className="text-[#A8A29E] text-[11px]">{stage.codeSnippet.filename}</span>
-                      <span className="text-[10px] text-sl-accent uppercase tracking-wider">{stage.tag}</span>
+                      <span className="text-[10px] text-emerald-300 uppercase tracking-wider">{stage.tag}</span>
                     </div>
-                    <pre className="overflow-x-auto font-sl-mono text-xs leading-relaxed text-emerald-400 p-3.5">
+                    <pre tabIndex={0} className="overflow-x-auto font-sl-mono text-xs leading-relaxed text-emerald-400 p-3.5">
                       <code>{stage.codeSnippet.code}</code>
                     </pre>
                     <div className="border-t border-white/10 bg-white/[0.02] p-3 grid grid-cols-2 gap-2 text-xs font-sl-mono">
                       {stage.metrics.slice(0, 2).map((m) => (
                         <div key={m.label} className="text-[10px]">
-                          <span className="text-[#78716C] block uppercase">{m.label}</span>
+                          <span className="text-[#A8A29E] block uppercase">{m.label}</span>
                           <span className="text-[#FAF9F5] font-semibold">{m.value}</span>
                         </div>
                       ))}
@@ -385,14 +385,14 @@ export function ScrollLifecycleStory() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className="rounded bg-sl-accent/10 border border-sl-accent/20 px-2 py-0.5 font-sl-mono text-[10px] font-semibold text-sl-accent uppercase">
+                  <span className="rounded bg-sl-accent/10 border border-sl-accent/20 px-2 py-0.5 font-sl-mono text-[10px] font-semibold text-emerald-300 uppercase">
                     Stage {activeStage.number} / 07
                   </span>
                 </div>
               </div>
 
               {/* Code Terminal View */}
-              <div className="p-6 bg-[#0C0B09] min-h-[300px] max-h-[440px] overflow-y-auto">
+              <div tabIndex={0} className="p-6 bg-[#0C0B09] min-h-[300px] max-h-[440px] overflow-auto">
                 <pre className="font-sl-mono text-xs leading-relaxed text-emerald-400/90 whitespace-pre">
                   <code>{activeStage.codeSnippet.code}</code>
                 </pre>
@@ -400,13 +400,13 @@ export function ScrollLifecycleStory() {
 
               {/* Bottom Telemetry Metrics Strip */}
               <div className="border-t border-white/10 bg-white/[0.03] p-4">
-                <span className="font-sl-mono text-[10px] uppercase tracking-wider text-[#78716C] font-semibold block mb-2.5">
+                <span className="font-sl-mono text-[10px] uppercase tracking-wider text-[#A8A29E] font-semibold block mb-2.5">
                   Protocol Telemetry &amp; Verifications
                 </span>
                 <div className="grid grid-cols-3 gap-3">
                   {activeStage.metrics.map((m) => (
                     <div key={m.label} className="rounded-lg border border-white/10 bg-white/[0.02] p-2.5">
-                      <span className="block font-sl-mono text-[10px] text-[#78716C] uppercase">
+                      <span className="block font-sl-mono text-[10px] text-[#A8A29E] uppercase">
                         {m.label}
                       </span>
                       <span className="mt-0.5 block font-sl-mono text-xs font-semibold text-[#FAF9F5]">
@@ -418,7 +418,7 @@ export function ScrollLifecycleStory() {
               </div>
 
               {/* Verifiable Safety Footnote */}
-              <div className="flex items-center justify-between border-t border-white/10 bg-white/[0.01] px-4 py-2.5 font-sl-mono text-[11px] text-[#78716C]">
+              <div className="flex items-center justify-between border-t border-white/10 bg-white/[0.01] px-4 py-2.5 font-sl-mono text-[11px] text-[#A8A29E]">
                 <span className="flex items-center gap-2">
                   <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   <span>Deterministic Execution Engine</span>

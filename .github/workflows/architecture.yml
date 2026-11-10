@@ -5,7 +5,8 @@ name: Architecture
 # covers libs AND services (services/financial holds the Draw hot path from M6).
 on:
   pull_request:
-    branches: [main, develop]
+    # Release A stacked draft PRs target build/* branches; run the same gates on them.
+    branches: [main, develop, 'build/**']
   push:
     branches: [develop]
 

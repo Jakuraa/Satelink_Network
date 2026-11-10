@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "status": "PROPOSED — NOT APPROVED",
+  "notice": "Model allowlist and limits for the preview router. Model ids and the auto-router plugin request shape are UNVERIFIED until a live OPENROUTER_API_KEY smoke test runs (founder action OB-10). Without a key the FixtureModelProvider answers.",
+  "base_url": "https://openrouter.ai/api/v1",
+  "allowlist": [
+    "openai/gpt-4o-mini",
+    "anthropic/claude-3.5-haiku",
+    "google/gemini-2.0-flash-001",
+    "meta-llama/llama-3.3-70b-instruct"
+  ],
+  "policies": {
+    "conversation": { "model": "openrouter/auto", "plugin": { "id": "auto-router", "cost_tier": "low" }, "max_tokens": 600, "temperature": 0.3 },
+    "plan": { "model": "openai/gpt-4o-mini", "structured_output": true, "max_tokens": 800, "temperature": 0 }
+  },
+  "provider_preferences": { "allow_fallbacks": true, "data_collection": "deny" },
+  "max_price_usd_per_million_tokens": { "prompt": "1", "completion": "4" },
+  "per_request_budget_minor": 20000,
+  "timeout_ms": 30000
+}

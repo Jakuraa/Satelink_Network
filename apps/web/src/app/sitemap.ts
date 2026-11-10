@@ -24,6 +24,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const core = [
     e("/", 1, "weekly"),
+    e("/preview", 0.95, "weekly"),
     e("/trading-agent", 0.95, "weekly"),
     e("/product/overview", 0.9, "weekly"),
     e("/pricing", 0.9, "weekly"),

@@ -91,7 +91,10 @@ describe("internal surfaces: 404 in production, noindex, not in the sitemap", ()
 describe("homepage and metadata", () => {
   const home = read("src/app/(marketing)/page.tsx");
   it("positioning, verbatim status line, beta CTA, loop, safety boundary, three interfaces", () => {
-    expect(home).toMatch(/Infrastructure for AI agents that discover and use digital services\./);
+    expect(home).toMatch(/Describe the outcome\. Approve the quote\. Get a receipt\./);
+    expect(home).toMatch(/Preview — simulated, no charges\./);
+    expect(home).toMatch(/no mandatory subscription/);
+    expect(home).not.toMatch(/Trading Intelligence/);
     expect(home).toMatch(/Discover, evaluate, authorize, access, meter, pay, settle/);
     expect(home).toContain(`"${STATUS}"`);
     expect(home).toMatch(/Request beta access/);

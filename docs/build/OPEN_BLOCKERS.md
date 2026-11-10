@@ -1,0 +1,20 @@
+# Open blockers — Release State A
+
+Status values: BLOCKED (FOUNDER) · BLOCKED (EXTERNAL). Each item lists the default the build uses meanwhile.
+
+| ID | Blocker | Status | Default while open | Unblocks |
+|---|---|---|---|---|
+| OB-1 | Rotate exposed JWT secret (E1) | BLOCKED (FOUNDER) | Build never reads or uses production auth secrets | closes incident |
+| OB-2 | Delete/recreate Slack + Discord webhooks (E2, E3) | BLOCKED (FOUNDER) | No webhook code touched | closes incident |
+| OB-3 | Local stash holds plaintext signer + treasury keys (L1): decide key move, then drop stash + gc | BLOCKED (FOUNDER) | Agents never read, pop, apply or drop it | closes incident |
+| OB-4 | Enable GitHub secret scanning + push protection | BLOCKED (FOUNDER) | CI gitleaks on new commits (branch `build/p0-safety`) | defence in depth |
+| OB-5 | Encrypted off-device + off-site backup copy | BLOCKED (FOUNDER) | Originals untouched; documented as ONE copy | recovery |
+| OB-6 | Confirm GitLab remote never received L1 | BLOCKED (FOUNDER) | assumed unknown | incident scope |
+| OB-7 | Assess PII notification (E6/E7) | BLOCKED (FOUNDER) | none | privacy |
+| OB-8 | Review ADR-5 (JS reservation writer + origin/environment columns on the frozen ledger) before any production apply | BLOCKED (FOUNDER) | local/CI only; parity test guards drift | production use of Release A money simulation |
+| OB-9 | #583 alone is unsafe (migration 020 vs 038); merge `build/integration-base` or renumber on #583 | BLOCKED (FOUNDER) | fixed on integration base (042) | Financial OS reservations |
+| OB-10 | OpenRouter: live key optional; PR #579 adapter is draft/unverified | BLOCKED (FOUNDER) | FixtureModelProvider; AC2 = VERIFIED (FIXTURE) | live model routing |
+| OB-11 | Turnstile on sign-up (needs Cloudflare site/secret keys; test keys still call challenges.cloudflare.com) | BLOCKED (FOUNDER) | preview sign-up without CAPTCHA; Better Auth per-IP limits on in production | bot protection on public sign-up |
+| OB-12 | `apps/api/package-lock.json` holds an invalid x402 edge (`@coinbase/cdp-sdk` → `@x402/evm ^2.25.0`, lock 2.18.0); any dependency change re-resolves the payment stack | BLOCKED (FOUNDER) | apps/api dependencies untouched (ADR-7) | declaring new apps/api dependencies safely |
+| OB-13 | MCP 2026-07-28: official `@modelcontextprotocol/sdk` (latest 1.32.2) supports ≤ 2025-11-25 | BLOCKED (EXTERNAL) | negotiate 2025-11-25 (ADR-9) | 2026-07-28 conformance once the SDK ships it |
+| OB-14 | **Critical production dependency advisories** (npm audit, 2026-11-05): `next` ≤15.5.27 unauthenticated RCE via image optimizer + SVG (GHSA-2464-fhr4-w9xw) — on `main` (checked 2026-11-09) `apps/web` is on 15.5.28 but **`apps/console` and `apps/corporate` still pin 15.5.27**; `better-auth` <1.7.7 OAuth state usable as magic link → sign in as another user (GHSA-965c-763c-88jm) — live auth; `proxy-addr` <2.0.8 IP spoofing (GHSA-jqcg-44mw-7w3h); `dompurify` ≤3.4.16 sanitizer bypass (GHSA-cg2g-xh64-v4q7); plus 36 high (incl. the x402 stack and the MCP SDK). Full list: `docs/build/evidence/npm-audit-baseline.json` | BLOCKED (FOUNDER) — upgrades change production lockfiles and need deploys (outside Release A) | CI audit gate fails on any NEW high/critical; known ones printed every run | closes the exposure; priority: next + better-auth |
