@@ -130,3 +130,30 @@ are in-process (fixed window), usage counters are durable (per key per day).
   keyed per task.
 - **Dependency audit gate**: CI fails on NEW high/critical production advisories; the existing 40 (4 critical) are
   founder actions (OB-14) because fixing them changes production lockfiles and requires deploys.
+
+## D-B1 — 2026-11-10 — Friends Beta session: permissions widened only as far as the ticked authorizations (FOUNDER)
+The founder mandate of 2026-11-10 ticks F1–F7, F9, F10. `.claude/settings.json` therefore allows
+`gh pr merge <n> --merge` and specific Railway commands (`status`, `logs`, `variables --service Satelink-api`
+`--kv` / `--set` / `delete`, `run --service Postgres-iQeW`). Still denied: force-push, push to `main`, publish,
+`vercel*`, `.env` and dump reads, `railway up/down/delete`, any Railway command naming `SETTLEMENT_DRY_RUN`,
+`FEATURE_REAL_SETTLEMENT` or a signer variable, merging #635, and squash/rebase/admin merges.
+Consequence: the 2026-11-09 HOLD is superseded for the listed items only. F8 and F11 stay unticked.
+
+## D-B2 — 2026-11-10 — Production is at Financial OS migration 019, not 039/041
+The mandate assumed 040/041 might be pending and authorised 042–046 (F5). Live `schema_migrations` ends at 019 and
+none of the 038–046 objects exist. The runner is ordered and cannot skip, and 042 rewrites the same ledger kind check
+that 038 widens. Decision: treat 038 and 039 as prerequisites inside F5's intent, rehearse 038→046 on a restored copy
+of the fresh backup first, and apply all nine only if the rehearsal verifies. The founder can veto before B3.
+
+## D-B3 — 2026-11-10 — Beta session works in `.claude/worktrees/beta-launch` on `beta/launch`
+Created from the #638 head so the stack, #636 and the session documents are one line of history. `release/beta-1`
+is cut from `main` after the security train and merges this line. The main checkout is left untouched.
+
+## D-B4 — 2026-11-10 — Production wiring of the assistant is B5 step 0
+Release A runs only as a local preview (separate server, `SATELINK_PREVIEW=1` console build, loopback mock
+suppliers). The Friends Beta needs it on production, so B5 starts with: (a) mount the task routes in `app_factory.mjs`
+behind the beta flag with Better Auth principals, default off; (b) host the simulated suppliers in-process, labelled
+simulated, reachable only on loopback, with the egress guard allowing loopback solely for connectors the registry
+marks simulated; (c) run the task worker in the API process; (d) point the console task proxy at the production API.
+No real supplier, payment rail or facilitator is added; the live x402 rail and `/rpc` money path are not touched.
+Why: without it the F10 flags enable nothing a friend can use. Consequence: B5 is larger than the mandate's list.
