@@ -13,7 +13,7 @@ Working tree: `.claude/worktrees/beta-launch`, branch `beta/launch`, created fro
 |---|---|---|
 | B0 Ground truth sync | VERIFIED (prod), read-only | this file, §B0 |
 | B1 Security train | VERIFIED (prod) | §B1 |
-| B2 Credential minimum bar | B2.1, B2.2, B2.4 VERIFIED (prod); B2.3 re-sequenced after B4; B2.5 pending | §B2 |
+| B2 Credential minimum bar | B2.1, B2.2, B2.4 VERIFIED (prod); B2.5 done; B2.3 re-sequenced after B4 | §B2 |
 | B3 Backup + migrations | VERIFIED (prod) | §B3, `evidence/beta-migrations-2026-11-10.md` |
 | B4 Release merge | NOT STARTED | |
 | B5 Beta controls | NOT STARTED | |

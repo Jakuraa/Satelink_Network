@@ -30,5 +30,28 @@ still live is unknown. "Reported" means your 2026-10-20 statement, not verified 
 - [ ] Assess notification for third-party email addresses in history (OB-7).
 - [ ] History rewrite is optional and comes after rotation. Rotation is what closes the risk.
 
+## Status after the Friends Beta session (2026-11-10)
+
+Done by the session under founder authorizations F2 and F3. Everything else is unchanged and founder-pending.
+
+| Order | Credential class | Status | Evidence / what remains |
+|---|---|---|---|
+| 4 | JWT signing secret | **DONE in production and CI** | Rotated on Railway and in GitHub Actions from an inline generator; redeploy healthy. Old-token rejection not demonstrated directly (no legitimately issued old token exists; legacy wallet login is broken in production). `BETA_LAUNCH_LEDGER.md` §B2.1 |
+| 7 | Infrastructure admin tokens on the API service | **REMOVED from Railway; NOT revoked** | Nine variables deleted, 12-route smoke identical. **Founder: revoke each token at GitHub, Vercel, Railway and Cloudflare** — removal from one service does not invalidate them. Unlisted and still present: `edit_zone_DNS_API_token`, `cloudflare_S3 API endpoint`. `VERCEL_TOKEN` also exists as a GitHub Actions secret |
+| 9 | Production database credential | **PENDING — blocked on code** | The role switch is unsafe until request-time DDL is removed (`BETA_LAUNCH_LEDGER.md` §B2.3). Rehearsal environment is ready (local restore) |
+| 1, 2, 3 | Treasury, claims and production signer keys | FOUNDER — hardware wallet + Safe | Not touched; forbidden for agents |
+| 5 | Slack and Discord webhooks | FOUNDER | GitHub alert #1 (Slack) shows resolved/revoked; Discord unverified |
+| 6 | Admin password | FOUNDER | |
+| 8 | Staff tokens `ADMIN_SECRET_TOKEN`, `MASTER_ADMIN_TOKEN` | FOUNDER — **rotate both, in two places at once** | Not rotated by the session: `apps/web` reads them (`api/admin-proxy/route.js`, `api/dodo-webhook/route.ts`), so the Vercel web project holds copies. Rotating Railway alone breaks the admin proxy and the Dodo webhook hand-off. Set the same new value on Railway `Satelink-api` and Vercel `web`, redeploy both, then confirm the old value returns 401 on `/admin/settlement/status` |
+| 10 | Local tokens on the build machine (`~/.zshrc`) | FOUNDER (F11 not ticked) | |
+| 11 | Unreachable local objects / stash | FOUNDER | `git gc` and stash drop stay forbidden for agents |
+| 12, 13, 14 | Other provider keys | FOUNDER | unchanged |
+
+## Controls — corrected 2026-11-10
+- [x] GitHub secret scanning and push protection: **enabled** (verified live 2026-11-10; the 2026-11-09 "verified
+      disabled" line above is superseded). Zero open alerts.
+- [ ] Branch protection on `main`: required checks exist; no required review; admins not enforced.
+- [ ] Off-device encrypted backup copy (OB-5): still none. Two same-disk dumps now exist.
+
 ## Scans on 2026-11-09 (redacted output)
 gitleaks across all refs since 2026-11-04: 0 findings. Untracked local files: 13 hits, classified with masked output (item 12).
