@@ -130,3 +130,69 @@ connect (401 / connection closed) — gh CLI used instead. Local: psql, pg_dump,
 | C6 | "jakuraa-corporate builds were canceled" read as a fault | `turbo-ignore` skip, by design | Verify a real rebuild in B1 |
 | C7 | `CLAUDE.md`: Vercel project `satelinkinternet-collabs-projects/web` | Team slug is `jakuraa` | Backlog 5 |
 | C8 | `CLAUDE.md`: "Postgres 304 MB, 32 tables" | 99 tables in `public` | Older context row; not acted on |
+
+## B1 — security train (F1) — in progress
+
+Review before merge: resolved-version diff of every lockfile per PR. #632 and #633 leave `apps/api/package-lock.json`
+untouched. #634 changes exactly body-parser 2.3.0→2.4.0, follow-redirects 1.16.1→1.16.3, ws 8.22.0→8.22.2 and removes
+the `ws` 8.18.0 copy nested under `@ethersproject/providers`. No `@x402/*` or Coinbase package re-resolved (OB-12).
+
+| Step | Status | Evidence |
+|---|---|---|
+| #631 merged | VERIFIED (prod) | merge `41017204b2`; CI 10/10 before merge |
+| #631 deployed | VERIFIED (prod) | web `dpl_ciYHHupo…`, console `dpl_Dx4AWwCy…`, corporate `dpl_5vco7YNH…` all READY on `41017204`; corporate rebuilt (not skipped); API `/health` commit `41017204` |
+| `/_next/image` rejects SVG | VERIFIED (prod) | local SVG source: satelink.network 400, jakuraa.com 400 (`INVALID_IMAGE_OPTIMIZE_REQUEST`). Console ships no image asset, so tested with a remote SVG source: 400 on all three domains |
+| #632 merged | VERIFIED (prod) | branch updated via GitHub (head `c98cf5b2`), CI 13/13, merge `3c827c469a`; API `/health` commit `3c827c46` |
+| #633 merged | VERIFIED (prod) | branch updated (head `9e3f4aee`), CI 13/13, merge `3552b5af09`; API `/health` commit `3552b5af` |
+| #634 merged | pending CI | branch updated (head `f409d850`) |
+
+## B2 — credential minimum bar — in progress
+
+### B2.1 JWT_SECRET (F2) — VERIFIED (prod), with one stated limit
+- Railway `JWT_SECRET` set from an inline generator (value never printed); GitHub Actions secret `JWT_SECRET` set the
+  same way with an independent value (updated 2026-11-10T17:32:42Z). No workflow reads that Actions secret; CI uses a
+  literal test value. Only `apps/api` reads `JWT_SECRET`; the Vercel apps do not.
+- After the redeploy (uptime reset, commit `3552b5af`): `/health` ok; `/auth/me` without a token 401; with a malformed
+  token 401; Better Auth `GET /api/identity/get-session` 200; anonymous RPC 402 (expected payment challenge).
+- **Limit:** "an old token returns 401" is not demonstrated directly. No old-secret token exists locally, minting one
+  inside the Railway environment was declined by the permission layer, and the legacy wallet login cannot issue a
+  token in production at all: `POST /auth/verify` fails after signature verification with `relation "users" does not
+  exist` (pre-existing; backlog 7). Rejection of old tokens follows from HS256 with a replaced secret.
+
+### B2.2 Admin tokens (F3) — proof of no runtime use collected
+`git grep` on `origin/main` and the release stack: no reader of GITHUB_TOKEN, VERCEL_TOKEN, vercel_token,
+railway_token, cloudflare_access_token, `cloudflare_Access Key ID`, `cloudflare_Secret Access Key`,
+google_OAuth_Client_secret or `RESEND.COM_API_KEY` in `apps`, `packages`, `libs`, `database`, `scripts`, `agent`.
+Only hits: `scripts/secret-scan.sh` (a pattern) and `apps/api/src/admin/jobs/settlement_control.js:62`, which reads
+uppercase `RAILWAY_TOKEN` — a variable that is not set. Deletion follows the #634 deploy.
+
+### B2.3 DB role switch (F4) — re-sequenced after B4
+The prepared runbook (`docs/build/runbooks/DB_ROLE_SWITCH.md` on `docs/node-blast-radius-and-db-role-switch`) states
+the switch is unsafe until request-time DDL is removed. Checked on the release stack: `pricing_v2/schema.mjs` (13 DDL
+statements, 0 guards), `console_accounts/schema.mjs` (17, 0), `analytics/rpc_traffic_recorder.mjs` (2, 0),
+`billing/legacy_sub_entitlement.mjs` (2, 1). Under `satelink_app` those paths fail. The fix is code, so it ships with
+the release and the switch is rehearsed on the local restore first.
+
+## B3 — backup + migrations (F5) — in progress
+
+### B3.1 Fresh backup — VERIFIED (local restore)
+- `pg_dump -Fc` (client 18.4, server 18.6), full dump with ownership and grants, read from the public endpoint.
+- File: `~/satelink-secure/satelink_prod_prebeta_20261110T171533Z.dump` — outside the repository, directory 700,
+  file 600, 47,339,487 bytes, SHA-256 `daca4d3e6758164141ea06f77202ed8ef0ea7e095e45cbe706b4a2bd4feb7793`.
+- First attempt hung when the network dropped (file stalled at 45,404,160 bytes, no server session). It was killed
+  and the dump re-run with TCP keepalives; the recorded file is the complete second run (`pg_dump` exit 0).
+- Not encrypted: `age` is not installed and no recipient is configured.
+- Restore check: Docker `postgres:18` (18.6), `pg_restore --exit-on-error` exit 0. 98 base tables, 2,221,257 rows.
+  93 tables match live production exactly; 5 live-append tables grew after the snapshot (`epoch_ledger` +4,
+  `epochs` +4, `intelligence_snapshots` +8, `node_health_logs` +4, `rpc_traffic_daily` +18).
+  `ledger_txns` 345,658 and `ledger_entries` 691,316 match exactly.
+- **Not independent:** this file is on the same machine and disk as the 2026-11-03 backup. One disk failure loses
+  both. An off-device encrypted copy remains a founder action (OB-5).
+
+### B3.2 Rehearsal of 038→046 on the restored copy — VERIFIED (local)
+Runner applied all nine in 0.9 s; `verify` reports every applied checksum matches its file (so 001–019 are unchanged
+since production applied them). After: 28 migration rows; 23 new tables; `ledger_txns_kind_check` now also allows
+payment, subscription, commission, rebate, provider_fee, hold, capture, release; `ledger_txns_reservation_tagged`
+validated; append-only triggers present on `wf_journal`, `workflow_receipts`, `workflow_quotes`, `trading_decisions`,
+`trading_strategy_evaluations`; `satelink_app` holds INSERT and SELECT only on `ledger_entries`; no pre-existing
+table's row count changed. Production apply: not yet done.
