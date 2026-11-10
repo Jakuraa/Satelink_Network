@@ -148,3 +148,12 @@ of the fresh backup first, and apply all nine only if the rehearsal verifies. Th
 ## D-B3 — 2026-11-10 — Beta session works in `.claude/worktrees/beta-launch` on `beta/launch`
 Created from the #638 head so the stack, #636 and the session documents are one line of history. `release/beta-1`
 is cut from `main` after the security train and merges this line. The main checkout is left untouched.
+
+## D-B4 — 2026-11-10 — Production wiring of the assistant is B5 step 0
+Release A runs only as a local preview (separate server, `SATELINK_PREVIEW=1` console build, loopback mock
+suppliers). The Friends Beta needs it on production, so B5 starts with: (a) mount the task routes in `app_factory.mjs`
+behind the beta flag with Better Auth principals, default off; (b) host the simulated suppliers in-process, labelled
+simulated, reachable only on loopback, with the egress guard allowing loopback solely for connectors the registry
+marks simulated; (c) run the task worker in the API process; (d) point the console task proxy at the production API.
+No real supplier, payment rail or facilitator is added; the live x402 rail and `/rpc` money path are not touched.
+Why: without it the F10 flags enable nothing a friend can use. Consequence: B5 is larger than the mandate's list.

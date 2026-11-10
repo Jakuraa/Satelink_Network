@@ -130,6 +130,7 @@ connect (401 / connection closed) — gh CLI used instead. Local: psql, pg_dump,
 | C6 | "jakuraa-corporate builds were canceled" read as a fault | `turbo-ignore` skip, by design | Verify a real rebuild in B1 |
 | C7 | `CLAUDE.md`: Vercel project `satelinkinternet-collabs-projects/web` | Team slug is `jakuraa` | Backlog 5 |
 | C8 | `CLAUDE.md`: "Postgres 304 MB, 32 tables" | 99 tables in `public` | Older context row; not acted on |
+| C9 | Mandate F10/B8: enabling `WORKFLOWS_BETA_ENABLED` + `BETA_INVITE_ONLY` switches the beta on | `WORKFLOWS_BETA_ENABLED` gates only the older workflows beta (#609) mounted in `app_factory.mjs`. The Satelink AI Assistance task engine (`/v1` tasks, A2A, x402 preview) is mounted only by `apps/api/scripts/preview_release_a.mjs`, which refuses `NODE_ENV=production`; console assistant pages need the build flag `SATELINK_PREVIEW=1`; the four simulated suppliers are separate loopback mock processes (`FINAL_REPORT.md` §4) | Production wiring is required before any flag can mean anything: B5 step 0 (D-B4) |
 
 ## B1 — security train (F1) — in progress
 
