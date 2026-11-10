@@ -13,3 +13,4 @@ Items here are outside `BETA_SCOPE.md`. Nothing in this file is worked on in the
 | 7 | 2026-11-10 | Legacy wallet login is broken in production: `POST /auth/verify` fails with `relation "users" does not exist` after the signature check | Pre-existing; the beta signs in through Better Auth |
 | 8 | 2026-11-10 | `JWT_REFRESH_SECRET` is not set on Railway although `jwt_service.js` verifies refresh tokens with it | Same dead legacy path as item 7 |
 | 9 | 2026-11-10 | `apps/api/src/admin/jobs/settlement_control.js` `setDryRun()` can flip the settlement dry-run flag in-process from an admin route | Settlement code is forbidden territory this session; founder should review or remove |
+| 10 | 2026-11-10 | Root lockfile lacks the `@next/swc-*` entries; `next build` warns and patches at build time | Non-fatal; fix by running `next` locally once and committing the lock |

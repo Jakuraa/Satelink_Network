@@ -12,9 +12,9 @@ Working tree: `.claude/worktrees/beta-launch`, branch `beta/launch`, created fro
 | Phase | Status | Evidence |
 |---|---|---|
 | B0 Ground truth sync | VERIFIED (prod), read-only | this file, §B0 |
-| B1 Security train | NOT STARTED | |
-| B2 Credential minimum bar | NOT STARTED | |
-| B3 Backup + migrations | NOT STARTED | |
+| B1 Security train | VERIFIED (prod) | §B1 |
+| B2 Credential minimum bar | B2.1, B2.2, B2.4 VERIFIED (prod); B2.3 re-sequenced after B4; B2.5 pending | §B2 |
+| B3 Backup + migrations | backup + rehearsal VERIFIED (local); production apply pending | §B3 |
 | B4 Release merge | NOT STARTED | |
 | B5 Beta controls | NOT STARTED | |
 | B6 UI/UX polish | NOT STARTED | |
@@ -132,7 +132,7 @@ connect (401 / connection closed) — gh CLI used instead. Local: psql, pg_dump,
 | C8 | `CLAUDE.md`: "Postgres 304 MB, 32 tables" | 99 tables in `public` | Older context row; not acted on |
 | C9 | Mandate F10/B8: enabling `WORKFLOWS_BETA_ENABLED` + `BETA_INVITE_ONLY` switches the beta on | `WORKFLOWS_BETA_ENABLED` gates only the older workflows beta (#609) mounted in `app_factory.mjs`. The Satelink AI Assistance task engine (`/v1` tasks, A2A, x402 preview) is mounted only by `apps/api/scripts/preview_release_a.mjs`, which refuses `NODE_ENV=production`; console assistant pages need the build flag `SATELINK_PREVIEW=1`; the four simulated suppliers are separate loopback mock processes (`FINAL_REPORT.md` §4) | Production wiring is required before any flag can mean anything: B5 step 0 (D-B4) |
 
-## B1 — security train (F1) — in progress
+## B1 — security train (F1) — COMPLETE
 
 Review before merge: resolved-version diff of every lockfile per PR. #632 and #633 leave `apps/api/package-lock.json`
 untouched. #634 changes exactly body-parser 2.3.0→2.4.0, follow-redirects 1.16.1→1.16.3, ws 8.22.0→8.22.2 and removes
@@ -145,7 +145,16 @@ the `ws` 8.18.0 copy nested under `@ethersproject/providers`. No `@x402/*` or Co
 | `/_next/image` rejects SVG | VERIFIED (prod) | local SVG source: satelink.network 400, jakuraa.com 400 (`INVALID_IMAGE_OPTIMIZE_REQUEST`). Console ships no image asset, so tested with a remote SVG source: 400 on all three domains |
 | #632 merged | VERIFIED (prod) | branch updated via GitHub (head `c98cf5b2`), CI 13/13, merge `3c827c469a`; API `/health` commit `3c827c46` |
 | #633 merged | VERIFIED (prod) | branch updated (head `9e3f4aee`), CI 13/13, merge `3552b5af09`; API `/health` commit `3552b5af` |
-| #634 merged | pending CI | branch updated (head `f409d850`) |
+| #634 merged | VERIFIED (prod) | branch updated (head `f409d850`), CI 13/13, merge `885826d6c4`; API `/health` commit `885826d6`, fresh process |
+| Final production SHAs | VERIFIED (prod) | web `dpl_Gv3UTch1…` READY on `885826d6`; console `dpl_zWUD8ykt…` READY on `885826d6`; corporate `dpl_2Zrce6XG…` READY on `3c827c46` (#632) — its #633/#634 builds were skipped by `turbo-ignore` because those commits do not affect it; API `885826d6` |
+| Deployed `next` / `sharp` | VERIFIED (prod) for console by build log (`▲ Next.js 15.5.29`); web and corporate by the root lockfile at the deployed SHA (single resolved `next` 15.5.29, `sharp` 0.35.5) plus the live SVG-400 behaviour | build logs do not print the sharp version |
+| API lockfile on `main` | VERIFIED | body-parser 2.4.0, follow-redirects 1.16.3, ws 8.22.2 |
+| node:test suites reported in CI | VERIFIED | run 42865607084: tests 159, pass 146, fail 0, skipped 13 |
+| API boot after final deploy | VERIFIED (prod) | no `permission denied`, unhandled, missing-module or FATAL lines in the last 150 log lines |
+
+Observations: Vercel's `npm install` still prints "71 vulnerabilities (8 low, 36 moderate, 23 high, 4 critical)" for the
+whole workspace including dev dependencies — the train closed the targeted advisories, not every audit finding.
+Console's build warns "Found lockfile missing swc dependencies" (non-fatal; backlog 10). No rollback was needed.
 
 ## B2 — credential minimum bar — in progress
 
@@ -165,7 +174,20 @@ the `ws` 8.18.0 copy nested under `@ethersproject/providers`. No `@x402/*` or Co
 railway_token, cloudflare_access_token, `cloudflare_Access Key ID`, `cloudflare_Secret Access Key`,
 google_OAuth_Client_secret or `RESEND.COM_API_KEY` in `apps`, `packages`, `libs`, `database`, `scripts`, `agent`.
 Only hits: `scripts/secret-scan.sh` (a pattern) and `apps/api/src/admin/jobs/settlement_control.js:62`, which reads
-uppercase `RAILWAY_TOKEN` — a variable that is not set. Deletion follows the #634 deploy.
+uppercase `RAILWAY_TOKEN` — a variable that is not set. A second search of the whole tree found nothing more.
+
+**Done — VERIFIED (prod).** Deleted from `Satelink-api`: GITHUB_TOKEN, VERCEL_TOKEN, vercel_token, railway_token,
+cloudflare_access_token, `cloudflare_Access Key ID`, `cloudflare_Secret Access Key`, google_OAuth_Client_secret,
+`RESEND.COM_API_KEY` (nine; `cloudflare_Example Usage` never existed — C2). Name diff before/after: exactly those nine
+removed, nothing else changed; 101 variables remain. Deleting did not restart the service, so the proof is the smoke
+run after the #634 deploy started a fresh process: 12 routes (health, auth challenge, auth me, Better Auth session,
+keys, anonymous RPC, x402 discovery, nodes, credit deposit initiate, admin without token, workflows beta off,
+`.well-known/x402`) return the same status codes as the baseline taken before deletion.
+**Not done by this session:** the tokens were removed from Railway, not revoked at GitHub, Vercel, Railway or
+Cloudflare. Until the founder revokes them at each provider they remain valid credentials wherever else they exist.
+
+### B2.4 Secret scanning — VERIFIED
+Secret scanning enabled, push protection enabled, zero open alerts (alert #1 Slack webhook: resolved, revoked).
 
 ### B2.3 DB role switch (F4) — re-sequenced after B4
 The prepared runbook (`docs/build/runbooks/DB_ROLE_SWITCH.md` on `docs/node-blast-radius-and-db-role-switch`) states
