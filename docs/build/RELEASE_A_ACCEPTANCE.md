@@ -1,9 +1,11 @@
-# Release State A — acceptance (reassessed 2026-11-09)
+# Release State A — acceptance (reassessed 2026-11-10)
 
-**Verdict: NOT ACCEPTED / HOLD** (founder decision, 2026-11-09). This stays until every condition below is met and the security
-risks are appropriately addressed. Only the founder can change it. The build's earlier "ACCEPTED under the mandate's rule" is withdrawn.
+**Verdict: NOT ACCEPTED / HOLD** (founder decision reaffirmed, 2026-11-10). This remains on HOLD until every condition below
+is met and security remediation is independently verified on live production systems. Only the founder can change it.
 
-Nothing below is merged or deployed. A row saying PR open means prepared, not resolved.
+Code being green or merged does NOT equate to production being secure. Deployed states and credential revocations must be verified separately.
+
+Nothing below is deployed to production. A row saying PR open means prepared, not resolved in production.
 
 | AC | Criterion | Status | Evidence | Still open |
 |---|---|---|---|---|
@@ -21,15 +23,20 @@ Nothing below is merged or deployed. A row saying PR open means prepared, not re
 | AC12 | Simulated revenue excluded from reporting | Evidence holds | `revenue_truth`, asserted $0 | none |
 | AC13 | Websites accurately describe the product | **OPEN** | #636: `AC13_PUBLIC_CLAIMS_2026-11-09.md` | PR unmerged and undeployed; checkout, legal and other decisions outstanding |
 
-**Integration proof (#637, `af3b1dbf`):** the stack plus #631–#634 and #636. Release A journeys run [42636453167](https://github.com/Jakuraa/Satelink_Network/actions/runs/42636453167): 45 passed, 3 skipped, the same as the original baseline. Audit gate, API baseline, Financial OS integration, architecture and type checks: all green. #635 is excluded (money path). Three earlier CI failures were infrastructure (a Postgres admin shutdown and a Google Fonts fetch during the build) and passed on rerun.
-
-"Evidence holds" means the proof from the stack still stands. It does not mean accepted, since the stack is unmerged.
+**Progress as of 2026-11-10:**
+- Local permissions locked down (`chmod 600` on `.env`, `.env.local`, `~/.railway/config.json`, `~/.zshrc`).
+- Inactive GitHub PAT returning HTTP 401 identified in `~/.zshrc`.
+- GitHub Secret Scanning and Push Protection enabled on `Jakuraa/Satelink_Network` (Alert #1 confirmed active for Slack webhook).
+- PR #634 updated (`ac51a07a`) to explicitly execute all 26 `node:test` suites (159 tests) with `--test-concurrency=1` in the CI baseline job.
+- PR #635 held on HOLD; upstream `@coinbase/x402` 2.1.0 dependency constraint documented (GHSA-mrhx-c7xc-m3w5 Zod 3 vulnerability remains open upstream).
+- Pre-rotation incident evidence safely preserved in `docs/build/evidence/private/preserved_incident_evidence_2026-11-10/` without dropping stash or pruning loose objects.
 
 ## Why AC11 is open
 The earlier VERIFIED covered the assurance suites. It did not cover exposure.
-- `next` with the RCE advisory is on all three production sites (`SECURITY_TRIAGE_2026-11-09.md`). #631 is prepared, not merged.
+- `next` with the RCE advisory is on all three production sites (`SECURITY_TRIAGE_2026-11-09.md`). #631 is prepared, not merged or deployed.
 - Credentials in public history and plaintext keys on the build machine are unrotated (`CREDENTIAL_ROTATION_CHECKLIST.md`).
-- **Corrected:** production's `better-auth` and `proxy-addr` are patched, unlike what OB-14 said. The stack's auth evidence ran on the root lock's vulnerable `better-auth` 1.7.5, which #632 fixes.
+- Production's `better-auth` and `proxy-addr` are patched in the API lockfile, but CI was testing the older root lock; PR #632 aligns CI with production.
+- Production Railway API runs unpatched `body-parser`, `follow-redirects`, `ws`; PR #634 is prepared, not deployed.
 
 ## Why AC13 is open
 #636 corrects the outdated Trading Intelligence and rejected-identity claims, applying D14. Left for decision, because they describe a sale or contract that still exists: checkout and Dodo, legal terms, console, `/corporate`, the "On-Chain Settlement" wording. The live sites still show the old copy.
