@@ -80,7 +80,7 @@ export const NARRATIVE_SECTIONS = [
     summary: "Structured catalogue query comparing supported digital services, providers, capabilities, and pricing.",
     details: "The agent requests the machine catalogue to evaluate live endpoints, schemas, authentication schemes, and flat pricing schedules without human interaction.",
     visualType: "table",
-    payload: `Endpoint                     Network         Rate Model     Auth Scheme\n/rpc/polygon                 Polygon (137)   Flat Per-Call  Key / x402\n/v1/intelligence/funding     HTTP Data       Metered API    API Key\n/.well-known/satelink.json   Discovery       Public Free    Unauthenticated`
+    payload: `Endpoint                     Network         Rate Model     Auth Scheme\n/rpc/polygon                 Polygon (137)   Flat Per-Call  Key / x402\n/.well-known/satelink.json   Discovery       Public Free    Unauthenticated`
   },
   {
     id: "authorization",

@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     template: "%s - Jakuraa",
   },
   description:
-    "Jakuraa Commercial Private Limited is the corporate technology company behind Satelink (flagship AI-agent and machine-commerce infrastructure), established in 2019 in Coimbatore, India.",
+    "Jakuraa Commercial Private Limited is the corporate technology company behind Satelink AI Assistance, established in 2019 in Coimbatore, India.",
   openGraph: {
     type: "website",
     url: SITE,

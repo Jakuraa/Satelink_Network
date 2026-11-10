@@ -43,7 +43,7 @@ test("satelink.network: positioning, preview labels, real screenshots, machine-r
   await page.goto(`${WEB}/`);
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Describe the outcome");
   await expect(page.getByTestId("home-status")).toContainText("Preview — simulated, no charges.");
-  await expect(page.locator("body")).not.toContainText("Trading Intelligence endpoints");
+  await expect(page.locator("body")).not.toContainText("Trading Intelligence");
   await noOverflow(page, "home"); await axe(page, "home");
 
   await page.goto(`${WEB}/preview`);

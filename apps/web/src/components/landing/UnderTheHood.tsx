@@ -14,7 +14,7 @@ export function UnderTheHood() {
           <figure className="rounded-[var(--sl-radius-lg)] border border-sl-border bg-sl-surface p-5 lg:col-span-2">
             <TwoRailsDiagram className="mx-auto w-full" />
             <figcaption className="mt-3 text-sm text-sl-text-muted">
-              Card and UPI payments buy Trading Intelligence credits; crypto (x402 or USDT) funds RPC and machine
+              Card and UPI payments buy credits for metered Trading AI tools; crypto (x402 or USDT) funds RPC and machine
               endpoints. The two balances never mix.
             </figcaption>
           </figure>

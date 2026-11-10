@@ -71,7 +71,7 @@ export function DataFooter({
             </Link>
 
             <p className="mt-4 text-sm leading-relaxed text-stone-400">
-              AI-agent assistance and machine-commerce infrastructure for software agents and machines to discover, evaluate, access, use, meter, and pay for supported digital services programmatically.
+              AI assistance and agent commerce for people, developers, AI agents and machines.
             </p>
 
             {/* Link only: this footer has no live measurement, so it must not assert a status. */}

@@ -5,10 +5,10 @@ Everything below needs you: credentials, money, legal, supplier relationships or
 
 | # | Action | Why it blocks | Where | Default if not done | Unblocks |
 |---|---|---|---|---|---|
-| 1 | Upgrade `next` in console + corporate (≥15.5.28) and deploy | Unauthenticated RCE advisory (GHSA-2464-fhr4-w9xw) on live sites | `apps/console/package.json`, `apps/corporate/package.json` (both pin 15.5.27 on `main`) | Exposure stays live | OB-14 |
-| 2 | Upgrade `better-auth` (≥1.7.7) and deploy | OAuth state usable as a magic link to sign in as another user (GHSA-965c-763c-88jm); auth is live | `apps/api` (needs #27 first, or accept the lock re-resolve) | Account takeover risk stays live | OB-14 |
-| 3 | Upgrade `proxy-addr` (≥2.0.8), `dompurify` (>3.4.16); triage 36 highs | IP spoofing can defeat IP limits; sanitizer bypass | `docs/build/evidence/npm-audit-baseline.json` | CI blocks only new ones | OB-14 |
-| 4 | Rotate the exposed JWT secret | In public git history | Production auth config | Tokens forgeable | OB-1 |
+| 1 | Review, merge, deploy #631 (`next` 15.5.29 + `sharp` 0.35.5) and confirm jakuraa.com rebuilds | RCE advisory GHSA-2464-fhr4-w9xw on all three sites | #631 | Exposure stays live | OB-14 |
+| 2 | Review and merge #632, #633: root lock `better-auth`, `proxy-addr`, `dompurify`, MCP SDK | Production's `better-auth` is already patched; CI tests a vulnerable one. See `SECURITY_TRIAGE_2026-11-09.md` | #632, #633 | CI keeps testing the wrong version | OB-14 |
+| 3 | Review and merge #634; decide #635 (`@x402` 2.30, live payment rail, needs a controlled settlement); remove or upgrade `apps/cms` | API high advisories; zod stays until `@coinbase/x402` moves | #634, #635 | Highs stay open | OB-14 |
+| 4 | Work through `CREDENTIAL_ROTATION_CHECKLIST.md`, starting with keys that control money. Rotate the exposed JWT secret | In public git history | Production auth config | Tokens forgeable | OB-1 |
 | 5 | Delete/recreate the Slack and Discord webhooks | In public git history | Slack, Discord | Anyone can post | OB-2 |
 | 6 | Move signer/treasury keys, then drop the local stash + gc | Plaintext keys in a local stash | This machine | Agents keep not touching it | OB-3 |
 | 7 | Make an encrypted off-device and off-site backup copy | Only ONE real copy of the production dump exists | `docs/build/BACKUP_POSTURE.md` | A disk failure loses it | OB-5 |
@@ -16,7 +16,7 @@ Everything below needs you: credentials, money, legal, supplier relationships or
 | 9 | Confirm the GitLab remote never received the keys; assess PII notification | Incident scope | GitLab; counsel | Assumed unknown | OB-6, OB-7 |
 | 10 | Review and merge the PR stack in order (see FINAL_REPORT §4) | Nothing here is on `main` | GitHub | Preview stays on branches | everything below |
 | 11 | Review ADR-5 before any production apply; apply migrations 042–046 yourself | Writes alongside the frozen ledger | `docs/build/DECISION_LOG.md`, `database/migrations` | Local/CI only | production money simulation |
-| 12 | Decide what Trading Intelligence is now | Delisted (#515) yet on the product page, `/intelligence`, llms.txt, docs, legal, checkout | `apps/web` (see P5 ledger entry) | Stays as is | truthful public claims |
+| 12 | D14 already decides Trading Intelligence is not a standalone product; #636 applies it. Decide the rest: keep, rename or stop the checkout sale; legal text with counsel | Checkout and legal still describe the sale | #636, `AC13_PUBLIC_CLAIMS_2026-11-09.md` | Public copy and checkout disagree | AC13 |
 | 13 | Check the replaced root JSON-LD product against any payment-provider review | It was commented as the merchant account's primary product | `apps/web/src/app/layout.tsx` | Possible mismatch with a merchant review | #629 merge |
 | 14 | Decide whether "On-Chain Settlement" stays in the footer | `SETTLEMENT_DRY_RUN=1` still blocks settlement broadcasting | `packages/content/src/navigation.ts` | Link stays | truthful public claims |
 | 15 | Approve or change all fees | Every fee is PROPOSED — NOT APPROVED | `apps/api/config/pricing.preview.json` | No charging | any real charge |

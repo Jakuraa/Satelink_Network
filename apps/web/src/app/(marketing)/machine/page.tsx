@@ -25,10 +25,10 @@ const DISCOVERY = `GET https://rpc.satelink.network/.well-known/satelink.json
     "network": "eip155:8453",
     "asset": "USDC",
     "endpoint": "https://rpc.satelink.network/rpc/polygon",
-    "price_per_call_usd": 0.01
+    "bundle": "$0.10 = 1,000 calls"
   },
   "resources": [
-    "https://rpc.satelink.network/v1/intelligence/*"
+    "https://rpc.satelink.network/rpc/polygon"
   ]
 }`;
 
@@ -41,9 +41,11 @@ import { base } from "viem/chains";
 const wallet = createWalletClient({ chain: base, transport: http() });
 const fetchWithPay = wrapFetchWithPayment(fetch, wallet);
 
-const res = await fetchWithPay(
-  "https://rpc.satelink.network/v1/intelligence/funding-rate-heatmap"
-);
+const res = await fetchWithPay("https://rpc.satelink.network/rpc/polygon", {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_blockNumber", params: [] }),
+});
 const data = await res.json(); // paid, settled on-chain`;
 
 function SequenceDiagram() {
@@ -55,9 +57,9 @@ function SequenceDiagram() {
     { x: 510, label: "Base (USDC)" },
   ];
   const steps: { from: number; to: number; y: number; label: string; back?: boolean }[] = [
-    { from: 0, to: 1, y: 90, label: "GET /v1/intelligence/…" },
+    { from: 0, to: 1, y: 90, label: "POST /rpc/polygon" },
     { from: 1, to: 0, y: 130, label: "402 Payment Required", back: true },
-    { from: 0, to: 2, y: 170, label: "pay $0.01 USDC (x402)" },
+    { from: 0, to: 2, y: 170, label: "pay $0.10 USDC (x402)" },
     { from: 0, to: 1, y: 210, label: "retry with payment proof" },
     { from: 1, to: 0, y: 250, label: "200 OK + data", back: true },
   ];

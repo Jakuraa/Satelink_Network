@@ -75,7 +75,7 @@ export const PRODUCTS: Record<ProductSlug, ProductFacts> = {
     name: "Machine Commerce",
     category: "product",
     definition:
-      "AI-agent assistance and machine-commerce infrastructure for software agents and machines to discover, evaluate, access, use, meter, and pay for supported digital services programmatically.",
+      "Machine Commerce lets software agents and machines discover, evaluate, access, meter, and pay for supported digital services programmatically.",
     tagline: "The programmatic discover → evaluate → authorize → access → meter → pay → settle workflow for autonomous agents.",
     endpoint: `${SITES.api.origin}/rpc/polygon`,
     discovery: DISCOVERY.wellKnown,
@@ -209,7 +209,7 @@ export const PRODUCTS: Record<ProductSlug, ProductFacts> = {
       "USDC settlement on Base (eip155:8453)",
       "MIT-licensed x402-kit middleware and client",
       "Proven mainnet settlements",
-      "Works with the RPC and Trading Intelligence endpoints",
+      "Works with the RPC and machine endpoints",
     ],
     exampleRequest: `# The service answers an unpaid call with the price:
 HTTP/1.1 402 Payment Required
@@ -258,10 +258,13 @@ HTTP/1.1 402 Payment Required
   },
 };
 
-/** The 5 products in the order the home grid + overview render them. */
+/**
+ * The public products, in the order the home grid + overview render them.
+ * D14: Trading Intelligence is internal metered tooling inside Trading AI, so it
+ * stays out of this list and everything generated from it (llms, sitemap, pricing.json).
+ */
 export const PRODUCT_ORDER: ProductSlug[] = [
   "machine-commerce",
-  "trading-intelligence",
   "rpc",
   "x402",
   "metering",

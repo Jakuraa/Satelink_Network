@@ -91,7 +91,7 @@ export const corporateNavMenus: CorporateMenu[] = [
       {
         title: 'Flagship Platform',
         items: [
-          { label: 'Satelink Platform', href: 'https://satelink.network', description: 'AI-agent assistance and machine-commerce infrastructure.', external: true, badge: 'Flagship' },
+          { label: 'Satelink Platform', href: 'https://satelink.network', description: 'AI assistance and agent commerce for people, developers, AI agents and machines.', external: true, badge: 'Flagship' },
           { label: 'Machine Commerce', href: 'https://satelink.network/products/machine-commerce', description: 'Programmatic API discovery, metering, and settlement.', external: true },
           { label: 'Polygon RPC Gateway', href: 'https://satelink.network/products/rpc', description: 'High-throughput metered blockchain infrastructure.', external: true },
         ],
@@ -107,7 +107,7 @@ export const corporateNavMenus: CorporateMenu[] = [
     highlight: {
       eyebrow: 'Flagship Platform',
       title: 'Satelink Network',
-      description: 'Infrastructure for AI agents that discover, access, and pay for services.',
+      description: 'AI agents that discover, access, and pay for services.',
       href: 'https://satelink.network',
       external: true,
     },
