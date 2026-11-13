@@ -5,6 +5,31 @@ categories only (R14); details in `docs/build/evidence/private/` on the build ma
 
 ---
 
+## ▶ RESUME CAPSULE — Release State A (updated after each phase)
+1. Mandate: Release State A master prompt v2026-11-04b + founder conditions 1–6 (2026-11-04).
+2. Worktree: `.claude/worktrees/release-a`; branch stack `build/p0-safety` → `build/integration-base` → `build/p2-foundation` → `build/s1-primary-journey`.
+3. Last phase done: **PT** (toolchain, hooks 50/50) after P0 (verdict EXPOSED credentials; DB data not exposed).
+4. Last SHA: see `git log -1 build/p0-safety`.
+5. Next sub-step: **P1.1** targeted audit, then P1.3 integration base (#609/#582/#583).
+6. Open risks: E1 JWT secret + webhooks public (OB-1/2); plaintext signer/treasury keys in local stash (OB-3); single-copy backup (OB-5).
+7. Rule: no work touching auth secrets, payment config or production (D-A2); local test credentials only.
+8. Backups: never touch `backups/protected/*.dump`, `docs/release/*.dump` (BACKUP_POSTURE.md).
+9. Blockers: `OPEN_BLOCKERS.md` (7 open, all FOUNDER).
+10. Decisions: `DECISION_LOG.md` (D-A1…D-A5, ADR-1…4).
+
+## Release A — Phase PT — 2026-11-04
+- Plugins: feature-dev + claude-md-management installed (project); others pre-existing; Superpowers pre-existing from official marketplace; context7 via claude.ai connector. `.mcp.json` not created (Postgres reference server deprecated).
+- `.claude/settings.json` deny/allow + 7 hooks, tests `bash .claude/hooks/tests/run.sh` 50/50. CLAUDE.md: root trimmed to 152 + 7 new. 2 skills, 7 agents. Inventory: `TOOLCHAIN_INVENTORY.md`.
+
+## Release A — Phase P0 — 2026-11-04 (Opus 5.5, background job)
+- Scanned every object (11,764 blobs) across 1,111 refs incl. 586 PR heads: **no dump content anywhere**; 0 releases / artifacts / Pages.
+- Credentials in public history (categories): JWT secret, Slack + Discord webhooks, admin password hash → `SECURITY_INCIDENT_2026-11-04.md`.
+- Local-only: stash with plaintext production signer/treasury keys (GitHub 404).
+- Guards: ignore files (git/docker/vercel/railway), `check-no-dumps.sh` (9/9 tests), `.gitleaks.toml` (positive-control tested), pre-commit + CI gitleaks on new commits.
+- Docs: `SECURITY_AND_FINANCIAL_PATH_AUDIT.md` §P0, `BACKUP_POSTURE.md`, `DECISION_LOG.md`, `OPEN_BLOCKERS.md`.
+
+---
+
 ## Session T1 — 2026-10-31 Trading AI: Eulerpool + evaluation harness + go/no-go (Opus 5.5, background job)
 
 Scope: founder prompt "TRADING AI: EULERPOOL DATA + DECISION API GO/NO-GO + BINANCE DEMO EXECUTION".

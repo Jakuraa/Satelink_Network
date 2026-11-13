@@ -23,3 +23,15 @@ e2e
 # Build caches, typecheck artifacts, and logs
 *.tsbuildinfo
 *.log
+
+# ── P0 2026-11-04: never ship database dumps, backups or env files ──
+*.dump
+*.pgdump
+*.backup
+*.sql.gz
+*.bak.sql
+backups/
+docs/release/**/*.dump
+.env
+.env.*
+!.env.example
