@@ -33,6 +33,7 @@ import { createWellKnownX402Router } from "./src/routes/well_known_x402.js";
 import { createMetricsRouter } from "./src/workloads/rpc_gateway/metrics.js";
 import { createIntelligenceRouter } from "./src/routes/intelligence_route.js";
 import { createTradingSimulationRouter } from "./src/routes/trading_simulation_route.js";
+import { createWorkflowsRouter } from "./src/routes/workflows_route.js";
 import { startIntelRefresh } from "./src/intelligence/engine.js";
 import { createMachineIntelRouter } from "./src/routes/machine_intel.js";
 import { createX402KeyRecoveryRouter } from "./src/payments/x402/key_recovery_router.js";
@@ -445,6 +446,11 @@ app.get("/api/mode", (req, res) => {
   // Multi-Market Trading AI — Metered paper execution simulation (/v1/trading/paper/simulate).
   // Metered via canonical api_credits; live trading remains disabled.
   app.use("/v1/trading", express.json({ limit: '64kb' }), createTradingSimulationRouter(pool));
+
+  // Customer workflows beta — Strategy Lab, Agent Marketplace, workflow runs on the
+  // vNext RoutingKernel. Inert (falls through) unless WORKFLOWS_BETA_ENABLED=true;
+  // charges nothing while catalog pricing is unapproved.
+  app.use("/v1", createWorkflowsRouter(pool));
 
   // Track B (P3.B / P6) — read-only plan catalogue (/v1/plans) + customer
   // console summary (/v1/console/summary). Mounted BEFORE the "/v1" ai-gateway

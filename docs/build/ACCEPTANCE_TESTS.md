@@ -57,3 +57,29 @@ entry to make CI green.
 | | OMS | Timeout/5xx gives UNKNOWN, then reconcile by `clientOrderId`; never a blind retry |
 | | Live gate | With the live flag unset, no code path reaches a live exchange endpoint (test with network deny) |
 | | Model acceptance | The candidate beats the best baseline out of sample after costs on agreed windows, or is rejected |
+
+## Customer journeys (Session B1, 2026-11-03) — workflows beta
+
+Status key: **PREVIEW-VERIFIED** = passes in tests and in the local preview with real data; not deployed.
+
+| Journey | Test | Pass criterion | Status |
+|---|---|---|---|
+| A Trading | Compile | NL → valid `satelink.strategy/v1`; ambiguous → questions; unsupported (short, leverage, unimplemented indicator, Indian markets, non-BTC/ETH, "guaranteed") → reasons | PREVIEW-VERIFIED (11 tests) |
+| | Data selection + licence | Strategy run routes to a live data offer via the kernel; licence shown on the scorecard; geo 451 → failed run, no result | PREVIEW-VERIFIED |
+| | Backtest | Real walk-forward engine; 4 OOS windows; costs > 0; result hash reproducible for same spec + data | PREVIEW-VERIFIED |
+| | Honest failure | FAIL verdicts shown as FAIL with reasons; every scorecard labelled SIMULATED / BACKTEST | PREVIEW-VERIFIED |
+| | Paper trading | Only via explicit link to the metered paper page; never auto-started | PREVIEW-VERIFIED (manual) |
+| B Procurement | Discover / compare / quote | All offers listed with status, networks, price, evidence; DecisionEngine picks among executable offers only | PREVIEW-VERIFIED |
+| | Approval | Every purchase pauses at `awaiting_approval`; nothing executes before approval | PREVIEW-VERIFIED |
+| | No double charge | Replayed create and concurrent double approve execute the supplier once, one SETTLE | PREVIEW-VERIFIED |
+| | Failure | Supplier error / invalid result → FAILED, no SETTLE, hold released, charge 0 | PREVIEW-VERIFIED (mutation-checked) |
+| | Honesty | Evaluation / paused / unconfigured offers block with per-offer reasons | PREVIEW-VERIFIED |
+| | Receipt | Receipt shows charge, list price, supplier cost, margin, settlement (`withheld`, money moved false), revenue counted false | PREVIEW-VERIFIED |
+| | Durability | Runs + hash chain survive restart on the same store; replay after restart does not execute | **POSTGRES-VERIFIED (B2)**: crash after kernel CLOSED → finalized without re-calling the supplier; crash before SUBMIT → resubmitted once; browser E2E after a real API restart |
+| | Tenant isolation | Another customer's run, receipt or strategy is 404 | POSTGRES-VERIFIED (B2) |
+| | Concurrency | Concurrent approvals execute the supplier once (SQL compare-and-set) | POSTGRES-VERIFIED (B2, mutation-checked) |
+| | Receipt integrity | Receipt carries sha256 of its canonical body, verified on read; table append-only | POSTGRES-VERIFIED (B2) |
+| | Revenue truth | Workflow usage can never be counted as revenue or move money (SQL CHECK) | POSTGRES-VERIFIED (B2) |
+| C RPC | existing rows above (x402, receipt) | — | production (pre-existing) |
+| D MCP | Tool discovery / execution / auth / spending cap / idempotency | 8 workflow tools on the same API; opt-in; caller-scoped key; approval cap | **BUILT, NOT PUBLISHED (B2)**: mcp-server 8/8 incl. real MCP client↔server |
+| Contract | OpenAPI | Every router route documented and every documented path routed | VERIFIED (B2 drift test) |

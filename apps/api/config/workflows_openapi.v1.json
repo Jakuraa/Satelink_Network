@@ -1,0 +1,1422 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Satelink Workflows API (beta)",
+    "version": "1.0.0-beta",
+    "description": "Strategy Lab, Agent Marketplace and workflow runs on the Satelink RoutingKernel. Beta: enabled only where WORKFLOWS_BETA_ENABLED=true. Nothing is charged while catalog pricing is unapproved; receipts say so. Strategy results are SIMULATED / BACKTEST \u2014 NOT ACTUAL RETURNS. No route places orders or moves money."
+  },
+  "servers": [
+    {
+      "url": "https://api.satelink.network"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "ApiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "Customer API key (active keys only; same rule as billing)."
+      },
+      "ConsoleSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "satelink.session_token",
+        "description": "Console session (CONSOLE_ACCOUNTS_V1). Mutations also require header X-Satelink-Console: 1 and a trusted Origin."
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "required": [
+          "ok",
+          "error"
+        ],
+        "properties": {
+          "ok": {
+            "const": false
+          },
+          "error": {
+            "type": "string",
+            "description": "Stable code, e.g. invalid_spec, idempotency_conflict, run_not_found, rate_limited, workflows_unavailable."
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "Money": {
+        "type": "string",
+        "pattern": "^\\d+(\\.\\d{1,6})?$",
+        "description": "USD as a decimal string (integer micro-USD internally). Never a float."
+      },
+      "StrategySpec": {
+        "type": "object",
+        "description": "satelink.strategy/v1. The server recomputes id, costs and the evaluation window; client values for those are ignored.",
+        "required": [
+          "schema",
+          "family",
+          "market",
+          "params",
+          "risk"
+        ],
+        "properties": {
+          "schema": {
+            "const": "satelink.strategy/v1"
+          },
+          "id": {
+            "type": "string",
+            "pattern": "^strat_[0-9a-f]{16}$"
+          },
+          "family": {
+            "enum": [
+              "sma-crossover",
+              "donchian-breakout"
+            ]
+          },
+          "market": {
+            "type": "object",
+            "properties": {
+              "symbol": {
+                "enum": [
+                  "BTCUSDT",
+                  "ETHUSDT"
+                ]
+              },
+              "instrument_id": {
+                "enum": [
+                  "BINANCE:BTCUSDT",
+                  "BINANCE:ETHUSDT"
+                ]
+              }
+            }
+          },
+          "params": {
+            "type": "object"
+          },
+          "timeframe": {
+            "const": "1d"
+          },
+          "direction": {
+            "const": "long_only"
+          },
+          "risk": {
+            "type": "object",
+            "properties": {
+              "allocation_pct": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100
+              }
+            }
+          }
+        }
+      },
+      "CompileResult": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "enum": [
+              "compiled",
+              "needs_clarification",
+              "unsupported"
+            ]
+          },
+          "spec": {
+            "$ref": "#/components/schemas/StrategySpec"
+          },
+          "assumptions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "questions": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Quote": {
+        "type": "object",
+        "properties": {
+          "capability": {
+            "type": "string"
+          },
+          "network": {
+            "type": "string"
+          },
+          "available": {
+            "type": "boolean"
+          },
+          "chosen": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "offer_id": {
+                "type": "string"
+              },
+              "provider": {
+                "type": "string"
+              }
+            }
+          },
+          "customer_charge_usd": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "list_price_usd": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "supplier_cost_usd": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "pricing_approved": {
+            "type": "boolean"
+          },
+          "compared": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "Receipt": {
+        "type": "object",
+        "description": "Append-only; receipt_sha256 is sha256 of the canonical body and is verified on every read.",
+        "properties": {
+          "receipt_id": {
+            "type": "string",
+            "pattern": "^rcpt_[0-9a-f]{8,64}$"
+          },
+          "run_id": {
+            "type": "string"
+          },
+          "customer_charge_usd": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "supplier_cost_usd": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "margin_usd": {
+            "type": "string"
+          },
+          "pricing_approved": {
+            "type": "boolean"
+          },
+          "verification": {
+            "type": "string"
+          },
+          "settlement": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "const": "withheld"
+              },
+              "money_moved": {
+                "const": false
+              }
+            }
+          },
+          "revenue": {
+            "type": "object",
+            "properties": {
+              "counted": {
+                "const": false
+              },
+              "reason": {
+                "type": "string"
+              }
+            }
+          },
+          "is_test_data": {
+            "type": "boolean"
+          },
+          "receipt_sha256": {
+            "type": "string"
+          }
+        }
+      },
+      "Run": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^run_[0-9a-f]{8,64}$"
+          },
+          "title": {
+            "type": "string"
+          },
+          "template": {
+            "enum": [
+              "strategy_lab.backtest.v1",
+              "procurement.capability_call.v1"
+            ]
+          },
+          "status": {
+            "enum": [
+              "running",
+              "awaiting_approval",
+              "completed",
+              "failed",
+              "blocked",
+              "cancelled"
+            ]
+          },
+          "idempotency_key": {
+            "type": "string"
+          },
+          "input": {
+            "type": "object"
+          },
+          "quote": {
+            "$ref": "#/components/schemas/Quote"
+          },
+          "approval": {
+            "type": "object"
+          },
+          "blocked": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "budget_usd": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "budget_hold": {
+            "type": "object",
+            "properties": {
+              "amount_usd": {
+                "type": "string"
+              },
+              "status": {
+                "enum": [
+                  "none",
+                  "held",
+                  "captured",
+                  "released"
+                ]
+              },
+              "money_moved": {
+                "const": false
+              }
+            }
+          },
+          "result": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "receipt": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Receipt"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "detail": {
+                "type": "string"
+              }
+            }
+          },
+          "is_simulation": {
+            "type": "boolean"
+          },
+          "is_test_data": {
+            "type": "boolean"
+          },
+          "graph": {
+            "type": "object",
+            "properties": {
+              "nodes": {
+                "type": "array"
+              },
+              "edges": {
+                "type": "array"
+              }
+            }
+          },
+          "trace": {
+            "type": "array",
+            "description": "Hash-chained journal events (detail endpoint only)."
+          }
+        }
+      },
+      "CreateRun": {
+        "type": "object",
+        "required": [
+          "template",
+          "idempotency_key"
+        ],
+        "properties": {
+          "template": {
+            "enum": [
+              "strategy_lab.backtest.v1",
+              "procurement.capability_call.v1"
+            ]
+          },
+          "idempotency_key": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9._:-]{8,128}$",
+            "description": "Same key + same request \u2192 replay (200). Same key + different request \u2192 409 idempotency_conflict."
+          },
+          "budget_usd": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "input": {
+            "type": "object",
+            "description": "Strategy: {prompt, answers?} or {spec}. Procurement: {capability, network, address}."
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/v1/workflows/templates": {
+      "get": {
+        "summary": "Workflow definitions (versioned nodes and edges)",
+        "responses": {
+          "200": {
+            "description": "Templates",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "beta": {
+                      "type": "boolean"
+                    },
+                    "templates": {
+                      "type": "array"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/marketplace/capabilities": {
+      "get": {
+        "summary": "Service discovery: capabilities with every supplier's status, networks, price and evidence",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 120
+            }
+          },
+          {
+            "name": "network",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Capabilities",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "beta": {
+                      "type": "boolean"
+                    },
+                    "capabilities": {
+                      "type": "array"
+                    },
+                    "statuses": {
+                      "type": "object"
+                    },
+                    "not_listed": {
+                      "type": "array"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/marketplace/capabilities/{id}": {
+      "get": {
+        "summary": "One capability with its supplier comparison",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9_.-]{2,64}$"
+            }
+          },
+          {
+            "name": "network",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Capability",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "beta": {
+                      "type": "boolean"
+                    },
+                    "capability": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown capability.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/marketplace/quote": {
+      "post": {
+        "summary": "Quote generation: compare suppliers and return the one Satelink would route to",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "capability",
+                  "network"
+                ],
+                "properties": {
+                  "capability": {
+                    "type": "string"
+                  },
+                  "network": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Quote (available=false with per-supplier reasons when nothing can execute)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "beta": {
+                      "type": "boolean"
+                    },
+                    "quote": {
+                      "$ref": "#/components/schemas/Quote"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "capability and network required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/strategy-lab/compile": {
+      "post": {
+        "summary": "Natural language \u2192 validated strategy spec, clarification questions, or rejection reasons",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "prompt"
+                ],
+                "properties": {
+                  "prompt": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "answers": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "compiled or needs_clarification",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompileResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "unsupported",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompileResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/strategy-lab/strategies": {
+      "post": {
+        "summary": "Save a strategy (from a spec or a prompt)",
+        "security": [
+          {
+            "ApiKey": []
+          },
+          {
+            "ConsoleSession": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "spec": {
+                    "$ref": "#/components/schemas/StrategySpec"
+                  },
+                  "prompt": {
+                    "type": "string"
+                  },
+                  "answers": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Saved (same spec saved twice is the same strategy)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "beta": {
+                      "type": "boolean"
+                    },
+                    "strategy": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid or unsupported strategy.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, unknown, revoked or inactive API key / no console session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Workflows unavailable (feature off returns 404 via fall-through; boot failure returns 503 workflows_unavailable).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "This customer's saved strategies",
+        "security": [
+          {
+            "ApiKey": []
+          },
+          {
+            "ConsoleSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Strategies",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "beta": {
+                      "type": "boolean"
+                    },
+                    "strategies": {
+                      "type": "array"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, unknown, revoked or inactive API key / no console session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Workflows unavailable (feature off returns 404 via fall-through; boot failure returns 503 workflows_unavailable).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/strategy-lab/strategies/{id}": {
+      "get": {
+        "summary": "A saved strategy and its backtest runs",
+        "security": [
+          {
+            "ApiKey": []
+          },
+          {
+            "ConsoleSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^strat_[0-9a-f]{16}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Strategy with runs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "beta": {
+                      "type": "boolean"
+                    },
+                    "strategy": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or not yours).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, unknown, revoked or inactive API key / no console session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Workflows unavailable (feature off returns 404 via fall-through; boot failure returns 503 workflows_unavailable).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/runs": {
+      "post": {
+        "summary": "Workflow creation and execution. Strategy runs execute immediately; purchases pause at awaiting_approval.",
+        "security": [
+          {
+            "ApiKey": []
+          },
+          {
+            "ConsoleSession": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRun"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "beta": {
+                      "type": "boolean"
+                    },
+                    "replayed": {
+                      "const": false
+                    },
+                    "run": {
+                      "$ref": "#/components/schemas/Run"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Idempotent replay of the same request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "beta": {
+                      "type": "boolean"
+                    },
+                    "replayed": {
+                      "const": true
+                    },
+                    "run": {
+                      "$ref": "#/components/schemas/Run"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "idempotency_conflict.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error (invalid_spec, invalid_address, unknown_capability, \u2026).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited (per customer, Retry-After).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, unknown, revoked or inactive API key / no console session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Workflows unavailable (feature off returns 404 via fall-through; boot failure returns 503 workflows_unavailable).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Workflow history (this customer only)",
+        "security": [
+          {
+            "ApiKey": []
+          },
+          {
+            "ConsoleSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Runs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "beta": {
+                      "type": "boolean"
+                    },
+                    "runs": {
+                      "type": "array"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, unknown, revoked or inactive API key / no console session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Workflows unavailable (feature off returns 404 via fall-through; boot failure returns 503 workflows_unavailable).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/runs/{id}": {
+      "get": {
+        "summary": "Workflow status: run, step graph, result, receipt and hash-chained trace",
+        "security": [
+          {
+            "ApiKey": []
+          },
+          {
+            "ConsoleSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^run_[0-9a-f]{8,64}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Run",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "beta": {
+                      "type": "boolean"
+                    },
+                    "run": {
+                      "$ref": "#/components/schemas/Run"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or not yours).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, unknown, revoked or inactive API key / no console session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Workflows unavailable (feature off returns 404 via fall-through; boot failure returns 503 workflows_unavailable).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/runs/{id}/approve": {
+      "post": {
+        "summary": "Purchase approval: approve once, then execute \u2192 verify \u2192 receipt. Approving a run that is not awaiting approval changes nothing.",
+        "security": [
+          {
+            "ApiKey": []
+          },
+          {
+            "ConsoleSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^run_[0-9a-f]{8,64}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Run after approval (changed=false if not awaiting approval)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "beta": {
+                      "type": "boolean"
+                    },
+                    "changed": {
+                      "type": "boolean"
+                    },
+                    "run": {
+                      "$ref": "#/components/schemas/Run"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or not yours).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, unknown, revoked or inactive API key / no console session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Workflows unavailable (feature off returns 404 via fall-through; boot failure returns 503 workflows_unavailable).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/runs/{id}/cancel": {
+      "post": {
+        "summary": "Workflow cancellation (awaiting-approval runs only; releases the budget hold)",
+        "security": [
+          {
+            "ApiKey": []
+          },
+          {
+            "ConsoleSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^run_[0-9a-f]{8,64}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cancelled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "beta": {
+                      "type": "boolean"
+                    },
+                    "run": {
+                      "$ref": "#/components/schemas/Run"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "not_cancellable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or not yours).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, unknown, revoked or inactive API key / no console session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Workflows unavailable (feature off returns 404 via fall-through; boot failure returns 503 workflows_unavailable).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/receipts/{id}": {
+      "get": {
+        "summary": "Receipt retrieval (hash-verified)",
+        "security": [
+          {
+            "ApiKey": []
+          },
+          {
+            "ConsoleSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^rcpt_[0-9a-f]{8,64}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Receipt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "beta": {
+                      "type": "boolean"
+                    },
+                    "receipt": {
+                      "$ref": "#/components/schemas/Receipt"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (or not yours).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, unknown, revoked or inactive API key / no console session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Workflows unavailable (feature off returns 404 via fall-through; boot failure returns 503 workflows_unavailable).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/openapi.json": {
+      "get": {
+        "summary": "This document",
+        "responses": {
+          "200": {
+            "description": "OpenAPI 3.1"
+          }
+        }
+      }
+    },
+    "/v1/workflows/mcp-tools": {
+      "get": {
+        "summary": "MCP tool manifest (same file the satelink-mcp server uses)",
+        "responses": {
+          "200": {
+            "description": "Manifest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "beta": {
+                      "type": "boolean"
+                    },
+                    "manifest": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

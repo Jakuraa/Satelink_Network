@@ -1,0 +1,20 @@
+# gitleaks config: default ruleset + Satelink rules (P0 2026-11-04).
+[extend]
+useDefault = true
+
+[[rules]]
+id = "pgdump-text-header"
+description = "Plain-text pg_dump output"
+regex = '''(?m)^-- PostgreSQL database dump$'''
+
+[[rules]]
+id = "evm-private-key-assignment"
+description = "64-hex value assigned to a private-key-like name"
+regex = '''(?i)(?:priv(?:ate)?_?key|signer_?key|mnemonic)\s*[:=]\s*['"]?(?:0x)?[0-9a-f]{64}\b'''
+
+[allowlist]
+description = "Well-known public test keys"
+regexes = [
+  # Hardhat/Anvil account #0 — public test vector, appears in forge-std and local compose files
+  '''ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80''',
+]

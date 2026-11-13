@@ -5,6 +5,114 @@ categories only (R14); details in `docs/build/evidence/private/` on the build ma
 
 ---
 
+## ▶ RESUME CAPSULE — Release State A (updated after each phase)
+1. Mandate: Release State A master prompt v2026-11-04b + founder conditions 1–6 (2026-11-04).
+2. Worktree: `.claude/worktrees/release-a`; stack `build/p0-safety` (#610) → `build/integration-base` (#611) → `build/p2-foundation` → `build/s1-primary-journey`.
+3. Last phase done: **P1** (audit + integration base #611; #583 migration conflict fixed as 042). P0/PT done (#610, CI 13/13).
+4. Last SHA: see `git log -1 build/p0-safety`.
+5. Next sub-step: **P2.1** extend #609 workflow engine to the mandate state set (branch `build/p2-foundation`).
+6. Open risks: E1 JWT secret + webhooks public (OB-1/2); plaintext signer/treasury keys in local stash (OB-3); single-copy backup (OB-5).
+7. Rule: no work touching auth secrets, payment config or production (D-A2); local test credentials only.
+8. Backups: never touch `backups/protected/*.dump`, `docs/release/*.dump` (BACKUP_POSTURE.md).
+9. Blockers: `OPEN_BLOCKERS.md` (7 open, all FOUNDER).
+10. Decisions: `DECISION_LOG.md` (D-A1…D-A5, ADR-1…4).
+
+## Release A — Phase P1 — 2026-11-04
+- Inspected #609 (`83763dab`), #582 (`c6e3556d`), #583 (`4bd3a740`): independent; file overlap only `migrations.integration.test.ts`. Local unpushed `50fe4e24` excluded (D-A6).
+- Merged on `build/integration-base` (PR #611). **Semantic conflict**: #583 020 vs main 038 both replace the ledger kind CHECK → renumbered 042 with union (D-A7, `5bc1073a`); proven 1/3 → 3/3.
+- Tests (local PG16 + Docker 29.6.2): api baseline guard 940/933/4 known/3 known-pending; integration 214/214; libs 300/300; arch 9/9; depcruise 0; console tsc clean; mcp 8/8.
+- Docs: `CURRENT_STATE_AUDIT.md`, STATUS_MATRIX Release A section, ADR-5 (money bridge), OB-8..10. Runtime: `docker-compose.preview.yml`, `scripts/preview/local-db.sh`.
+
+## Release A — Phase PT — 2026-11-04
+- Plugins: feature-dev + claude-md-management installed (project); others pre-existing; Superpowers pre-existing from official marketplace; context7 via claude.ai connector. `.mcp.json` not created (Postgres reference server deprecated).
+- `.claude/settings.json` deny/allow + 7 hooks, tests `bash .claude/hooks/tests/run.sh` 50/50. CLAUDE.md: root trimmed to 152 + 7 new. 2 skills, 7 agents. Inventory: `TOOLCHAIN_INVENTORY.md`.
+
+## Release A — Phase P0 — 2026-11-04 (Opus 5.5, background job)
+- Scanned every object (11,764 blobs) across 1,111 refs incl. 586 PR heads: **no dump content anywhere**; 0 releases / artifacts / Pages.
+- Credentials in public history (categories): JWT secret, Slack + Discord webhooks, admin password hash → `SECURITY_INCIDENT_2026-11-04.md`.
+- Local-only: stash with plaintext production signer/treasury keys (GitHub 404).
+- Guards: ignore files (git/docker/vercel/railway), `check-no-dumps.sh` (9/9 tests), `.gitleaks.toml` (positive-control tested), pre-commit + CI gitleaks on new commits.
+- Docs: `SECURITY_AND_FINANCIAL_PATH_AUDIT.md` §P0, `BACKUP_POSTURE.md`, `DECISION_LOG.md`, `OPEN_BLOCKERS.md`.
+
+## Session B2 — 2026-11-03 Beta: persistence, independent review, MCP, suppliers (Opus 5.5, background job)
+
+Scope: founder briefs "B2 — Stabilize, Persist, Review and Complete" + "PR #609 release readiness". Branch
+`feat/beta-unified-workflow`, PR #609 (draft). No merge, deploy, env change, paid call, publish or message sent.
+
+### Privacy incident (commit `5f08020a`, public repo)
+Third-party business email addresses (a dRPC staff member, another company that wrote to dRPC) and the fact that a
+reply was misaddressed were committed; redacted in `aa6435df`, still in branch history. **No credentials, tokens or
+secrets → no rotation needed.** Severity low/low-medium. Cleanup plan (needs approval): squash-merge #609 so main
+never contains it, delete the branch; full purge = rebase + force-push + GitHub Support for cached PR refs.
+
+### Delivered
+| Commit | What |
+|---|---|
+| `d0b2bdca` | Migration 041 (`wf_*` kernel store + owner-scoped read model; usage never revenue; append-only receipts/journal) + `PgDurableStore` prefix |
+| `a617b16f` | `run_store.js` (Memory/Pg), Postgres wiring, boot `recover()`, receipts/strategies endpoints; **all HIGH/MED review fixes** (except M8) with regression tests that fail on the pre-fix commit |
+| `13269b5e` | MCP workflow tools (8, opt-in, caller-scoped, approval cap), OpenAPI 3.1 + drift test, saved strategies + `/api-mcp` console page |
+| `6dcb4b17` | Browser E2E (journeys A–D, mobile, auth) + after-restart phase |
+| (this) | Supplier catalog evidence, docs |
+
+### Tests
+- API workflows: 40/40 memory + 8/8 Postgres (mutation-checked: SQL CAS, recovery). MCP: 8/8.
+- Full apps/api suite, same local DB: branch 916/867/50 vs pristine main 868/818/51 — zero failures unique to the branch.
+- Console: tsc + eslint clean. Browser E2E phase 1: 8/8; API restarted on the same DB → phase 2: 1/1.
+- Not run locally: migration integration tests (testcontainers; no Docker, F19) — CI.
+
+### Findings
+- Railway: only `satelink-reconciler` is in `europe-west4`; API/Postgres/Redis remain `us-west2`.
+- Space Command Kits previews fail because their workers' free Base RPC (`mainnet.base.org`) returns 429 to Cloudflare egress (200 from Satelink's network). Not a Satelink defect.
+- FreeTier: public catalogue 83 paths / 74 MCP tools; two free calls 200, balance matched on-chain. Same operator signal. 0.5% share not accepted.
+- dRPC: corrected enquiry saved as a Gmail **draft** to dRPC (unsent).
+
+### Founder actions added
+- F30 Apply migrations 040 + 041 in production when the beta goes to staging/production (review first).
+- F31 Send (or edit) the dRPC draft; reply to Space Command (test keys, 120 s vs 300 s timeout, Base RPC dependency).
+- F32 Choose the Strategy Lab data licence (CoinGecko paid tier first) and approve/adjust the pricing proposal.
+- F33 Decide MCP publication scope (BETA_RELEASE_CHECKLIST).
+- F34 Approve the privacy cleanup plan above (or accept squash-merge-only).
+
+---
+
+## Session B1 — 2026-11-03 Customer beta: one workflow foundation for trading + procurement (Opus 5.5, background job)
+
+Scope: founder mandate "MASTER PRODUCT RECOVERY, UNIFICATION & BETA LAUNCH". Branch `feat/beta-unified-workflow`
+(worktree `.claude/worktrees/beta-unified`), base `origin/main` `dd279db4` = production `/health.commit` (verified).
+Customer-journey matrix: `BETA_READINESS_MATRIX.md`. Suppliers: `SUPPLIER_INTEGRATION_STATUS.md`.
+
+### Verified state (read-only)
+- Railway: Satelink-api, Postgres, Redis, reconciler all deployed in **`us-west2`** (manifests 2026-11-02 23:18 UTC). The brief's "moved to Europe" is not reflected; Binance 451 from the API still applies.
+- Prod: `/health` ok @ `dd279db4`; anon `/rpc/polygon` → JSON-RPC `-32005` with x402 + deposit instructions.
+- Supplier mail (read-only): Space Command Kits and FreeTier share sender domain `mail.grokbot.com`; the founder's dRPC answer did not reach dRPC (misaddressed; detail in `evidence/private/`).
+- Space Command Kits zero-cost probes: manifests 200; unpaid → 402 v2 (Base+Polygon USDC, $0.005, timeout 300 s ≠ claimed 120 s); Polygon → 503 paused; free previews 503/502 (their Base RPC 429). No paid call.
+
+### Delivered
+| Commit | What |
+|---|---|
+| `d13fab1a` | `apps/api/src/workflows/*`: supplier catalog → vNext SupplierRegistry; NL strategy compiler (`satelink.strategy/v1`); kernel workloads `trading.strategy_evaluation` (real walk-forward engine) and `procurement:<capability>`; quote → approval → execute → verify → receipt; `WithheldSettlement` (charge 0, no money moved, not revenue); `/v1` router inert unless `WORKFLOWS_BETA_ENABLED=true` |
+| `7bdbb129` | Console `/strategy-lab`, `/marketplace`, `/marketplace/[id]`, `/workflows`, `/workflows/[id]` (flag-gated nav); console-session principal with existing `csrfGuard`; local preview (`scripts/preview/beta-preview.sh`) |
+| (docs) | BETA_READINESS_MATRIX, SUPPLIER_INTEGRATION_STATUS, REVENUE_EXPERIMENT_PLAN, BETA_RELEASE_CHECKLIST, ACCEPTANCE_TESTS §Customer journeys |
+
+### Tests
+- `workflows_beta.test.js` 31/31; mutation checks: removing the result verifier → 2 fail; removing the journal-payload clone → 2 fail (chain breaks on restart).
+- Full apps/api suite, local PG, branch vs pristine `origin/main` worktree with identical env: main 868/819 pass/50 fail; branch 898/848/51. Only diff = `identity rate limits … same Vercel IP` (known flake; 17/17 ×3 on rerun). The ~50 local failures exist on main too (local DB env), CI uses its own Postgres.
+- Console: `tsc --noEmit` 0 errors, `eslint` clean, `next build` exit 0.
+- Browser walkthrough (Playwright, desktop + 390 px): Journey A real BTC data, 20/50 SMA → **FAIL** (1/4 windows; +4.02% vs buy-and-hold +49.39%); Journey B real Polygon balance of `0x966E…` (0.2287 POL), receipt charge $0 withheld; token-risk on Base blocked (evaluation). `evidence/beta-preview/`.
+
+### Not done / next (in order)
+1. Independent code review of `d13fab1a`/`7bdbb129`; open PR (draft) → founder review.
+2. Durable store for workflows (`PgDurableStore` + reviewed migration of `vnext/reliability/schema.sql`) and staging (F3) before any flag-on deploy.
+3. Expose the same workflow service as MCP tools; OpenAPI for `/v1/workflows|marketplace|strategy-lab`.
+
+### Founder actions added
+- F26 Resend the 2026-11-02 dRPC answer to dRPC's contact (it went only to a third party copied on the thread).
+- F27 Reply to Space Command Kits accepting the free test keys (token-risk, bal-check) for a capped 40-call evaluation.
+- F28 Decide Strategy Lab data path: licensed vendor vs F22 worker outside the US; until then Strategy Lab is non-commercial preview.
+- F29 Approve (or change) list prices before any workflow meter charges (catalog `pricing.approved`).
+
+---
+
 ## Session T1 — 2026-10-31 Trading AI: Eulerpool + evaluation harness + go/no-go (Opus 5.5, background job)
 
 Scope: founder prompt "TRADING AI: EULERPOOL DATA + DECISION API GO/NO-GO + BINANCE DEMO EXECUTION".
