@@ -16,6 +16,7 @@ import { buildPayingFetch } from './src/pay.mjs';
 import { createRpcExecutor } from './src/rpc.mjs';
 import { createIntelligenceExecutor } from './src/intelligence.mjs';
 import { createSatelinkMcpServer } from './src/server-factory.mjs';
+import { createWorkflowExecutor } from './src/workflows.mjs';
 
 const RPC_URL = process.env.SATELINK_RPC_URL || 'https://rpc.satelink.network/rpc/polygon';
 
@@ -31,7 +32,15 @@ const executeIntelligence = createIntelligenceExecutor({
   apiKey: process.env.SATELINK_API_KEY,
 });
 
-const server = createSatelinkMcpServer({ executeRpc, executeIntelligence, rpcUrl: RPC_URL, wallet, canPay });
+// Workflow tools (beta, opt-in via SATELINK_MCP_WORKFLOW_TOOLS=1): same customer API key.
+const executeWorkflowTool = createWorkflowExecutor({
+  fetch: globalThis.fetch,
+  apiBase: process.env.SATELINK_API_BASE || 'https://api.satelink.network',
+  apiKey: process.env.SATELINK_API_KEY,
+  autoApproveMaxUsd: process.env.SATELINK_MCP_AUTO_APPROVE_MAX_USD || '0',
+});
+
+const server = createSatelinkMcpServer({ executeRpc, executeIntelligence, executeWorkflowTool, rpcUrl: RPC_URL, wallet, canPay });
 
 async function main() {
   const transport = new StdioServerTransport();
